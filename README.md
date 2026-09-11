@@ -190,18 +190,20 @@ importe-letras.js  "SON: CIENTO VEINTICINCO CON 80/100 SOLES"
 documentos.js      Validación de DNI, RUC (módulo 11), correo y teléfono
 ubigeo.js          Departamento/provincia/distrito + zona y costo de envío
 limites.js         Cuotas por IP (token bucket en memoria)
+markdown.mjs       Markdown a HTML, lo justo que usa este README
+manual.mjs         Viste este README para imprimirlo: portada, índice y hoja A4
 ilustraciones.mjs  Qué lámina le toca a cada producto (forma × color)
 gen-catalogo.mjs   Arma los 400 productos de ejemplo desde 132 insumos
 gen-imagenes.mjs   Dibuja las ilustraciones SVG de respaldo
 gen-ubigeo.mjs     Compacta el ubigeo del INEI a public/ubigeo.json
-gen-pdf.mjs        Imprime la documentación de docs/ a PDF
+gen-pdf.mjs        Arma el manual desde este README e imprime los tres PDF
 verificar-imagenes.mjs  Comprueba que las ilustraciones no se corten
 importar-fotos.mjs Importa las fotos propias desde img/ (empareja por nombre)
 traer-fotos.mjs    Descarga fotografías libres y guarda sus créditos
 test/              222 tests con node:test, sin dependencias
 public/            Tienda, panel, login, hoja de contactos, /img
 img/               Las fotos originales del negocio, FUERA de public/
-docs/              Los dos documentos para el cliente, en HTML y PDF
+docs/              Los tres documentos, en HTML y PDF
 data/              La base de datos (se crea sola)
 ```
 

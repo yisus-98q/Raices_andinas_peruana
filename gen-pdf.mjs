@@ -11,11 +11,12 @@
  * Las tipografias vienen de Google Fonts, o sea que ESTE paso necesita
  * internet. Sin conexion el PDF sale igual, con las tipografias de respaldo.
  */
-import { readFileSync, writeFileSync, mkdirSync, existsSync, rmSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, existsSync, rmSync, readdirSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { tmpdir } from 'node:os';
+import { manualHtml } from './manual.mjs';
 
 const RAIZ = dirname(fileURLToPath(import.meta.url));
 const DOCS = join(RAIZ, 'docs');
@@ -23,7 +24,38 @@ const DOCS = join(RAIZ, 'docs');
 const DOCUMENTOS = [
   { fuente: 'raiz-andina-por-dentro.html', salida: 'raiz-andina-por-dentro.pdf' },
   { fuente: 'que-gana-su-tienda.html', salida: 'que-gana-su-tienda.pdf' },
+  { fuente: 'manual-del-sistema.html', salida: 'manual-del-sistema.pdf' },
 ];
+
+/**
+ * El manual se arma del README en cada corrida, nunca se edita a mano.
+ *
+ * Es la unica forma de que no se separen. Un manual copiado a mano envejece
+ * en la primera semana, y esta documentacion ya tuvo que corregirse una vez
+ * por ensenar cifras que el panel ya no daba.
+ */
+function armarManual() {
+  const md = readFileSync(join(RAIZ, 'README.md'), 'utf8');
+
+  // Las cifras de la portada se cuentan aqui, no se escriben. La de pruebas
+  // sale del propio README: contar `test(` se queda corto con los anidados,
+  // que es justo como el documento tecnico llego a declarar un total que sus
+  // propias filas no sumaban.
+  const modulos = readdirSync(RAIZ).filter((f) => /\.m?js$/.test(f)).length;
+  const pruebas = (md.match(/test\/\s+(\d+) tests/) || [])[1] || '—';
+  const productos = JSON.parse(readFileSync(join(RAIZ, 'data', 'catalogo.json'), 'utf8')).length;
+  const paquete = JSON.parse(readFileSync(join(RAIZ, 'package.json'), 'utf8'));
+  const dependencias = Object.keys(paquete.dependencies || {}).length;
+
+  const salida = join(DOCS, 'manual-del-sistema.html');
+  writeFileSync(salida, manualHtml(md, {
+    'módulos': modulos,
+    'pruebas': pruebas,
+    'dependencias': dependencias,
+    'productos': productos,
+  }));
+  console.log('  manual-del-sistema.html armado desde README.md\n');
+}
 
 /** Chrome o Edge, el que este instalado. */
 function navegador() {
@@ -73,6 +105,7 @@ const temporal = join(tmpdir(), 'ra-pdf-' + Date.now());
 mkdirSync(temporal, { recursive: true });
 
 console.log('  navegador: ' + exe + '\n');
+armarManual();
 
 for (const doc of DOCUMENTOS) {
   const origen = join(DOCS, doc.fuente);
