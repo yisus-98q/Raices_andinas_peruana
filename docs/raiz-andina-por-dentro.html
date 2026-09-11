@@ -218,9 +218,9 @@
   </header>
 
   <div class="cifras">
-    <div class="cifra"><b>20</b><span>módulos</span></div>
-    <div class="cifra"><b>9 551</b><span>líneas</span></div>
-    <div class="cifra"><b>207</b><span>pruebas</span></div>
+    <div class="cifra"><b>23</b><span>módulos</span></div>
+    <div class="cifra"><b>9 031</b><span>líneas</span></div>
+    <div class="cifra"><b>222</b><span>pruebas</span></div>
     <div class="cifra"><b>400</b><span>productos</span></div>
     <div class="cifra"><b>0</b><span>dependencias</span></div>
     <div class="cifra"><b>1 874</b><span>distritos</span></div>
@@ -306,7 +306,7 @@
         </div>
         <div class="mod">
           <div class="mod-nombre">gen-catalogo.mjs</div>
-          <div class="mod-que">Arma los 400 productos combinando ~110 insumos reales con las presentaciones que le tocan a cada uno.</div>
+          <div class="mod-que">Arma los 400 productos combinando 132 insumos reales con las presentaciones que le tocan a cada uno.</div>
           <div class="mod-lineas">889</div>
         </div>
         <div class="mod">
@@ -526,7 +526,7 @@
   <section class="seccion">
     <div class="rail">06<em>Pruebas</em></div>
     <div class="cuerpo">
-      <h2>207 pruebas automáticas, todas verdes</h2>
+      <h2>222 pruebas automáticas, todas verdes</h2>
       <p>
         Cada archivo levanta su propio servidor en un puerto libre y con una base
         de datos desechable, así que no dependen del orden en que corran ni
@@ -539,18 +539,18 @@
             <tr><th>Archivo</th><th>Qué vigila</th><th class="num">Pruebas</th></tr>
           </thead>
           <tbody>
-            <tr><td class="arch">comprobantes</td><td>Numeración sin huecos, IGV cuadrado, XML, QR, notas de crédito</td><td class="num">28</td></tr>
+            <tr><td class="arch">comprobantes</td><td>Numeración sin huecos, IGV cuadrado, XML, QR, PDF, notas de crédito</td><td class="num">39</td></tr>
+            <tr><td class="arch">checkout</td><td>DNI, RUC, ubigeo, costo de envío, correo y teléfono</td><td class="num">36</td></tr>
+            <tr><td class="arch">pedidos</td><td>Stock, transacciones, estados, devoluciones, códigos repetidos</td><td class="num">34</td></tr>
             <tr><td class="arch">alta</td><td>Alta de productos y de categorías nuevas, y lo que debe rechazar</td><td class="num">25</td></tr>
-            <tr><td class="arch">checkout</td><td>DNI, RUC, ubigeo, costo de envío, correo y teléfono</td><td class="num">24</td></tr>
-            <tr><td class="arch">pedidos</td><td>Stock, transacciones, estados, devoluciones</td><td class="num">22</td></tr>
-            <tr><td class="arch">peru</td><td>Escalones mayoristas, cotización, intenciones de negocio</td><td class="num">16</td></tr>
-            <tr><td class="arch">auth</td><td>Sesiones, bloqueo, cierre de sesión, páginas privadas</td><td class="num">14</td></tr>
+            <tr><td class="arch">auth</td><td>Sesiones, bloqueo, cierre de sesión, páginas privadas</td><td class="num">25</td></tr>
             <tr><td class="arch">seguimiento</td><td>Doble factor, fugas de datos, constancia de recepción, boleta del comprador</td><td class="num">22</td></tr>
-            <tr><td class="arch">catalogo</td><td>Variedad del asesor, costo oculto, compresión, envases</td><td class="num">11</td></tr>
+            <tr><td class="arch">peru</td><td>Escalones mayoristas, cotización, intenciones de negocio</td><td class="num">16</td></tr>
+            <tr><td class="arch">catalogo</td><td>Variedad del asesor, relleno de demostración, costo oculto, compresión</td><td class="num">14</td></tr>
             <tr><td class="arch">seguridad</td><td>Cabeceras, cuotas, inyección, recorrido de rutas</td><td class="num">11</td></tr>
           </tbody>
           <tfoot>
-            <tr><td>Total</td><td>2 066 líneas de pruebas</td><td class="num">207</td></tr>
+            <tr><td>Total</td><td>2 361 líneas de pruebas</td><td class="num">222</td></tr>
           </tfoot>
         </table>
       </div>
@@ -656,7 +656,7 @@
         <div class="pendiente">
           <span class="quien q-codigo">Datos</span>
           <p>
-            <b>Los 400 productos son inventados y las fotos son de banco libre.</b>
+            <b>Los 400 productos son inventados y la mitad de las fotos son de banco libre.</b>
             Hay que cargar el catálogo real del negocio —desde el panel, uno por
             uno, o reemplazando el archivo del catálogo— y sus fotos propias.
           </p>
