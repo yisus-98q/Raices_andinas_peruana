@@ -120,7 +120,7 @@
   async function cargar() {
     try {
       const [resumen, pedidos, movimientos, productos, cambios, comprobantes,
-        cal, clientes] = await Promise.all([
+        cal, clientes, resp] = await Promise.all([
         pedir('/api/admin/resumen'),
         pedir('/api/pedidos'),
         pedir('/api/admin/movimientos'),
@@ -129,6 +129,7 @@
         pedir('/api/admin/comprobantes'),
         pedir('/api/admin/calendario' + (mesVisto ? '?mes=' + mesVisto : '')),
         pedir('/api/admin/clientes'),
+        pedir('/api/admin/respaldos'),
       ]);
       ultimosPedidos = pedidos;
       ultimosProductos = productos;
@@ -145,6 +146,7 @@
       pintarCalendario(cal);
       ultimosClientes = clientes;
       pintarClientes();
+      pintarRespaldo(resp);
       $('hora').textContent = new Date().toLocaleTimeString('es-PE',
         { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     } catch (e) {
@@ -417,6 +419,75 @@
           <span class="cmp-estado">${c.estado === 'pendiente_envio' ? 'sin enviar' : escapar(c.estado)}</span>
         </div>
       </a>`).join(''));
+  }
+
+  // ----------------------------------------------------------- respaldo
+  const kb = (b) => `${Math.round(b / 1024).toLocaleString('es-PE')} KB`;
+
+  /**
+   * Estado del respaldo, a la vista y sin tener que buscarlo. Un respaldo que
+   * hay que ir a comprobar es un respaldo que nadie comprueba: se avisa aqui
+   * cuando el del dia no esta, y cuando esta en el mismo disco que la base.
+   */
+  function pintarRespaldo(r) {
+    const u = r.ultimo;
+    const hoy = new Date().toISOString().slice(0, 10);
+    // Comparar contra la fecha local, no la del servidor: el panel puede estar
+    // abierto en otra maquina.
+    const d = new Date();
+    const local = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const alDia = Boolean(u) && (u.fecha === local || u.fecha === hoy);
+
+    $('bloque-respaldo').classList.toggle('bloque-alerta', !alDia);
+
+    const aviso = !u
+      ? '<div class="resp-aviso grave">Todavía no hay ningún respaldo. Pulsa «Respaldar ahora».</div>'
+      : !alDia
+        ? `<div class="resp-aviso grave">El último respaldo es del ${escapar(u.fecha)}.
+             Hoy no se ha hecho ninguno.</div>`
+        : `<div class="resp-aviso bien">Al día. Último: ${escapar(u.fecha)} · ${kb(u.bytes)}</div>`;
+
+    // Una copia en el mismo disco salva de un borrado por error, no de que se
+    // lleven la laptop. Decirlo es la diferencia entre estar respaldado y
+    // creerlo.
+    const fuera = r.fuera_del_disco
+      ? '<div class="resp-nota">Se guarda fuera de este disco. Correcto.</div>'
+      : `<div class="resp-aviso tibio">Está en el mismo disco que la base. Ante un robo
+           o una avería se perdería con ella. Hay que apuntar el respaldo a un
+           pendrive o disco externo.</div>`;
+
+    pintar('respaldo', `
+      ${aviso}
+      ${fuera}
+      <div class="resp-nota">Carpeta: <code>${escapar(r.carpeta)}</code></div>
+      ${r.respaldos.length ? `
+        <div class="resp-lista">
+          ${r.respaldos.slice(0, 7).map((x) => `
+            <div class="resp-fila">
+              <span>${escapar(x.fecha)}</span>
+              <span class="resp-peso">${kb(x.bytes)}</span>
+            </div>`).join('')}
+        </div>
+        <div class="resp-nota">${r.respaldos.length} copia(s) · se guardan las
+          últimas ${r.se_guardan}</div>` : ''}`);
+  }
+
+  async function respaldarAhora() {
+    const b = $('btn-respaldar');
+    b.disabled = true;
+    b.textContent = 'Respaldando…';
+    try {
+      const r = await fetch('/api/admin/respaldos', { method: 'POST' });
+      const j = await r.json();
+      avisar(r.ok ? `Respaldo hecho: ${j.archivo} (${kb(j.bytes)})`
+        : `No se pudo respaldar: ${j.error}`);
+    } catch {
+      avisar('No se pudo respaldar: sin conexión con el servidor');
+    } finally {
+      b.disabled = false;
+      b.textContent = 'Respaldar ahora';
+      cargar();
+    }
   }
 
   // ------------------------------------------------- calendario de ventas
@@ -824,6 +895,8 @@
     const cabeza = e.target.closest('.cliente-cabeza');
     if (cabeza) return abrirCliente(cabeza.dataset.doc);
   });
+
+  $('btn-respaldar').onclick = respaldarAhora;
 
   $('mes-antes').onclick = () => moverMes(-1);
   $('mes-despues').onclick = () => moverMes(1);

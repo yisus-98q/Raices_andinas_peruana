@@ -21,6 +21,10 @@ import {
   listar as listarComprobantes, porPedido as comprobanteDePedido, numeroDe,
 } from './comprobantes.js';
 import { MOTIVO_NOTA_CREDITO } from './catalogos-sunat.js';
+import {
+  programar as programarRespaldo, respaldar, listar as listarRespaldos,
+  ultimo as ultimoRespaldo, DIR as DIR_RESPALDOS, DIAS_QUE_SE_GUARDAN,
+} from './respaldo.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PUBLIC = join(__dirname, 'public');
@@ -908,6 +912,33 @@ async function api(req, res, url) {
     return json(res, 200, Q.movimientos.all());
   }
 
+  // Estado del respaldo. El panel lo muestra para que nadie tenga que
+  // acordarse de comprobarlo.
+  if (metodo === 'GET' && ruta === '/api/admin/respaldos') {
+    if (!requiereSesion(req, res)) return;
+    const lista = listarRespaldos();
+    return json(res, 200, {
+      carpeta: DIR_RESPALDOS,
+      fuera_del_disco: Boolean(process.env.RESPALDO_DIR),
+      se_guardan: DIAS_QUE_SE_GUARDAN,
+      ultimo: ultimoRespaldo(),
+      respaldos: lista,
+    });
+  }
+
+  // Respaldar a mano: antes de cerrar, antes de cargar el catalogo, antes de
+  // cualquier cosa que de miedo.
+  if (metodo === 'POST' && ruta === '/api/admin/respaldos') {
+    if (!requiereSesion(req, res)) return;
+    try {
+      return json(res, 200, { ok: true, ...respaldar() });
+    } catch (e) {
+      // El motivo si sale al panel: es personal del negocio, no un cliente, y
+      // "no se pudo" sin decir por que no deja arreglar un disco lleno.
+      return json(res, 500, { error: e.message });
+    }
+  }
+
   // Cuanto se vendio cada dia del mes. Sin `?mes=`, el mes en curso.
   if (metodo === 'GET' && ruta === '/api/admin/calendario') {
     if (!requiereSesion(req, res)) return;
@@ -1262,5 +1293,12 @@ createServer(async (req, res) => {
       console.log('    node clave.mjs ' + inicial.email + ' <nueva-clave>');
     }
   }
+
+  // El respaldo del dia, en cuanto se enciende la laptop. No se programa a una
+  // hora porque el puesto apaga la maquina al cerrar y una tarea de madrugada
+  // nunca correria. Los tests apuntan RESPALDO_DIR a su carpeta desechable, de
+  // modo que esto tambien se prueba en vez de apagarse.
+  programarRespaldo();
+
   console.log('');
 });

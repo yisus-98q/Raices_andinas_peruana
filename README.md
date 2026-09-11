@@ -30,6 +30,45 @@ Una foto propia manda sobre cualquier otra: `traer-fotos.mjs` no la pisa ni con
 `traer-fotos.mjs` es lo unico que necesita internet, y una sola vez: las fotos
 quedan en `public/img/fotos/`. Despues la tienda funciona desconectada.
 
+## Respaldo
+
+Todo el negocio vive en un archivo, `data/tienda.db`. **El respaldo se hace
+solo:** uno por día, en cuanto se enciende la laptop y se arranca el servidor.
+No se programa a una hora porque el puesto apaga la máquina al cerrar y una
+tarea de madrugada nunca correría.
+
+```bash
+node respaldo.mjs                                  # copiar ahora
+node respaldo.mjs --listar                         # ver qué copias hay
+node respaldo.mjs --restaurar tienda-2026-09-11.db # volver a una (servidor parado)
+```
+
+El panel lo muestra en el bloque **Respaldo**, y se pone en rojo si hoy no se
+hizo ninguno. Un respaldo que hay que ir a comprobar es un respaldo que nadie
+comprueba.
+
+**Apúntalo fuera del disco.** Por defecto las copias quedan en
+`data/respaldos/`, al lado de la base: eso salva de un borrado por error, pero
+no de que se lleven la laptop. Con `RESPALDO_DIR` va a un pendrive o disco
+externo, y el panel deja de avisar:
+
+```bash
+RESPALDO_DIR=E:
+espaldos npm start
+```
+
+Se guardan las últimas **14** copias (`RESPALDO_DIAS` lo cambia); cada una pesa
+unos 270 KB. La copia se hace con `VACUUM INTO`, no copiando el archivo: la base
+corre en modo WAL y copiarla a pelo da una base **a la que le faltan las últimas
+ventas y que abre sin quejarse**. Antes de guardarse, cada copia se abre y se le
+cuentan las filas — un respaldo ilegible se ve igual que uno bueno hasta el día
+que hace falta.
+
+Restaurar deja la base anterior guardada como `antes-de-restaurar-…` en la misma
+carpeta, por si el que restauró se equivocó de copia.
+
+---
+
 Sin `npm install`. Node 22.5+ (usa `node:sqlite` nativo). Funciona sin internet,
 que es exactamente lo que hace falta para demostrar en la laptop, en el local del cliente.
 

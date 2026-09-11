@@ -642,3 +642,37 @@ img { max-width: 100%; display: block; }
   .dia-monto { display: none; }
   .dia-cal { aspect-ratio: 1; padding: 4px; }
 }
+
+/* ------------------------------------------------------------- respaldo
+   El bloque entero se tiñe cuando el respaldo del día falta. Un aviso
+   pequeño dentro de un bloque igual a los demás no se ve; el borde sí. */
+.bloque-alerta { border-color: rgba(194, 80, 44, .45); }
+.bloque-alerta .bloque-cabeza h2 { color: var(--terra); }
+
+.btn-ancho { width: auto; padding: 0 11px; }
+
+.resp-aviso {
+  font-size: 12.5px;
+  border-radius: 8px;
+  padding: 9px 11px;
+  margin: 8px 0;
+  line-height: 1.45;
+}
+.resp-aviso.bien { background: rgba(92, 143, 101, .14); color: var(--crema); }
+.resp-aviso.grave { background: rgba(194, 80, 44, .16); color: var(--crema); }
+.resp-aviso.tibio { background: rgba(240, 165, 44, .12); color: var(--crema); }
+.resp-nota { font-size: 11.5px; color: var(--crema-suave); margin: 6px 0; line-height: 1.5; }
+.resp-nota code {
+  font-family: ui-monospace, "Consolas", monospace;
+  font-size: 11px;
+  word-break: break-all;
+}
+.resp-lista { border-top: 1px solid var(--borde); margin-top: 10px; padding-top: 6px; }
+.resp-fila {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  padding: 4px 0;
+  color: var(--crema-suave);
+}
+.resp-peso { color: var(--crema); }

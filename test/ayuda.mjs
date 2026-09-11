@@ -41,6 +41,10 @@ export async function levantarServidor({ limites = false } = {}) {
       // Por defecto sin cuotas: las suites de CRUD hacen decenas de peticiones.
       // La de seguridad las activa para comprobar que el limite existe.
       SIN_LIMITES: limites ? '0' : '1',
+      // El respaldo automatico tambien corre en los tests, pero dentro de la
+      // carpeta desechable: asi se prueba el arranque sin dejar copias de
+      // bases de prueba en data/respaldos.
+      RESPALDO_DIR: join(carpeta, 'respaldos'),
     },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
