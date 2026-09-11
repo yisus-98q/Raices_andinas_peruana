@@ -144,9 +144,38 @@ contrasena:  raiz2026
 ```bash
 node clave.mjs hola@raizandina.pe miClaveSegura        # cambiar contraseña (mín. 8)
 node clave.mjs --correo admin dueno@raizandina.pe      # cambiar el correo
-node clave.mjs --nuevo rosa rosa@raizandina.pe "Rosa Q." claveDeRosa
+node clave.mjs --nuevo rosa rosa@raizandina.pe "Rosa Q." claveDeRosa   # acceso nuevo
+node clave.mjs --rol rosa admin                        # ascender a dueña
 node clave.mjs --listar
 ```
+
+### Dos papeles: el dueño y el mostrador
+
+| | `admin` — el dueño | `vendedor` — el mostrador |
+|---|---|---|
+| Pedidos: ver, preparar, anular | sí | sí |
+| Stock: ingresar mercadería, ajustar el mínimo | sí | sí |
+| Comprobantes, clientes, calendario de ventas | sí | sí |
+| **Costo y margen de cada producto** | sí | **no** |
+| **Valor del inventario a costo** | sí | **no** (ve las unidades) |
+| Cambiar precios · dar de alta o de baja fichas | sí | **no** |
+| Bitácora de cambios de ficha · respaldo | sí | **no** |
+
+Que quien atiende no vea el costo no es desconfianza: **el margen es la
+negociación del dueño con su proveedor**, y no tiene por qué estar en la
+pantalla del mostrador, donde cualquiera se asoma.
+
+Un acceso nuevo nace `vendedor` si no se dice otra cosa — es más fácil ascender
+a alguien que descubrir que llevaba meses viendo los márgenes.
+
+El corte está **en el servidor, no en los botones**. El panel esconde lo que el
+rol no puede usar, pero eso es cortesía: esconder un botón evita el error de
+buena fe, no la curiosidad. Al mostrador el catálogo le llega **sin la columna
+`costo`**, y `PATCH /api/productos/:id` con un precio responde 403 sin escribir
+nada — ni el precio ni lo que venía junto en la misma petición.
+
+El rol se lee de la tabla en cada petición, no de la cookie: degradar a alguien
+tiene efecto en su siguiente clic, sin cerrarle la sesión.
 
 > Cambia la contraseña por defecto antes de mostrarle esto a alguien. También
 > puedes fijar ambas desde el arranque con `ADMIN_EMAIL` y `ADMIN_PASSWORD`.

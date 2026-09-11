@@ -11,6 +11,23 @@ import { randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
 import { db } from './db.js';
 import { TIENDA } from './tienda.config.js';
 
+/**
+ * Los dos papeles que hay en un puesto de mercado, y no mas:
+ *
+ * - `admin`   el dueño. Ve el costo, el margen y el valor del inventario,
+ *             cambia precios, da de alta productos y maneja el respaldo.
+ * - `vendedor` quien atiende y despacha. Trabaja los pedidos, mueve stock,
+ *             entrega comprobantes y consulta clientes — **sin ver lo que a
+ *             la tienda le cuesta cada cosa**.
+ *
+ * Que el sobrino no vea el costo no es desconfianza: es que el margen es la
+ * negociacion del dueño con su proveedor, y no tiene por que estar en la
+ * pantalla del mostrador donde cualquiera se asoma.
+ */
+export const ROLES = ['admin', 'vendedor'];
+
+export const esAdmin = (sesion) => sesion?.rol === 'admin';
+
 const HORAS_SESION = 8;          // una jornada del local
 const MAX_INTENTOS = 5;
 const BLOQUEO_MS = 5 * 60 * 1000;
@@ -50,9 +67,18 @@ function igual(a, b) {
 export const correoValido = (c) => /^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(String(c || '').trim());
 
 export function crearUsuario(usuario, email, nombre, clave, rol = 'admin') {
+  if (!ROLES.includes(rol)) throw new Error(`Rol desconocido: ${rol}`);
   const salt = randomBytes(16).toString('hex');
   Q.crear.run(usuario, String(email || '').trim().toLowerCase(), nombre,
     derivar(clave, salt), salt, rol);
+}
+
+/** Cambia el papel de alguien. Sus sesiones abiertas siguen valiendo: el
+ *  permiso se lee de la tabla en cada peticion, no de la cookie. */
+export function cambiarRol(usuario, rol) {
+  if (!ROLES.includes(rol)) throw new Error(`Rol desconocido: ${rol}`);
+  return db.prepare('UPDATE usuarios SET rol = ? WHERE usuario = ?')
+    .run(rol, String(usuario).toLowerCase()).changes > 0;
 }
 
 export function cambiarCorreo(usuario, email) {

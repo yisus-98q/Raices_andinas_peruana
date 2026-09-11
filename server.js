@@ -8,7 +8,7 @@ import { db } from './db.js';
 import { asesorar } from './asesor.js';
 import {
   iniciarSesion, cerrarSesion, sesionDe, leerCookie,
-  cookieSesion, cookieBorrada, asegurarUsuarioInicial, COOKIE,
+  cookieSesion, cookieBorrada, asegurarUsuarioInicial, COOKIE, esAdmin,
 } from './auth.js';
 import { TIENDA, estaAbierto } from './tienda.config.js';
 import { consumir, CUOTAS } from './limites.js';
@@ -387,6 +387,10 @@ function validarAlta(c) {
 const EDITABLES = {
   precio: {
     etiqueta: 'precio',
+    // `soloDueno`: lo que toca la plata o saca un producto de la tienda. El
+    // minimo de reposicion no esta marcado a proposito — ajustarlo es trabajo
+    // de quien ve vaciarse el estante, no del dueño desde su casa.
+    soloDueno: true,
     validar: (v) => {
       const n = Number(v);
       if (!Number.isFinite(n) || n <= 0 || n > 99999) return null;
@@ -403,6 +407,7 @@ const EDITABLES = {
   },
   activo: {
     etiqueta: 'estado',
+    soloDueno: true,
     validar: (v) => (v === 0 || v === 1 || v === true || v === false ? (v ? 1 : 0) : null),
   },
 };
@@ -482,6 +487,41 @@ function requiereSesion(req, res) {
   }
   return s;
 }
+
+/**
+ * Lo que es del dueño y no del mostrador: el costo, el margen, el precio de
+ * venta, el alta de fichas y el respaldo.
+ *
+ * Se comprueba **en el servidor y no ocultando botones**. Esconderlos en el
+ * panel evita el error de buena fe, no la curiosidad: quien sepa escribir una
+ * URL veria el costo de todo el catalogo. El 403 es lo que de verdad corta.
+ *
+ * El rol se lee de la tabla en cada peticion, no de la cookie, asi que
+ * degradar a alguien tiene efecto en su siguiente clic sin tener que cerrarle
+ * la sesion.
+ */
+function requiereAdmin(req, res) {
+  const s = requiereSesion(req, res);
+  if (!s) return null;
+  if (!esAdmin(s)) {
+    json(res, 403, {
+      error: 'Esto solo lo ve el dueño de la tienda. Si lo necesitas, pídele acceso.',
+    });
+    return null;
+  }
+  return s;
+}
+
+/**
+ * La ficha como la puede ver cada uno. Para el mostrador se quita el costo —y
+ * con el, el margen, que se calcula a partir de el.
+ */
+const sinCosto = (p) => {
+  const { costo, ...resto } = p;
+  return resto;
+};
+const fichasPara = (sesion, filas) =>
+  (esAdmin(sesion) ? filas : filas.map(sinCosto));
 
 // ------------------------------------------------------------------- rutas
 async function api(req, res, url) {
@@ -764,8 +804,9 @@ async function api(req, res, url) {
 
   // Catalogo completo, incluidos los productos dados de baja.
   if (metodo === 'GET' && ruta === '/api/admin/productos') {
-    if (!requiereSesion(req, res)) return;
-    return json(res, 200, Q.todosProductos.all());
+    const sesion = requiereSesion(req, res);
+    if (!sesion) return;
+    return json(res, 200, fichasPara(sesion, Q.todosProductos.all()));
   }
 
   // Categorias existentes, para que el formulario de alta las sugiera y no se
@@ -778,7 +819,8 @@ async function api(req, res, url) {
   // Alta de producto. Lo unico que el panel todavia no podia hacer solo: para
   // meter algo nuevo habia que tocar la base a mano.
   if (metodo === 'POST' && ruta === '/api/productos') {
-    const sesion = requiereSesion(req, res);
+    // Dar de alta una ficha es fijar un precio y un costo: del dueño.
+    const sesion = requiereAdmin(req, res);
     if (!sesion) return;
 
     const cuerpo = await leerCuerpo(req);
@@ -855,7 +897,8 @@ async function api(req, res, url) {
   }
 
   if (metodo === 'GET' && ruta === '/api/admin/cambios') {
-    if (!requiereSesion(req, res)) return;
+    // Lleva el historial de precios: quien no ve el precio tampoco su rastro.
+    if (!requiereAdmin(req, res)) return;
     return json(res, 200, Q.cambios.all());
   }
 
@@ -871,6 +914,14 @@ async function api(req, res, url) {
     const cambios = [];
     for (const [campo, regla] of Object.entries(EDITABLES)) {
       if (!(campo in cuerpo)) continue;
+      // El permiso se mira campo por campo y no en la puerta: el mostrador
+      // tiene que poder ajustar el minimo de un producto sin poder tocar su
+      // precio, y las dos cosas entran por la misma peticion.
+      if (regla.soloDueno && !esAdmin(sesion)) {
+        return json(res, 403, {
+          error: `Cambiar el ${regla.etiqueta} solo lo hace el dueño de la tienda.`,
+        });
+      }
       const valor = regla.validar(cuerpo[campo]);
       if (valor === null) {
         return json(res, 400, { error: `Valor no válido para ${regla.etiqueta}.` });
@@ -903,8 +954,9 @@ async function api(req, res, url) {
   }
 
   if (metodo === 'GET' && ruta === '/api/admin/resumen') {
-    if (!requiereSesion(req, res)) return;
-    return json(res, 200, resumen());
+    const sesion = requiereSesion(req, res);
+    if (!sesion) return;
+    return json(res, 200, resumen(sesion));
   }
 
   if (metodo === 'GET' && ruta === '/api/admin/movimientos') {
@@ -915,7 +967,7 @@ async function api(req, res, url) {
   // Estado del respaldo. El panel lo muestra para que nadie tenga que
   // acordarse de comprobarlo.
   if (metodo === 'GET' && ruta === '/api/admin/respaldos') {
-    if (!requiereSesion(req, res)) return;
+    if (!requiereAdmin(req, res)) return;
     const lista = listarRespaldos();
     return json(res, 200, {
       carpeta: DIR_RESPALDOS,
@@ -929,7 +981,7 @@ async function api(req, res, url) {
   // Respaldar a mano: antes de cerrar, antes de cargar el catalogo, antes de
   // cualquier cosa que de miedo.
   if (metodo === 'POST' && ruta === '/api/admin/respaldos') {
-    if (!requiereSesion(req, res)) return;
+    if (!requiereAdmin(req, res)) return;
     try {
       return json(res, 200, { ok: true, ...respaldar() });
     } catch (e) {
@@ -1125,7 +1177,13 @@ function crearPedido(res, body) {
   }
 }
 
-function resumen() {
+/**
+ * El tablero. `sesion` decide cuanto se ve: el valor del inventario esta
+ * calculado **a costo**, asi que es el costo del catalogo entero en una sola
+ * cifra. Para el mostrador se manda las unidades, que es lo que necesita para
+ * saber si hay que reponer, sin la plata.
+ */
+function resumen(sesion) {
   const hoy = db.prepare(`SELECT COUNT(*) c, COALESCE(SUM(total),0) t FROM pedidos
     WHERE date(creado_en) = date('now','localtime')
       AND estado NOT IN ('anulado','devuelto')`).get();
@@ -1140,7 +1198,7 @@ function resumen() {
     ventas_hoy: +hoy.t.toFixed(2),
     pedidos_hoy: hoy.c,
     pedidos_pendientes: pendientes.c,
-    valor_inventario: +inv.v.toFixed(2),
+    ...(esAdmin(sesion) ? { valor_inventario: +inv.v.toFixed(2) } : {}),
     unidades_inventario: inv.u,
     agotados: bajos.filter((p) => p.stock === 0).length,
     bajo_stock: bajos.map((p) => ({

@@ -33,6 +33,12 @@
   let filtroProducto = '';
   let verBajas = false;
   let filtroCliente = '';
+  /**
+   * Quien esta mirando. El servidor ya corta por su cuenta —ocultar botones no
+   * es seguridad—, pero un panel lleno de controles que devuelven 403 se siente
+   * roto. Esto es cortesia, no cerradura.
+   */
+  let esDueno = true;
   // Mes que se esta mirando en el calendario y documento del cliente abierto.
   // Viven fuera de `cargar()` porque el panel se refresca solo cada 15 s: si se
   // guardaran dentro, mirar agosto o el historial de alguien duraria hasta el
@@ -119,17 +125,21 @@
 
   async function cargar() {
     try {
-      const [resumen, pedidos, movimientos, productos, cambios, comprobantes,
-        cal, clientes, resp] = await Promise.all([
+      // La bitacora de fichas y el respaldo son del dueño: al mostrador le
+      // responderian 403. No se piden en vez de pedirlos y descartar la
+      // respuesta — pedir lo que se sabe prohibido llena el registro del
+      // servidor de 403 que no son un intento de nada.
+      const [resumen, pedidos, movimientos, productos, comprobantes,
+        cal, clientes, cambios, resp] = await Promise.all([
         pedir('/api/admin/resumen'),
         pedir('/api/pedidos'),
         pedir('/api/admin/movimientos'),
         pedir('/api/admin/productos'),
-        pedir('/api/admin/cambios'),
         pedir('/api/admin/comprobantes'),
         pedir('/api/admin/calendario' + (mesVisto ? '?mes=' + mesVisto : '')),
         pedir('/api/admin/clientes'),
-        pedir('/api/admin/respaldos'),
+        esDueno ? pedir('/api/admin/cambios') : [],
+        esDueno ? pedir('/api/admin/respaldos') : null,
       ]);
       ultimosPedidos = pedidos;
       ultimosProductos = productos;
@@ -146,7 +156,7 @@
       pintarCalendario(cal);
       ultimosClientes = clientes;
       pintarClientes();
-      pintarRespaldo(resp);
+      if (resp) pintarRespaldo(resp);
       $('hora').textContent = new Date().toLocaleTimeString('es-PE',
         { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     } catch (e) {
@@ -157,7 +167,15 @@
   async function identificar() {
     try {
       const s = await pedir('/api/sesion');
-      $('quien').textContent = s.nombre;
+      esDueno = s.rol === 'admin';
+      $('quien').textContent = esDueno ? s.nombre : `${s.nombre} · mostrador`;
+      if (!esDueno) {
+        // El respaldo y el alta de fichas son del dueño. Se quitan del todo en
+        // vez de dejarlos deshabilitados: un boton apagado invita a preguntar
+        // por que, y la respuesta no le sirve a quien esta atendiendo.
+        $('bloque-respaldo').hidden = true;
+        $('abrir-alta').hidden = true;
+      }
     } catch { /* pedir() ya redirigió */ }
   }
 
@@ -171,10 +189,19 @@
         nota: r.agotados ? `${r.agotados} ya agotado(s)` : 'ninguno agotado aún',
         alerta: r.bajo_stock.length > 0,
       },
-      {
-        etiqueta: 'Valor del inventario', valor: soles(r.valor_inventario),
-        nota: `${r.unidades_inventario} unidades a costo`,
-      },
+      // El valor del inventario esta calculado a costo: es el costo del
+      // catalogo entero en una cifra. Para el mostrador la tarjeta cuenta las
+      // unidades, que es lo que necesita para saber si hay que reponer.
+      r.valor_inventario === undefined
+        ? {
+          etiqueta: 'Unidades en tienda',
+          valor: r.unidades_inventario.toLocaleString('es-PE'),
+          nota: 'sumando todo el catálogo',
+        }
+        : {
+          etiqueta: 'Valor del inventario', valor: soles(r.valor_inventario),
+          nota: `${r.unidades_inventario} unidades a costo`,
+        },
     ];
     pintar('kpis', tarjetas.map((t) => `
       <div class="kpi${t.alerta ? ' alerta' : ''}">
@@ -364,8 +391,10 @@
         <span></span><span>Producto</span><span>Precio</span>
         <span>Stock mín.</span><span>Stock</span><span></span>
       </div>` + lista.slice(0, TOPE_FILAS).map((p) => {
-      const margen = p.precio > 0
-        ? Math.round(((p.precio - p.costo) / p.precio) * 100) : 0;
+      // El servidor no manda `costo` al mostrador, asi que aqui no hay nada
+      // que ocultar: simplemente no esta.
+      const margen = esDueno && p.precio > 0 && Number.isFinite(p.costo)
+        ? Math.round(((p.precio - p.costo) / p.precio) * 100) : null;
       return `
       <div class="fila-prod${p.activo ? '' : ' de-baja'}" data-prod="${p.id}">
         <div class="prod-foto">
@@ -373,13 +402,14 @@
         </div>
         <div class="prod-info">
           <strong>${escapar(p.nombre)}</strong>
-          <span>${escapar(p.sku)} · ${escapar(p.categoria)} · costo ${soles(p.costo)}
-            · margen ${margen}%</span>
+          <span>${escapar(p.sku)} · ${escapar(p.categoria)}${margen === null ? ''
+            : ` · costo ${soles(p.costo)} · margen ${margen}%`}</span>
         </div>
         <div class="prod-campo">
           <span class="prefijo">S/</span>
           <input type="number" step="0.10" min="0.1" max="99999"
-                 value="${p.precio.toFixed(2)}" data-campo="precio" data-id="${p.id}"
+                 value="${p.precio.toFixed(2)}"
+                 ${esDueno ? `data-campo="precio" data-id="${p.id}"` : 'readonly'}
                  aria-label="Precio de ${escapar(p.nombre)}">
         </div>
         <div class="prod-campo">
@@ -390,10 +420,11 @@
         <div class="prod-stock ${p.stock <= p.stock_min ? 'bajo' : ''}">${p.stock}</div>
         <div class="prod-acciones">
           <button class="mini guardar" data-guardar="${p.id}" disabled>Guardar</button>
+          ${esDueno ? `
           <button class="mini ${p.activo ? 'mini-peligro' : ''}"
                   data-activo="${p.id}" data-valor="${p.activo ? 0 : 1}">
             ${p.activo ? 'Dar de baja' : 'Reactivar'}
-          </button>
+          </button>` : ''}
         </div>
       </div>`;
     }).join('') + pie);
@@ -1002,8 +1033,11 @@
   $('a-precio').oninput = calcularMargen;
   $('a-costo').oninput = calcularMargen;
 
-  identificar();
-  cargar();
+  // Primero quien es, despues los datos: si se lanzan a la vez, el primer
+  // pintado puede salir con los controles del dueño y corregirse un instante
+  // despues. Un panel que parpadea permisos se ve inseguro, aunque el servidor
+  // este cortando bien.
+  identificar().then(cargar);
 
   // No refrescamos si la pestaña no está a la vista: no tiene sentido consultar
   // al servidor mientras el dueño atiende en el mostrador.

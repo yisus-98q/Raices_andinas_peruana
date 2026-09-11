@@ -2,9 +2,17 @@
  * Gestion de accesos al panel, desde la consola.
  *
  *   node clave.mjs <correo|usuario> <nueva-clave>          cambiar la clave
- *   node clave.mjs --nuevo <usuario> <correo> "<nombre>" <clave>   crear acceso
+ *   node clave.mjs --nuevo <usuario> <correo> "<nombre>" <clave> [rol]  crear acceso
+ *   node clave.mjs --rol <usuario> <admin|vendedor>        cambiar el papel
  *   node clave.mjs --correo <usuario> <nuevo-correo>       cambiar el correo
  *   node clave.mjs --listar
+ *
+ * Hay dos papeles. `admin` es el dueño: ve el costo, el margen y el valor del
+ * inventario, cambia precios y da de alta fichas. `vendedor` es el mostrador:
+ * trabaja los pedidos, mueve stock y entrega comprobantes, **sin ver lo que a
+ * la tienda le cuesta cada cosa**. Un acceso nuevo nace `vendedor` si no se
+ * dice otra cosa: es mas facil subir a alguien que descubrir que llevaba
+ * meses viendo los margenes.
  *
  * Se entra al panel con el CORREO. El `usuario` corto se conserva porque es lo
  * que firma el kardex y la bitacora: en un movimiento de stock se lee mejor
@@ -13,7 +21,9 @@
  * Cambiar una clave cierra todas las sesiones abiertas de esa persona.
  */
 import { db } from './db.js';
-import { crearUsuario, cambiarClave, cambiarCorreo, correoValido, buscarUsuario } from './auth.js';
+import {
+  crearUsuario, cambiarClave, cambiarCorreo, cambiarRol, correoValido, buscarUsuario, ROLES,
+} from './auth.js';
 
 const args = process.argv.slice(2);
 const MIN_CLAVE = 8;
@@ -27,9 +37,12 @@ if (!args.length || args[0] === '--ayuda' || args[0] === '-h') {
   salir([
     'Uso:',
     '  node clave.mjs <correo|usuario> <nueva-clave>                cambiar clave',
-    '  node clave.mjs --nuevo <usuario> <correo> "<nombre>" <clave>  crear acceso',
+    '  node clave.mjs --nuevo <usuario> <correo> "<nombre>" <clave> [rol]  crear acceso',
+    '  node clave.mjs --rol <usuario> <admin|vendedor>              cambiar papel',
     '  node clave.mjs --correo <usuario> <nuevo-correo>             cambiar correo',
     '  node clave.mjs --listar                                      ver accesos',
+    '',
+    '  Roles: admin (el dueño, ve costos y precios) · vendedor (mostrador, no)',
   ].join('\n'), 0);
 }
 
@@ -46,16 +59,28 @@ if (args[0] === '--listar') {
   process.exit(0);
 }
 
+if (args[0] === '--rol') {
+  const [, usuario, rol] = args;
+  if (!usuario || !rol) salir('Faltan datos. Usa --ayuda.');
+  if (!ROLES.includes(rol)) salir(`Rol desconocido: "${rol}". Son: ${ROLES.join(', ')}.`);
+  if (!buscarUsuario(usuario)) salir(`No existe el usuario "${usuario}".`);
+  if (!cambiarRol(usuario, rol)) salir(`No pude cambiar el rol de "${usuario}".`);
+  salir(`"${usuario}" ahora es ${rol}.`
+    + (rol === 'vendedor' ? ' Deja de ver costos y margenes en su siguiente clic.' : ''), 0);
+}
+
 if (args[0] === '--nuevo') {
-  const [, usuario, correo, nombre, clave] = args;
+  // El rol es el ultimo y es opcional: sin el, `vendedor`.
+  const [, usuario, correo, nombre, clave, rol = 'vendedor'] = args;
   if (!usuario || !correo || !nombre || !clave) salir('Faltan datos. Usa --ayuda.');
   if (!correoValido(correo)) salir(`"${correo}" no parece un correo valido.`);
   if (clave.length < MIN_CLAVE) salir(`La clave necesita al menos ${MIN_CLAVE} caracteres.`);
+  if (!ROLES.includes(rol)) salir(`Rol desconocido: "${rol}". Son: ${ROLES.join(', ')}.`);
   if (buscarUsuario(usuario)) salir(`El usuario "${usuario}" ya existe.`);
   if (buscarUsuario(correo)) salir(`El correo "${correo}" ya esta en uso.`);
 
-  crearUsuario(usuario.toLowerCase(), correo, nombre, clave);
-  salir(`Acceso creado: ${correo} (usuario "${usuario}")`, 0);
+  crearUsuario(usuario.toLowerCase(), correo, nombre, clave, rol);
+  salir(`Acceso creado: ${correo} (usuario "${usuario}", rol ${rol})`, 0);
 }
 
 if (args[0] === '--correo') {
