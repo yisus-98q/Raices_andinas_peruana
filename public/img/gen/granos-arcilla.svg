@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" role="img">
+
+  <defs>
+    <linearGradient id="ggranosarcilla" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fcefe8"/><stop offset="1" stop-color="#f3d6c5"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="400" fill="url(#ggranosarcilla)"/>
+  <circle cx="200" cy="200" r="150" fill="none" stroke="#b26a48" stroke-width="2" opacity=".22"/>
+  <circle cx="200" cy="200" r="128" fill="#fffdf8" opacity=".45"/>
+<path d="M150 202 C160 164 176 144 200 144 C224 144 240 164 250 202 Z" fill="#d8916d" stroke="#241a12" stroke-width="7"
+     stroke-linejoin="round" stroke-linecap="round"/>
+<ellipse cx="176" cy="186" rx="11" ry="8" fill="#b26a48"
+         stroke="#241a12" stroke-width="4"/>
+<ellipse cx="200" cy="174" rx="11" ry="8" fill="#b26a48"
+         stroke="#241a12" stroke-width="4"/>
+<ellipse cx="224" cy="186" rx="11" ry="8" fill="#b26a48"
+         stroke="#241a12" stroke-width="4"/>
+<ellipse cx="188" cy="162" rx="11" ry="8" fill="#b26a48"
+         stroke="#241a12" stroke-width="4"/>
+<ellipse cx="212" cy="162" rx="11" ry="8" fill="#b26a48"
+         stroke="#241a12" stroke-width="4"/>
+<rect x="112" y="198" width="176" height="22" rx="11" fill="#874a2f"
+     stroke="#241a12" stroke-width="7" stroke-linejoin="round"/>
+<path d="M124 220 L276 220 C276 286 242 322 200 322 C158 322 124 286 124 220 Z" fill="#fcefe8" stroke="#241a12" stroke-width="7"
+     stroke-linejoin="round" stroke-linecap="round"/>
+<rect x="150" y="244" width="20" height="44" rx="10" fill="#fff" opacity=".3"/>
+</svg>

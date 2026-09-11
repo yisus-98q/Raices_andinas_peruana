@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" role="img">
+
+  <defs>
+    <linearGradient id="gbayasmiel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fdf3d6"/><stop offset="1" stop-color="#f8e2a2"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="400" fill="url(#gbayasmiel)"/>
+  <circle cx="200" cy="200" r="150" fill="none" stroke="#c78d16" stroke-width="2" opacity=".22"/>
+  <circle cx="200" cy="200" r="128" fill="#fffdf8" opacity=".45"/>
+<path d="M200 118 L200 186" fill="none" stroke="#241a12" stroke-width="5"
+     stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M200 146 C224 120 254 120 268 134 C252 160 222 164 200 146 Z" fill="#c78d16" stroke="#241a12" stroke-width="7"
+     stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="168" cy="228" r="48" fill="#eeb63a"
+     stroke="#241a12" stroke-width="7"/>
+<circle cx="232" cy="228" r="48" fill="#eeb63a"
+     stroke="#241a12" stroke-width="7"/>
+<circle cx="200" cy="288" r="44" fill="#eeb63a"
+     stroke="#241a12" stroke-width="7"/>
+<circle cx="152" cy="212" r="10" fill="#fff" opacity=".42"/>
+<circle cx="216" cy="212" r="10" fill="#fff" opacity=".42"/>
+<circle cx="186" cy="274" r="9" fill="#fff" opacity=".42"/>
+</svg>

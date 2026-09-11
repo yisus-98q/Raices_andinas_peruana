@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Créditos de las imágenes — Raíz Andina</title>
+<meta name="robots" content="noindex">
+<link rel="icon" type="image/svg+xml" href="/img/marca/favicon.svg">
+<link rel="stylesheet" href="/css/premium.css">
+<style>
+  body { padding-top: 0; }
+  .cabecera-simple {
+    border-bottom: 1px solid var(--borde); padding: 22px 0; margin-bottom: 48px;
+  }
+  .cabecera-simple .contenedor { display: flex; align-items: center; gap: 14px; }
+  .cabecera-simple .btn { margin-left: auto; }
+  .tabla-creditos { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .tabla-creditos th {
+    text-align: left; font-size: 11px; letter-spacing: .16em; text-transform: uppercase;
+    color: var(--ocre); font-weight: 700; padding: 0 14px 12px 0;
+    border-bottom: 1px solid var(--borde);
+  }
+  .tabla-creditos td {
+    padding: 14px 14px 14px 0; border-bottom: 1px solid var(--borde);
+    color: var(--crema-suave); vertical-align: top;
+  }
+  .tabla-creditos td:first-child { color: var(--crema); font-weight: 600; }
+  .tabla-creditos a { color: var(--ocre); text-decoration: underline; }
+  .lic {
+    display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .06em;
+    padding: 3px 9px; border-radius: 999px; white-space: nowrap;
+  }
+  .lic-libre { background: rgba(92,143,101,.16); color: #8fc199; }
+  .lic-atrib { background: rgba(240,165,44,.14); color: var(--ocre); }
+  .nota-legal {
+    background: var(--carbon); border: 1px solid var(--borde); border-radius: 16px;
+    padding: 22px 26px; margin-bottom: 40px; font-size: 14.5px; color: var(--crema-suave);
+  }
+  .nota-legal strong { color: var(--crema); }
+</style>
+</head>
+<body>
+
+<header class="cabecera-simple">
+  <div class="contenedor">
+    <img src="/img/marca/marca.svg" alt="" width="40" height="40" style="border-radius:11px">
+    <div>
+      <div class="marca-nombre">Raíz Andina</div>
+      <div class="marca-bajada">Créditos de imágenes</div>
+    </div>
+    <a class="btn btn-fantasma btn-chico" href="/">Volver a la tienda</a>
+  </div>
+</header>
+
+<main class="contenedor" style="padding-bottom:80px">
+  <span class="kicker">Atribución</span>
+  <h1 class="grande" style="margin:20px 0 28px">Créditos<br>de imágenes</h1>
+
+  <div class="nota-legal">
+    Las fotografías marcadas como <strong>Propia</strong> son del negocio.
+    El resto proviene de bancos de imágenes libres, obtenidas a través de
+    <a href="https://openverse.org">Openverse</a>.
+    Las marcadas como <strong>CC0</strong> o <strong>Dominio público</strong> no
+    exigen atribución; las marcadas como <strong>CC BY</strong> sí la exigen, y
+    por eso figuran acá con su autor y su fuente.
+    <br><br>
+    <strong>Para reemplazar una foto:</strong> deja la imagen en la carpeta
+    <code>img/</code> con el nombre del producto y ejecuta
+    <code>node importar-fotos.mjs</code>. Las que sigan como CC0, PDM o CC BY
+    son marcadores de posición: conviene sustituirlas por fotos del puesto.
+  </div>
+
+  <table class="tabla-creditos">
+    <thead>
+      <tr><th>Producto</th><th>Imagen</th><th>Autor</th><th>Licencia</th></tr>
+    </thead>
+    <tbody id="filas"><tr><td colspan="4">Cargando…</td></tr></tbody>
+  </table>
+</main>
+
+<script src="/js/creditos.js"></script>
+</body>
+</html>

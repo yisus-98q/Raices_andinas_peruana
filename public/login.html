@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Entrar al panel — Raíz Andina</title>
+<link rel="icon" type="image/svg+xml" href="/img/marca/favicon-panel.svg">
+<link rel="stylesheet" href="/css/panel.css">
+<style>
+  body { display: grid; place-items: center; min-height: 100vh; }
+</style>
+</head>
+<body>
+
+<div class="caja">
+  <div class="caja-cabeza">
+    <img class="marca-icono" src="/img/marca/marca.svg" alt="Raíz Andina" width="52" height="52">
+    <h1>Panel interno</h1>
+    <p>Raíz Andina · Mercado Central</p>
+  </div>
+
+  <form class="caja-cuerpo" id="forma">
+    <div class="aviso aviso-error" id="error" hidden></div>
+
+    <div class="campo">
+      <label for="usuario">Correo</label>
+      <input id="usuario" type="email" inputmode="email" autocomplete="username"
+             autocapitalize="none" spellcheck="false" required autofocus
+             placeholder="hola@raizandina.pe">
+    </div>
+
+    <div class="campo">
+      <label for="clave">Contraseña</label>
+      <input id="clave" type="password" autocomplete="current-password" required>
+    </div>
+
+    <button class="btn btn-verde btn-bloque" type="submit" id="entrar">Entrar</button>
+  </form>
+
+  <div class="caja-pie">
+    <span>Acceso solo para personal</span>
+    <a href="/">← Ir a la tienda</a>
+  </div>
+</div>
+
+<script src="/js/login.js"></script>
+</body>
+</html>

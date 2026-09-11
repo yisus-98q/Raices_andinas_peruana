@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" role="img">
+
+  <defs>
+    <linearGradient id="gcapsulassalvia" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f0f3e6"/><stop offset="1" stop-color="#d9e2c2"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="400" fill="url(#gcapsulassalvia)"/>
+  <circle cx="200" cy="200" r="150" fill="none" stroke="#647f3d" stroke-width="2" opacity=".22"/>
+  <circle cx="200" cy="200" r="128" fill="#fffdf8" opacity=".45"/>
+<rect x="164" y="92" width="72" height="30" rx="7" fill="#455a28"
+     stroke="#241a12" stroke-width="7" stroke-linejoin="round"/>
+<rect x="176" y="120" width="48" height="30" rx="4" fill="#647f3d"
+     stroke="#241a12" stroke-width="7" stroke-linejoin="round"/>
+<rect x="140" y="148" width="120" height="172" rx="18" fill="#f0f3e6"
+     stroke="#241a12" stroke-width="7" stroke-linejoin="round"/>
+<rect x="140" y="200" width="120" height="74" rx="4" fill="#8aa85e"
+     stroke="#241a12" stroke-width="7" stroke-linejoin="round"/>
+<rect x="158" y="168" width="14" height="130" rx="7" fill="#fff" opacity=".3"/>
+<rect x="162" y="222" width="76" height="8" rx="4" fill="#fffdf6" opacity=".85"/>
+<rect x="174" y="244" width="52" height="8" rx="4" fill="#fffdf6" opacity=".6"/>
+</svg>

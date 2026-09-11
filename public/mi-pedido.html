@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Seguir mi pedido — Raíz Andina</title>
+<meta name="description" content="Consulta el estado de tu pedido de Raíz Andina con tu código y tu teléfono.">
+<link rel="canonical" href="{{SITIO}}/mi-pedido.html">
+<link rel="icon" type="image/svg+xml" href="/img/marca/favicon.svg">
+<meta name="theme-color" content="#0b0a08">
+<link rel="stylesheet" href="/css/premium.css">
+<style>
+  .cabecera-simple { border-bottom: 1px solid var(--borde); padding: 20px 0; }
+  .cabecera-simple .contenedor { display: flex; align-items: center; gap: 13px; }
+  .cabecera-simple .btn { margin-left: auto; }
+  .caja-seguimiento { max-width: 640px; margin: 0 auto; }
+</style>
+</head>
+<body>
+
+<header class="cabecera-simple">
+  <div class="contenedor">
+    <a class="marca" href="/">
+      <img class="marca-sello" src="/img/marca/marca.svg" alt="" width="40" height="40">
+      <div>
+        <div class="marca-nombre">Raíz Andina</div>
+        <div class="marca-bajada">Seguimiento de pedido</div>
+      </div>
+    </a>
+    <a class="btn btn-fantasma btn-chico" href="/">Ir a la tienda</a>
+  </div>
+</header>
+
+<main class="contenedor seccion caja-seguimiento">
+  <span class="kicker">Tu pedido</span>
+  <h1 class="grande" style="margin:18px 0 12px">¿Dónde<br>va lo mío?</h1>
+  <p style="color:var(--crema-suave);margin-bottom:30px">
+    Escribe el código que te dimos al comprar y los <strong>últimos 4 dígitos</strong>
+    del teléfono que dejaste. Pedimos los dos para que nadie más pueda ver tu pedido.
+  </p>
+
+  <form class="asesor-caja" id="forma">
+    <div class="aviso aviso-error" id="error" hidden></div>
+
+    <div class="campo-doble">
+      <div class="campo">
+        <label for="f-codigo">Código del pedido</label>
+        <input id="f-codigo" placeholder="RA-20260910-A1B" autocomplete="off"
+               spellcheck="false" maxlength="20" required>
+      </div>
+      <div class="campo">
+        <label for="f-tel4">Últimos 4 del teléfono</label>
+        <input id="f-tel4" inputmode="numeric" maxlength="4" placeholder="1447" required>
+      </div>
+    </div>
+
+    <button class="btn btn-primario btn-bloque" type="submit" id="btn-consultar">
+      Ver mi pedido
+    </button>
+  </form>
+
+  <section class="pedido-estado" id="resultado" hidden></section>
+</main>
+
+<footer class="pie">
+  <div class="contenedor">
+    <div class="pie-legal">
+      <span>© 2026 Raíz Andina · <a href="/">Volver a la tienda</a></span>
+      <span>Los productos naturales no son medicamentos ni reemplazan un tratamiento médico.</span>
+    </div>
+  </div>
+</footer>
+
+<script src="/js/mi-pedido.js"></script>
+</body>
+</html>

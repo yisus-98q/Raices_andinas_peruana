@@ -1,0 +1,14 @@
+# Raiz Andina
+User-agent: *
+Allow: /
+Allow: /creditos.html
+
+# Zona interna: nunca debe indexarse.
+Disallow: /admin.html
+Disallow: /login.html
+Disallow: /imagenes.html
+Disallow: /panel
+Disallow: /entrar
+Disallow: /api/
+
+Sitemap: {{SITIO}}/sitemap.xml

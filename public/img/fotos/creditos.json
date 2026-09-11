@@ -1,0 +1,218 @@
+{
+  "ACE-001": {
+    "archivo": "ACE-001.jpg",
+    "sku": "ACE-001",
+    "titulo": "aceite de copaiba",
+    "autor": "Raíz Andina",
+    "licencia": "PROPIA",
+    "fuente": "",
+    "proveedor": "foto del negocio"
+  },
+  "CHA-001": {
+    "archivo": "CHA-001.jpg",
+    "sku": "CHA-001",
+    "titulo": "chanca piedra",
+    "autor": "Raíz Andina",
+    "licencia": "PROPIA",
+    "fuente": "",
+    "proveedor": "foto del negocio"
+  },
+  "COL-001": {
+    "archivo": "COL-001.jpg",
+    "sku": "COL-001",
+    "titulo": "Equisetum hyemale 2, Scouring Rush Horsetail, Howard County, Md, GFG, Helen Lowe Metzman_2019-03-22-17.17.44 ZS PMax UDR",
+    "autor": "Sam Droege",
+    "licencia": "PDM 1.0",
+    "fuente": "https://www.flickr.com/photos/54563451@N08/49706786512",
+    "proveedor": "flickr"
+  },
+  "GRA-001": {
+    "archivo": "GRA-001.jpg",
+    "sku": "GRA-001",
+    "titulo": "gaviola en capsula",
+    "autor": "Raíz Andina",
+    "licencia": "PROPIA",
+    "fuente": "",
+    "proveedor": "foto del negocio"
+  },
+  "HER-001": {
+    "archivo": "HER-001.jpg",
+    "sku": "HER-001",
+    "titulo": "Pipturus albidus",
+    "autor": "D.Eickhoff",
+    "licencia": "BY 2.0",
+    "fuente": "https://www.flickr.com/photos/50823119@N08/5179179606",
+    "proveedor": "flickr"
+  },
+  "JAB-001": {
+    "archivo": "JAB-001.webp",
+    "sku": "JAB-001",
+    "titulo": "Assorted-color bar soap",
+    "autor": "Desconocido",
+    "licencia": "CC0 1.0",
+    "fuente": "https://www.rawpixel.com/image/3286046/free-photo-image-soaps-paper-craft-soap-bar",
+    "proveedor": "rawpixel"
+  },
+  "KIW-001": {
+    "archivo": "KIW-001.jpg",
+    "sku": "KIW-001",
+    "titulo": "kiwicha pop",
+    "autor": "Raíz Andina",
+    "licencia": "PROPIA",
+    "fuente": "",
+    "proveedor": "foto del negocio"
+  },
+  "MAC-002": {
+    "archivo": "MAC-002.jpg",
+    "sku": "MAC-002",
+    "titulo": "Sunday Smoothie Bowl 🏆 with avocado, zucchini, banana, spinach, maca, he shou wu, @sunwarriortribe vanilla protein powder, homemade Brazil nut milk, topped with #cacaonibs, @purely_elizabeth blueberry granola, and cashew butter cause I ran 5+ mile",
+    "autor": "Courtbean",
+    "licencia": "BY 2.0",
+    "fuente": "https://www.flickr.com/photos/27963141@N00/30366447985",
+    "proveedor": "flickr"
+  },
+  "MAN-001": {
+    "archivo": "MAN-001.jpg",
+    "sku": "MAN-001",
+    "titulo": "Chamomile Flower",
+    "autor": "Mustang Joe",
+    "licencia": "CC0 1.0",
+    "fuente": "https://www.flickr.com/photos/63234672@N04/52991508485",
+    "proveedor": "flickr"
+  },
+  "MIE-001": {
+    "archivo": "MIE-001.jpg",
+    "sku": "MIE-001",
+    "titulo": "Small Honey Jar with Honeycomb",
+    "autor": "Alabama Extension",
+    "licencia": "CC0 1.0",
+    "fuente": "https://www.flickr.com/photos/184594136@N08/51330849013",
+    "proveedor": "flickr"
+  },
+  "MUN-001": {
+    "archivo": "MUN-001.webp",
+    "sku": "MUN-001",
+    "titulo": "Fresh Mint Leaves",
+    "autor": "Desconocido",
+    "licencia": "CC0 1.0",
+    "fuente": "https://www.rawpixel.com/image/5965717/fresh-mint-leaves",
+    "proveedor": "rawpixel"
+  },
+  "NON-001": {
+    "archivo": "NON-001.jpg",
+    "sku": "NON-001",
+    "titulo": "Noni fruits",
+    "autor": "Plant pests and diseases",
+    "licencia": "CC0 1.0",
+    "fuente": "https://www.flickr.com/photos/62295966@N07/5791711850",
+    "proveedor": "flickr"
+  },
+  "POL-001": {
+    "archivo": "POL-001.jpg",
+    "sku": "POL-001",
+    "titulo": "Bunch of Bee Pollen Granules",
+    "autor": "beepollenhub",
+    "licencia": "BY 2.0",
+    "fuente": "https://www.flickr.com/photos/82295638@N03/7549035740",
+    "proveedor": "flickr"
+  },
+  "PRO-001": {
+    "archivo": "PRO-001.jpg",
+    "sku": "PRO-001",
+    "titulo": "propoleo en gotas",
+    "autor": "Raíz Andina",
+    "licencia": "PROPIA",
+    "fuente": "",
+    "proveedor": "foto del negocio"
+  },
+  "QUI-001": {
+    "archivo": "QUI-001.jpg",
+    "sku": "QUI-001",
+    "titulo": "Quinua Perlada Organica",
+    "autor": "Raíz Andina",
+    "licencia": "PROPIA",
+    "fuente": "",
+    "proveedor": "foto del negocio"
+  },
+  "UNG-001": {
+    "archivo": "UNG-001.jpg",
+    "sku": "UNG-001",
+    "titulo": "uña de gato",
+    "autor": "Raíz Andina",
+    "licencia": "PROPIA",
+    "fuente": "",
+    "proveedor": "foto del negocio"
+  },
+  "VAL-001": {
+    "archivo": "VAL-001.jpg",
+    "sku": "VAL-001",
+    "titulo": "Valerian Root",
+    "autor": "The Drug Users Bible",
+    "licencia": "BY 2.0",
+    "fuente": "https://www.flickr.com/photos/157786281@N07/27848632937",
+    "proveedor": "flickr"
+  },
+  "YAC-001": {
+    "archivo": "YAC-001.jpg",
+    "sku": "YAC-001",
+    "titulo": "jarabe de yacon",
+    "autor": "Raíz Andina",
+    "licencia": "PROPIA",
+    "fuente": "",
+    "proveedor": "foto del negocio"
+  },
+  "ACE-002": {
+    "archivo": "ACE-002.jpg",
+    "sku": "ACE-002",
+    "titulo": "Aceite de Rosa Mosqueta",
+    "autor": "Raíz Andina",
+    "licencia": "PROPIA",
+    "fuente": "",
+    "proveedor": "foto del negocio"
+  },
+  "CAM-001": {
+    "archivo": "CAM-001.jpg",
+    "sku": "CAM-001",
+    "titulo": "camu camu en polvo",
+    "autor": "Raíz Andina",
+    "licencia": "PROPIA",
+    "fuente": "",
+    "proveedor": "foto del negocio"
+  },
+  "MAC-001": {
+    "archivo": "MAC-001.jpg",
+    "sku": "MAC-001",
+    "titulo": "Jicamas or turnip",
+    "autor": "GeorgeTan#3 - OFF permanently",
+    "licencia": "PDM 1.0",
+    "fuente": "https://www.flickr.com/photos/190270151@N02/51295471377",
+    "proveedor": "flickr"
+  },
+  "SAC-001": {
+    "archivo": "SAC-001.jpg",
+    "sku": "SAC-001",
+    "titulo": "sacha inchi en capsula",
+    "autor": "Raíz Andina",
+    "licencia": "PROPIA",
+    "fuente": "",
+    "proveedor": "foto del negocio"
+  },
+  "SAN-001": {
+    "archivo": "SAN-001.webp",
+    "sku": "SAN-001",
+    "titulo": "Dropper bottle, blank retro label",
+    "autor": "Desconocido",
+    "licencia": "CC0 1.0",
+    "fuente": "https://www.rawpixel.com/image/11515770/dropper-bottle-blank-retro-label",
+    "proveedor": "rawpixel"
+  },
+  "BOL-001": {
+    "archivo": "BOL-001.jpg",
+    "sku": "BOL-001",
+    "titulo": "boldo",
+    "autor": "Raíz Andina",
+    "licencia": "PROPIA",
+    "fuente": "",
+    "proveedor": "foto del negocio"
+  }
+}

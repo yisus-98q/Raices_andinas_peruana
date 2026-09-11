@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Comprobante — Raíz Andina</title>
+<meta name="robots" content="noindex">
+<link rel="icon" type="image/svg+xml" href="/img/marca/favicon-panel.svg">
+<link rel="stylesheet" href="/css/panel.css">
+<style>
+  body { padding: 26px 16px 60px; }
+  .hoja {
+    max-width: 830px; margin: 0 auto; background: #fff; color: #14110d;
+    border-radius: 6px; padding: 34px 38px;
+    font-size: 13px; line-height: 1.5;
+  }
+  .acciones-doc {
+    max-width: 830px; margin: 0 auto 18px;
+    display: flex; gap: 10px; align-items: center;
+  }
+  .acciones-doc .btn { text-decoration: none; }
+  .acciones-doc a.volver { margin-left: auto; font-size: 13px; color: var(--crema-suave); }
+
+  .doc-cabeza { display: flex; gap: 24px; align-items: flex-start; margin-bottom: 24px; }
+  .doc-emisor { display: flex; gap: 14px; flex: 1; }
+  .doc-emisor img { border-radius: 12px; flex: none; }
+  .doc-emisor strong { display: block; font-size: 16px; }
+  .doc-emisor span { display: block; font-size: 12px; color: #5d564c; }
+  .doc-numero {
+    border: 2px solid #14110d; border-radius: 6px; padding: 12px 20px;
+    text-align: center; min-width: 245px;
+  }
+  .doc-ruc { font-size: 13px; font-weight: 700; }
+  .doc-tipo { font-size: 11.5px; letter-spacing: .06em; margin: 5px 0; }
+  .doc-serie { font-size: 18px; font-weight: 800; letter-spacing: .04em; }
+
+  .doc-cliente {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 3px 22px;
+    border-top: 1px solid #d8d2c6; border-bottom: 1px solid #d8d2c6;
+    padding: 13px 0; margin-bottom: 18px; font-size: 12.5px;
+  }
+  .doc-cliente div:nth-child(1),
+  .doc-cliente div:nth-child(3) { grid-column: 1 / -1; }
+  .doc-cliente b { font-weight: 700; }
+
+  .doc-tabla { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  .doc-tabla th {
+    background: #f1ece2; text-align: left; padding: 8px 9px;
+    font-size: 10.5px; letter-spacing: .07em; text-transform: uppercase;
+    border-bottom: 1.5px solid #14110d;
+  }
+  .doc-tabla td { padding: 9px; border-bottom: 1px solid #e6e1d6; vertical-align: top; }
+  .doc-tabla .c { text-align: center; white-space: nowrap; }
+  .doc-tabla .d { text-align: right; white-space: nowrap; }
+  .doc-tabla small { display: block; color: #8a8175; font-size: 10.5px; margin-top: 2px; }
+
+  .doc-cierre { display: flex; gap: 26px; margin-top: 20px; align-items: flex-start; }
+  .doc-letras { flex: 1; }
+  .doc-son { font-weight: 700; font-size: 12.5px; margin-bottom: 16px; }
+  .doc-qr { display: flex; gap: 12px; align-items: center; }
+  .qr-caja {
+    width: 88px; height: 88px; flex: none; border: 1px dashed #b6ae9f;
+    border-radius: 4px; display: grid; place-items: center; align-content: center;
+    color: #8a8175; text-align: center;
+  }
+  .qr-caja span { font-size: 15px; font-weight: 800; letter-spacing: .1em; }
+  .qr-caja small { font-size: 8.5px; line-height: 1.2; padding: 0 4px; }
+  .doc-qr code {
+    font-size: 9.5px; color: #6b6459; word-break: break-all; line-height: 1.45;
+  }
+
+  .doc-totales { min-width: 245px; font-size: 13px; }
+  .doc-totales div { display: flex; justify-content: space-between; gap: 20px; padding: 5px 0; }
+  .doc-total {
+    border-top: 1.5px solid #14110d; margin-top: 6px; padding-top: 9px !important;
+    font-size: 16px; font-weight: 800;
+  }
+
+  .doc-pie {
+    margin-top: 26px; padding-top: 14px; border-top: 1px solid #d8d2c6;
+    display: flex; gap: 14px; align-items: center;
+    font-size: 11px; color: #6b6459;
+  }
+  .doc-estado {
+    font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+    padding: 4px 10px; border-radius: 999px; white-space: nowrap;
+  }
+  .doc-estado.pendiente { background: #fdf0d6; color: #8a5d12; }
+  .doc-estado.enviado   { background: #e2ecfa; color: #1f4e82; }
+  .doc-estado.aceptado  { background: #e4f2e7; color: #2c5c36; }
+  .doc-estado.rechazado { background: #fbe6e0; color: #8e3520; }
+  .doc-error { padding: 40px; text-align: center; color: #8e3520; }
+
+  @media print {
+    body { background: #fff; padding: 0; }
+    .acciones-doc { display: none; }
+    .hoja { max-width: none; border-radius: 0; padding: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="acciones-doc" id="acciones" hidden>
+  <a class="btn btn-primario" id="btn-pdf" href="#">Descargar PDF</a>
+  <button class="btn btn-claro" id="btn-imprimir">Imprimir</button>
+  <a class="btn btn-claro" id="btn-xml" href="#" download>Descargar XML</a>
+  <a class="volver" id="btn-volver" href="/admin.html">← Volver al panel</a>
+</div>
+
+<div class="hoja" id="doc">Cargando…</div>
+
+<script src="/js/comprobante.js"></script>
+</body>
+</html>

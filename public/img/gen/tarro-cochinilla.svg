@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" role="img">
+
+  <defs>
+    <linearGradient id="gtarrocochinilla" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fbe9e4"/><stop offset="1" stop-color="#f2cabe"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="400" fill="url(#gtarrocochinilla)"/>
+  <circle cx="200" cy="200" r="150" fill="none" stroke="#a23e28" stroke-width="2" opacity=".22"/>
+  <circle cx="200" cy="200" r="128" fill="#fffdf8" opacity=".45"/>
+<rect x="178" y="96" width="44" height="20" rx="6" fill="#76281a"
+     stroke="#241a12" stroke-width="7" stroke-linejoin="round"/>
+<rect x="136" y="114" width="128" height="36" rx="8" fill="#a23e28"
+     stroke="#241a12" stroke-width="7" stroke-linejoin="round"/>
+<rect x="128" y="148" width="144" height="172" rx="24" fill="#cb5f45"
+     stroke="#241a12" stroke-width="7" stroke-linejoin="round"/>
+<rect x="128" y="204" width="144" height="76" rx="4" fill="#fbe9e4"
+     stroke="#241a12" stroke-width="7" stroke-linejoin="round"/>
+<rect x="148" y="172" width="15" height="130" rx="7" fill="#fff" opacity=".3"/>
+<path d="M200 222 C186 240 178 252 178 262 C178 274 188 282 200 282 C212 282 222 274 222 262 C222 252 214 240 200 222 Z" fill="#a23e28" stroke="#241a12" stroke-width="7"
+     stroke-linejoin="round" stroke-linecap="round"/>
+</svg>

@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" role="img">
+
+  <defs>
+    <linearGradient id="ghojaarcilla" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fcefe8"/><stop offset="1" stop-color="#f3d6c5"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="400" fill="url(#ghojaarcilla)"/>
+  <circle cx="200" cy="200" r="150" fill="none" stroke="#b26a48" stroke-width="2" opacity=".22"/>
+  <circle cx="200" cy="200" r="128" fill="#fffdf8" opacity=".45"/>
+<path d="M200 92 C256 136 266 232 200 316 C134 232 144 136 200 92 Z" fill="#d8916d" stroke="#241a12" stroke-width="7"
+     stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M200 118 L200 300" fill="none" stroke="#241a12" stroke-width="5"
+     stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M200 168 L158 196" fill="none" stroke="#241a12" stroke-width="5"
+     stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M200 168 L242 196" fill="none" stroke="#241a12" stroke-width="5"
+     stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M200 218 L164 244" fill="none" stroke="#241a12" stroke-width="5"
+     stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M200 218 L236 244" fill="none" stroke="#241a12" stroke-width="5"
+     stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

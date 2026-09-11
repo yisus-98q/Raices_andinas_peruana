@@ -1,0 +1,760 @@
+<title>Raíz Andina por dentro</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Karla:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+
+<style>
+  /* ── Paleta clara: papel cálido con sesgo ocre, no gris de fábrica ───── */
+  :root {
+    --papel:      #faf7f1;
+    --papel-alto: #ffffff;
+    --papel-hondo:#f1ebe0;
+    --tinta:      #1b1815;
+    --tinta-media:#4e4740;
+    --gris:       #7d7368;
+    --linea:      #e0d8ca;
+    --linea-firme:#c9bfae;
+    --ocre:       #b4720a;
+    --terra:      #a03e1d;
+    --verde:      #3d6b46;
+
+    --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+    --texto:   Karla, "Segoe UI", system-ui, sans-serif;
+    --mono:    "IBM Plex Mono", ui-monospace, "Cascadia Mono", monospace;
+
+    --ancho: 1080px;
+    --prosa: 66ch;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --papel:      #16130f;
+      --papel-alto: #1e1a15;
+      --papel-hondo:#100e0b;
+      --tinta:      #f4eee2;
+      --tinta-media:#d3c9b8;
+      --gris:       #9d9284;
+      --linea:      #332d25;
+      --linea-firme:#4a4238;
+      --ocre:       #f0a52c;
+      --terra:      #dd7a55;
+      --verde:      #85b78e;
+    }
+  }
+  :root[data-theme="dark"] {
+    --papel:      #16130f;
+    --papel-alto: #1e1a15;
+    --papel-hondo:#100e0b;
+    --tinta:      #f4eee2;
+    --tinta-media:#d3c9b8;
+    --gris:       #9d9284;
+    --linea:      #332d25;
+    --linea-firme:#4a4238;
+    --ocre:       #f0a52c;
+    --terra:      #dd7a55;
+    --verde:      #85b78e;
+  }
+
+  body {
+    background: var(--papel);
+    color: var(--tinta);
+    font-family: var(--texto);
+    font-size: 16.5px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .envoltura { max-width: var(--ancho); margin: 0 auto; padding: 0 28px 96px; }
+
+  /* ── Cabecera ────────────────────────────────────────────────────────── */
+  .portada { padding: 72px 0 40px; border-bottom: 2px solid var(--tinta); }
+  .sello {
+    font-family: var(--mono); font-size: 11.5px; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--ocre); margin-bottom: 22px;
+  }
+  h1 {
+    font-family: var(--display); font-weight: 800;
+    font-size: clamp(38px, 7vw, 68px); line-height: .98;
+    letter-spacing: -.035em; margin: 0 0 20px; text-wrap: balance;
+  }
+  .bajada {
+    max-width: 58ch; font-size: 18.5px; color: var(--tinta-media);
+    margin: 0 0 8px; line-height: 1.55;
+  }
+
+  /* ── Tira de cifras ─────────────────────────────────────────────────── */
+  .cifras {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+    gap: 1px; background: var(--linea);
+    border-bottom: 1px solid var(--linea); margin-bottom: 8px;
+  }
+  .cifra { background: var(--papel); padding: 22px 4px 24px; }
+  .cifra b {
+    display: block; font-family: var(--display); font-weight: 800;
+    font-size: 30px; letter-spacing: -.03em; line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .cifra span {
+    display: block; margin-top: 7px; font-family: var(--mono);
+    font-size: 10.5px; letter-spacing: .09em; text-transform: uppercase;
+    color: var(--gris);
+  }
+
+  /* ── Secciones con rail lateral ─────────────────────────────────────── */
+  .seccion { display: grid; gap: 8px 44px; padding: 54px 0; border-bottom: 1px solid var(--linea); }
+  @media (min-width: 900px) { .seccion { grid-template-columns: 190px minmax(0, 1fr); } }
+
+  .rail {
+    font-family: var(--mono); font-size: 11.5px; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--gris); padding-top: 9px;
+  }
+  .rail em { display: block; font-style: normal; color: var(--ocre); }
+
+  h2 {
+    font-family: var(--display); font-weight: 800;
+    font-size: clamp(24px, 3.4vw, 33px); letter-spacing: -.028em;
+    line-height: 1.1; margin: 0 0 18px; text-wrap: balance;
+  }
+  h3 {
+    font-family: var(--display); font-weight: 600; font-size: 18.5px;
+    letter-spacing: -.015em; margin: 30px 0 9px;
+  }
+  .cuerpo > p { max-width: var(--prosa); margin: 0 0 16px; }
+  .cuerpo > p:last-child { margin-bottom: 0; }
+  strong { font-weight: 700; }
+  code {
+    font-family: var(--mono); font-size: .87em;
+    background: var(--papel-hondo); border: 1px solid var(--linea);
+    padding: 1px 5px; border-radius: 4px; white-space: nowrap;
+  }
+
+  /* ── Mapa de módulos ─────────────────────────────────────────────────── */
+  .modulos { display: flex; flex-direction: column; gap: 0; margin-top: 6px; }
+  .mod {
+    display: grid; gap: 3px 18px; padding: 13px 0;
+    border-top: 1px solid var(--linea);
+    grid-template-columns: 1fr; align-items: baseline;
+  }
+  @media (min-width: 660px) {
+    .mod { grid-template-columns: 178px minmax(0,1fr) 62px; }
+  }
+  .mod:last-child { border-bottom: 1px solid var(--linea); }
+  .mod-nombre { font-family: var(--mono); font-size: 13px; color: var(--ocre); font-weight: 500; }
+  .mod-que { color: var(--tinta-media); font-size: 15.5px; line-height: 1.5; }
+  .mod-lineas {
+    font-family: var(--mono); font-size: 12px; color: var(--gris);
+    font-variant-numeric: tabular-nums; text-align: left;
+  }
+  @media (min-width: 660px) { .mod-lineas { text-align: right; } }
+
+  /* ── Decisiones ──────────────────────────────────────────────────────── */
+  .decisiones { display: flex; flex-direction: column; gap: 28px; margin-top: 4px; }
+  .decision { border-left: 3px solid var(--ocre); padding: 2px 0 2px 20px; }
+  .decision h3 { margin: 0 0 6px; }
+  .decision p { margin: 0; max-width: var(--prosa); color: var(--tinta-media); }
+
+  /* ── Fallas ──────────────────────────────────────────────────────────── */
+  .fallas { display: flex; flex-direction: column; gap: 0; }
+  .falla { padding: 18px 0; border-top: 1px solid var(--linea); }
+  .falla:last-child { border-bottom: 1px solid var(--linea); }
+  .falla-titulo { font-weight: 700; font-size: 16px; margin: 0 0 5px; }
+  .falla-titulo .marca {
+    font-family: var(--mono); font-size: 10.5px; letter-spacing: .08em;
+    text-transform: uppercase; color: var(--terra); margin-right: 9px;
+    border: 1px solid currentColor; padding: 1px 6px; border-radius: 3px;
+    vertical-align: 2px; white-space: nowrap;
+  }
+  .falla p { margin: 0; color: var(--tinta-media); font-size: 15.5px; max-width: var(--prosa); }
+  .arreglo { color: var(--verde); font-weight: 500; }
+
+  /* ── Pruebas ─────────────────────────────────────────────────────────── */
+  .tabla-envoltura { overflow-x: auto; margin-top: 6px; }
+  table { border-collapse: collapse; width: 100%; min-width: 460px; font-size: 15px; }
+  th, td { text-align: left; padding: 10px 14px 10px 0; border-bottom: 1px solid var(--linea); }
+  th {
+    font-family: var(--mono); font-size: 10.5px; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--gris); font-weight: 500;
+    border-bottom: 1px solid var(--linea-firme);
+  }
+  td.num { font-family: var(--mono); font-variant-numeric: tabular-nums; text-align: right; padding-right: 0; }
+  td.arch { font-family: var(--mono); font-size: 13px; color: var(--ocre); }
+  tr:last-child td { border-bottom: none; }
+  tfoot td { font-weight: 700; border-top: 1px solid var(--linea-firme); border-bottom: none; }
+
+  /* ── Pendientes ──────────────────────────────────────────────────────── */
+  .pendientes { display: flex; flex-direction: column; gap: 16px; margin-top: 4px; }
+  .pendiente { display: grid; grid-template-columns: auto minmax(0,1fr); gap: 14px; align-items: start; }
+  .quien {
+    font-family: var(--mono); font-size: 10px; letter-spacing: .08em;
+    text-transform: uppercase; padding: 3px 8px; border-radius: 3px;
+    white-space: nowrap; margin-top: 3px;
+  }
+  .q-tramite { background: var(--papel-hondo); color: var(--terra); border: 1px solid var(--linea-firme); }
+  .q-codigo  { background: var(--papel-hondo); color: var(--verde); border: 1px solid var(--linea-firme); }
+  .pendiente p { margin: 0; max-width: var(--prosa); }
+  .pendiente b { display: block; }
+
+  .cierre { padding: 46px 0 0; }
+  .cierre p { max-width: var(--prosa); color: var(--gris); font-size: 14.5px; margin: 0; }
+
+  ul.limpia { margin: 10px 0 0; padding-left: 20px; max-width: var(--prosa); }
+  ul.limpia li { margin-bottom: 7px; color: var(--tinta-media); }
+  ul.limpia li::marker { color: var(--ocre); }
+
+  a { color: var(--ocre); }
+  a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--ocre); outline-offset: 3px; }
+</style>
+
+<div class="envoltura">
+
+  <header class="portada">
+    <div class="sello">Documentación técnica · 10 de septiembre de 2026</div>
+    <h1>Raíz Andina<br>por dentro</h1>
+    <p class="bajada">
+      Qué se construyó, con qué está hecho y por qué cada pieza está donde está.
+      Es la demo que sostiene la propuesta comercial: una tienda naturista peruana
+      completa, del catálogo al comprobante electrónico.
+    </p>
+  </header>
+
+  <div class="cifras">
+    <div class="cifra"><b>20</b><span>módulos</span></div>
+    <div class="cifra"><b>9 551</b><span>líneas</span></div>
+    <div class="cifra"><b>207</b><span>pruebas</span></div>
+    <div class="cifra"><b>400</b><span>productos</span></div>
+    <div class="cifra"><b>0</b><span>dependencias</span></div>
+    <div class="cifra"><b>1 874</b><span>distritos</span></div>
+  </div>
+
+  <!-- ─────────────────────────────────────────────────────── qué es -->
+  <section class="seccion">
+    <div class="rail">01<em>Qué es</em></div>
+    <div class="cuerpo">
+      <h2>Una tienda que funciona de verdad, no una maqueta</h2>
+      <p>
+        Raíz Andina es una tienda naturista completa que corre en una laptop sin
+        conexión. No hay pantallas de mentira: el cliente compra, el stock baja,
+        se emite la boleta, el panel lo ve y el comprador sigue su pedido hasta
+        firmar la recepción.
+      </p>
+      <p>
+        Existe para una conversación de venta concreta —convencer al dueño de una
+        tienda naturista de que esto no es «una página web»— así que todo lo que
+        se ve tiene que aguantar que le hagan preguntas incómodas delante.
+      </p>
+      <p>
+        Son <strong>siete páginas</strong>: la tienda, el seguimiento del pedido,
+        el login, el panel interno, el comprobante imprimible, los créditos de las
+        fotos y la hoja de contactos de las ilustraciones.
+      </p>
+    </div>
+  </section>
+
+  <!-- ─────────────────────────────────────────── la restricción -->
+  <section class="seccion">
+    <div class="rail">02<em>La restricción</em></div>
+    <div class="cuerpo">
+      <h2>Cero dependencias, y eso manda sobre todo lo demás</h2>
+      <p>
+        No hay <code>npm install</code>, no hay paso de compilación, no hay
+        <code>node_modules</code>. La base de datos es <code>node:sqlite</code>,
+        el cifrado es <code>node:crypto</code>, las pruebas son
+        <code>node:test</code>. Todo viene dentro de Node 22.5 o superior.
+      </p>
+      <p>Tres razones, en orden de peso:</p>
+      <ul class="limpia">
+        <li>
+          <strong>Se demuestra sin internet.</strong> En el puesto del mercado la
+          señal se cae. Una demo que necesita descargar algo es una demo que
+          falla justo cuando hay un cliente mirando.
+        </li>
+        <li>
+          <strong>Sigue arrancando en dos años.</strong> Un proyecto con cuarenta
+          paquetes se pudre solo: alguno se abandona, otro cambia de versión y
+          deja de instalar. Sin paquetes no hay nada que se pudra.
+        </li>
+        <li>
+          <strong>Se puede leer entero.</strong> Nada pasa por una caja negra de
+          otro. Cada línea que corre está en esta carpeta.
+        </li>
+      </ul>
+      <p>
+        El costo es real y hay que decirlo: cosas que un framework regala
+        —enrutado, plantillas, validación— están escritas a mano. Son unas
+        seiscientas líneas de <code>server.js</code>. A cambio, el proyecto entero
+        pesa lo que pesa el código.
+      </p>
+    </div>
+  </section>
+
+  <!-- ─────────────────────────────────────────────── el mapa -->
+  <section class="seccion">
+    <div class="rail">03<em>El mapa</em></div>
+    <div class="cuerpo">
+      <h2>Los veinte módulos y de qué se ocupa cada uno</h2>
+      <p>
+        Cada archivo tiene un trabajo y no se mete en el de al lado. Los que
+        empiezan por <code>gen-</code> son herramientas que se corren una vez y
+        dejan un archivo hecho; no participan cuando la tienda está andando.
+      </p>
+
+      <div class="modulos">
+        <div class="mod">
+          <div class="mod-nombre">server.js</div>
+          <div class="mod-que">El servidor HTTP sin framework: rutas, sesiones, cabeceras de seguridad, plantillas y el alta de productos.</div>
+          <div class="mod-lineas">1 041</div>
+        </div>
+        <div class="mod">
+          <div class="mod-nombre">gen-catalogo.mjs</div>
+          <div class="mod-que">Arma los 400 productos combinando ~110 insumos reales con las presentaciones que le tocan a cada uno.</div>
+          <div class="mod-lineas">889</div>
+        </div>
+        <div class="mod">
+          <div class="mod-nombre">db.js</div>
+          <div class="mod-que">Esquema, migraciones idempotentes y carga inicial. Nueve tablas con restricciones a nivel de base.</div>
+          <div class="mod-lineas">517</div>
+        </div>
+        <div class="mod">
+          <div class="mod-nombre">comprobantes.js</div>
+          <div class="mod-que">Boletas, facturas y notas de crédito: numeración, aritmética del IGV, XML UBL 2.1 y contenido del QR.</div>
+          <div class="mod-lineas">510</div>
+        </div>
+        <div class="mod">
+          <div class="mod-nombre">asesor.js</div>
+          <div class="mod-que">Empareja el malestar que escribe el cliente con los productos que lo tratan, filtrados por stock.</div>
+          <div class="mod-lineas">449</div>
+        </div>
+        <div class="mod">
+          <div class="mod-nombre">intenciones.js</div>
+          <div class="mod-que">Quince intenciones de negocio —delivery, horarios, devoluciones, regateo— y la cotización al por mayor.</div>
+          <div class="mod-lineas">442</div>
+        </div>
+        <div class="mod">
+          <div class="mod-nombre">gen-imagenes.mjs</div>
+          <div class="mod-que">Dibuja las ilustraciones: 24 por producto curado y 84 de respaldo, silueta por color.</div>
+          <div class="mod-lineas">253</div>
+        </div>
+        <div class="mod">
+          <div class="mod-nombre">importar-fotos.mjs</div>
+          <div class="mod-que">Toma la carpeta de fotos del negocio y las empareja por nombre, tolerando tildes, plurales y erratas.</div>
+          <div class="mod-lineas">198</div>
+        </div>
+        <div class="mod">
+          <div class="mod-nombre">auth.js</div>
+          <div class="mod-que">Login con scrypt, sesiones en cookie firmada y bloqueo tras varios intentos fallidos.</div>
+          <div class="mod-lineas">175</div>
+        </div>
+        <div class="mod">
+          <div class="mod-nombre">traer-fotos.mjs</div>
+          <div class="mod-que">Rellena las fotos que falten desde bancos libres. Lo único que necesita internet, y una sola vez.</div>
+          <div class="mod-lineas">165</div>
+        </div>
+        <div class="mod">
+          <div class="mod-nombre">tienda.config.js</div>
+          <div class="mod-que">El único punto de edición: teléfono, RUC, horarios, zonas de reparto, IGV, correo.</div>
+          <div class="mod-lineas">135</div>
+        </div>
+        <div class="mod">
+          <div class="mod-nombre">ubigeo.js</div>
+          <div class="mod-que">Valida departamento, provincia y distrito contra el ubigeo del INEI y calcula la zona de reparto.</div>
+          <div class="mod-lineas">130</div>
+        </div>
+        <div class="mod">
+          <div class="mod-nombre">documentos.js</div>
+          <div class="mod-que">DNI y RUC con dígito verificador módulo 11. Un RUC inventado no pasa.</div>
+          <div class="mod-lineas">117</div>
+        </div>
+        <div class="mod">
+          <div class="mod-nombre">ilustraciones.mjs</div>
+          <div class="mod-que">Decide qué lámina le toca a cada producto: la silueta la manda la presentación, el color la categoría.</div>
+          <div class="mod-lineas">112</div>
+        </div>
+        <div class="mod">
+          <div class="mod-nombre">catalogos-sunat.js</div>
+          <div class="mod-que">Los catálogos 01, 02, 03, 05, 06, 07 y 09 de SUNAT, que son los que exige el XML.</div>
+          <div class="mod-lineas">102</div>
+        </div>
+        <div class="mod">
+          <div class="mod-nombre">verificar-imagenes.mjs</div>
+          <div class="mod-que">Revisa que las 109 ilustraciones estén dentro del lienzo y centradas, sin abrir un navegador.</div>
+          <div class="mod-lineas">100</div>
+        </div>
+        <div class="mod">
+          <div class="mod-nombre">importe-letras.js</div>
+          <div class="mod-que">«CIENTO TREINTA Y UNO CON 80/100 SOLES». Va en el comprobante y hay que apocopar bien.</div>
+          <div class="mod-lineas">93</div>
+        </div>
+        <div class="mod">
+          <div class="mod-nombre">limites.js</div>
+          <div class="mod-que">Cuotas por IP con cubeta de fichas, para que nadie pruebe códigos de pedido ajenos en masa.</div>
+          <div class="mod-lineas">66</div>
+        </div>
+        <div class="mod">
+          <div class="mod-nombre">gen-ubigeo.mjs</div>
+          <div class="mod-que">Compacta el ubigeo del INEI a 26 KB: 25 departamentos, 196 provincias, 1 874 distritos.</div>
+          <div class="mod-lineas">67</div>
+        </div>
+        <div class="mod">
+          <div class="mod-nombre">clave.mjs</div>
+          <div class="mod-que">Crea y cambia la contraseña del panel desde la línea de comandos.</div>
+          <div class="mod-lineas">83</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────────────────────────────────────── decisiones -->
+  <section class="seccion">
+    <div class="rail">04<em>Decisiones</em></div>
+    <div class="cuerpo">
+      <h2>Nueve decisiones que explican el resto del código</h2>
+
+      <div class="decisiones">
+        <div class="decision">
+          <h3>El stock no se edita a mano</h3>
+          <p>
+            Solo se mueve por ventas, ingresos y devoluciones. Para corregirlo se
+            registra un ingreso, que deja constancia. Si el stock se pudiera
+            escribir directo, el kardex dejaría de explicar dónde fue cada unidad
+            —que es exactamente lo que el dueño necesita saber.
+          </p>
+        </div>
+
+        <div class="decision">
+          <h3>En el comprobante manda el importe, no el valor de venta</h3>
+          <p>
+            Se cobra un importe exacto; de ahí sale la base imponible, y el IGV
+            se calcula <em>por diferencia</em>. Al revés —calcular el IGV y
+            sumarlo— aparecían descuadres de dos céntimos entre el pedido y la
+            boleta. Dos céntimos en un comprobante son un problema con SUNAT.
+          </p>
+        </div>
+
+        <div class="decision">
+          <h3>El asesor pregunta primero de qué se trata</h3>
+          <p>
+            Hay dos capas. La primera reconoce intenciones de negocio: horarios,
+            delivery, devoluciones, mayoreo, regateo. Solo si no es ninguna de
+            esas se pasa a recomendar productos. Antes, un cliente que reclamaba
+            un pedido demorado recibía un catálogo de hierbas.
+          </p>
+        </div>
+
+        <div class="decision">
+          <h3>Un producto solo califica por sus etiquetas o su nombre</h3>
+          <p>
+            El texto libre de la descripción suma puntos, pero nunca alcanza para
+            recomendar. Sin esa regla, «bajar 10 kilos rápido» devolvía Sangre de
+            Grado, porque su descripción decía «cerrarlas rápido».
+          </p>
+        </div>
+
+        <div class="decision">
+          <h3>La boleta la recoge el comprador, no la pide por teléfono</h3>
+          <p>
+            La misma página imprime el comprobante para los dos lados del
+            mostrador. La tienda entra con su sesión; el comprador, con el
+            mismo par de código y últimos cuatro dígitos con que sigue su
+            pedido. Sale del mismo sitio, así que los importes no pueden
+            diferir. El XML no se le entrega: ese es del emisor y de SUNAT.
+          </p>
+        </div>
+
+        <div class="decision">
+          <h3>El panel no vive en la tienda</h3>
+          <p>
+            <code>/admin.html</code> y las demás páginas internas no se sirven sin
+            sesión: redirigen al login antes de mandar un solo byte. Un cliente
+            curioso no debe llegar ahí ni por accidente.
+          </p>
+        </div>
+
+        <div class="decision">
+          <h3>Sin scripts en línea, en ninguna página</h3>
+          <p>
+            La política de contenido es <code>script-src 'self'</code> sin
+            <code>unsafe-inline</code>. Costó sacar todo el JavaScript a archivos
+            y reemplazar los <code>onerror=</code> por oyentes delegados, y es lo
+            que hace que un texto inyectado no pueda ejecutarse.
+          </p>
+        </div>
+
+        <div class="decision">
+          <h3>Cada cambio de ficha queda firmado</h3>
+          <p>
+            Qué campo, valor anterior, valor nuevo, quién y cuándo. Un precio que
+            baja sin responsable es el mismo agujero que un ajuste de stock sin
+            responsable.
+          </p>
+        </div>
+
+        <div class="decision">
+          <h3>Un solo archivo para cambiar el negocio</h3>
+          <p>
+            Teléfono, RUC, horario, IGV, zonas de reparto y costos viven en
+            <code>tienda.config.js</code>. Cambiar de número de WhatsApp es editar
+            una línea, no buscar en catorce archivos.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────────────────────────────────────── seguridad -->
+  <section class="seccion">
+    <div class="rail">05<em>Seguridad</em></div>
+    <div class="cuerpo">
+      <h2>Lo que protege los datos del cliente</h2>
+      <p>
+        La tienda guarda nombres, teléfonos, direcciones y documentos de
+        identidad. Eso obliga a más que un login.
+      </p>
+      <ul class="limpia">
+        <li><strong>Contraseñas con scrypt</strong> y comparación en tiempo constante; nunca se guardan en claro.</li>
+        <li><strong>Cookies HttpOnly y SameSite=Strict</strong>, que el JavaScript de la página no puede leer.</li>
+        <li><strong>Bloqueo por intentos fallidos</strong> sobre la cuenta, más cuota por IP para el ataque distribuido.</li>
+        <li><strong>Cuotas por IP:</strong> asesor 30 por minuto, pedidos 8 cada 5 minutos, seguimiento y login 20 cada 10 minutos.</li>
+        <li><strong>Seguimiento con dos factores:</strong> el código del pedido más los últimos cuatro dígitos del teléfono. El código solo no basta.</li>
+        <li><strong>Mismo mensaje de error</strong> para código inexistente y teléfono equivocado, para que no se puedan averiguar códigos válidos.</li>
+        <li><strong>El costo de compra no sale al público.</strong> El catálogo abierto entregaba el margen del negocio completo; ahora se seleccionan las columnas.</li>
+        <li><strong>Transacciones <code>BEGIN IMMEDIATE</code></strong> con claves foráneas y restricciones <code>CHECK</code>: un pedido entra completo o no entra.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ─────────────────────────────────────────── pruebas -->
+  <section class="seccion">
+    <div class="rail">06<em>Pruebas</em></div>
+    <div class="cuerpo">
+      <h2>207 pruebas automáticas, todas verdes</h2>
+      <p>
+        Cada archivo levanta su propio servidor en un puerto libre y con una base
+        de datos desechable, así que no dependen del orden en que corran ni
+        ensucian la demo. Se ejecutan con <code>npm test</code> en unos ocho
+        segundos.
+      </p>
+      <div class="tabla-envoltura">
+        <table>
+          <thead>
+            <tr><th>Archivo</th><th>Qué vigila</th><th class="num">Pruebas</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="arch">comprobantes</td><td>Numeración sin huecos, IGV cuadrado, XML, QR, notas de crédito</td><td class="num">28</td></tr>
+            <tr><td class="arch">alta</td><td>Alta de productos y de categorías nuevas, y lo que debe rechazar</td><td class="num">25</td></tr>
+            <tr><td class="arch">checkout</td><td>DNI, RUC, ubigeo, costo de envío, correo y teléfono</td><td class="num">24</td></tr>
+            <tr><td class="arch">pedidos</td><td>Stock, transacciones, estados, devoluciones</td><td class="num">22</td></tr>
+            <tr><td class="arch">peru</td><td>Escalones mayoristas, cotización, intenciones de negocio</td><td class="num">16</td></tr>
+            <tr><td class="arch">auth</td><td>Sesiones, bloqueo, cierre de sesión, páginas privadas</td><td class="num">14</td></tr>
+            <tr><td class="arch">seguimiento</td><td>Doble factor, fugas de datos, constancia de recepción, boleta del comprador</td><td class="num">22</td></tr>
+            <tr><td class="arch">catalogo</td><td>Variedad del asesor, costo oculto, compresión, envases</td><td class="num">11</td></tr>
+            <tr><td class="arch">seguridad</td><td>Cabeceras, cuotas, inyección, recorrido de rutas</td><td class="num">11</td></tr>
+          </tbody>
+          <tfoot>
+            <tr><td>Total</td><td>2 066 líneas de pruebas</td><td class="num">207</td></tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────────────────────────────────────── fallas -->
+  <section class="seccion">
+    <div class="rail">07<em>Fallas</em></div>
+    <div class="cuerpo">
+      <h2>Seis fallas que habrían arruinado la demostración</h2>
+      <p>
+        Las encontró probar la tienda como cliente, no leer el código. Van aquí
+        porque explican por qué existen la mitad de las pruebas.
+      </p>
+
+      <div class="fallas">
+        <div class="falla">
+          <p class="falla-titulo"><span class="marca">Crítica</span>El asesor entregaba el teléfono de otro cliente</p>
+          <p>
+            Consultando con un código de pedido, la respuesta traía el teléfono
+            del comprador. Los códigos eran adivinables y no tenían límite de
+            intentos. <span class="arreglo">Se quitó el dato personal de la
+            respuesta y se puso cuota de 30 por minuto.</span>
+          </p>
+        </div>
+
+        <div class="falla">
+          <p class="falla-titulo"><span class="marca">Venta perdida</span>Al mayorista no le decía cuántas había</p>
+          <p>
+            «50 bolsas de maca» devolvía el precio unitario y nada más. Nunca
+            mencionaba que solo quedaban 42.
+            <span class="arreglo">Ahora cotiza con descuento por volumen y dice
+            cuántas entrega hoy y cuántas faltan.</span>
+          </p>
+        </div>
+
+        <div class="falla">
+          <p class="falla-titulo"><span class="marca">Venta perdida</span>Pedía bolsas y le cotizaban un frasco</p>
+          <p>
+            Con 400 productos, «50 bolsas de maca negra» terminaba cotizando un
+            frasco de 60 ml. En una venta al por mayor ese detalle hace
+            desconfiar de todo lo demás.
+            <span class="arreglo">El envase que nombra el cliente ahora manda.</span>
+          </p>
+        </div>
+
+        <div class="falla">
+          <p class="falla-titulo"><span class="marca">Contable</span>Dos céntimos de diferencia con la boleta</p>
+          <p>
+            Un pedido de S/ 131.80 emitía un comprobante de S/ 131.78, por
+            redondear dos veces.
+            <span class="arreglo">Se reescribió la aritmética anclando en el
+            importe cobrado.</span>
+          </p>
+        </div>
+
+        <div class="falla">
+          <p class="falla-titulo"><span class="marca">Confianza</span>El asesor recomendaba lo mismo tres veces</p>
+          <p>
+            «Me duele la rodilla» devolvía la misma crema en tres presentaciones:
+            una sola opción disfrazada de tres.
+            <span class="arreglo">Ahora las tres recomendaciones son tres
+            productos distintos.</span>
+          </p>
+        </div>
+
+        <div class="falla">
+          <p class="falla-titulo"><span class="marca">Datos</span>El RUC de ejemplo era inválido</p>
+          <p>
+            El RUC que venía en la configuración no pasaba el dígito verificador.
+            Lo detectó el propio validador módulo 11 escrito para el checkout.
+            <span class="arreglo">Corregido, y con prueba que lo vigila.</span>
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────────────────────────────────────── pendientes -->
+  <section class="seccion">
+    <div class="rail">08<em>Pendiente</em></div>
+    <div class="cuerpo">
+      <h2>Lo que falta para que el negocio opere</h2>
+      <p>
+        La demo está completa. Para que el cliente <em>facture</em> con esto,
+        falta lo siguiente, ordenado por lo que primero se notaría.
+      </p>
+
+      <div class="pendientes">
+        <div class="pendiente">
+          <span class="quien q-tramite">Trámite</span>
+          <p>
+            <b>El envío a SUNAT no está conectado.</b>
+            Se emiten boletas y facturas con numeración correcta, XML UBL 2.1 y
+            QR, pero la función de envío está deliberadamente vacía. Necesita
+            certificado digital <code>.pfx</code>, usuario SOL secundario y un OSE
+            contratado. Hoy los comprobantes son válidos en pantalla, no ante
+            SUNAT.
+          </p>
+        </div>
+
+        <div class="pendiente">
+          <span class="quien q-codigo">Datos</span>
+          <p>
+            <b>Los 400 productos son inventados y las fotos son de banco libre.</b>
+            Hay que cargar el catálogo real del negocio —desde el panel, uno por
+            uno, o reemplazando el archivo del catálogo— y sus fotos propias.
+          </p>
+        </div>
+
+        <div class="pendiente">
+          <span class="quien q-tramite">Trámite</span>
+          <p>
+            <b>No hay pasarela de pago.</b>
+            El pedido se registra, pero el cobro es contra entrega o
+            transferencia. Integrar Yape, Niubiz o Culqi requiere contrato con el
+            proveedor.
+          </p>
+        </div>
+
+        <div class="pendiente">
+          <span class="quien q-codigo">Código</span>
+          <p>
+            <b>Corre solo en una laptop.</b>
+            Para que funcione desde el celular del dueño y el del repartidor hace
+            falta hosting, dominio y HTTPS. Hoy es <code>localhost</code>.
+          </p>
+        </div>
+
+        <div class="pendiente">
+          <span class="quien q-codigo">Código</span>
+          <p>
+            <b>Un solo usuario.</b>
+            No hay cuentas separadas para el dueño y para quien despacha, ni
+            permisos distintos entre ellos.
+          </p>
+        </div>
+
+        <div class="pendiente">
+          <span class="quien q-codigo">Código</span>
+          <p>
+            <b>Sin respaldo automático</b> de la base de datos.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="cierre">
+    <p>
+      Raíz Andina · demostración comercial · Node 22.5+ · sin dependencias
+      externas · <code>npm start</code> en <code>localhost:3000</code>
+    </p>
+  </footer>
+
+</div>
+
+<style>
+/* ─────────────────────────────────────────────────────────────────────────
+   Impresión / PDF.
+
+   El documento ya es claro, así que lo que hace falta aquí es paginado: que
+   una decisión o una falla no queden partidas entre dos hojas, y que el rail
+   lateral no se coma el ancho útil de un A4.
+   ───────────────────────────────────────────────────────────────────────── */
+@media print {
+  @page { size: A4; margin: 16mm 15mm 18mm; }
+
+  :root {
+    --papel: #ffffff; --papel-alto: #ffffff; --papel-hondo: #f4efe6;
+    --tinta: #14110e; --tinta-media: #3c3630; --gris: #6b6258;
+    --linea: #ddd5c6; --linea-firme: #b9ae9c;
+    --ocre: #8f5a06; --terra: #8d3315; --verde: #2f5636;
+  }
+
+  body { font-size: 10.5pt; line-height: 1.5; }
+  .envoltura { max-width: none; padding: 0; }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  .portada { padding: 0 0 16pt; page-break-after: avoid; }
+  h1 { font-size: 30pt; }
+  .bajada { font-size: 11.5pt; }
+
+  .cifras { grid-template-columns: repeat(6, 1fr); page-break-inside: avoid; }
+  .cifra { padding: 10pt 2pt; }
+  .cifra b { font-size: 15pt; }
+  .cifra span { font-size: 6.5pt; }
+
+  /* En papel el rail lateral no compensa: se pone encima del texto. */
+  .seccion { grid-template-columns: 1fr; padding: 18pt 0; page-break-inside: auto; }
+  .rail { padding: 0 0 6pt; font-size: 8pt; }
+  .rail em { display: inline; margin-left: 8pt; }
+  h2 { font-size: 16pt; page-break-after: avoid; }
+  h3 { font-size: 11.5pt; page-break-after: avoid; }
+
+  .mod, .falla, .decision, .pendiente, .cifra, tr { page-break-inside: avoid; }
+  .mod { grid-template-columns: 150pt 1fr 40pt; padding: 6pt 0; }
+  .mod-que { font-size: 9.5pt; }
+  .decisiones { gap: 14pt; }
+  table { min-width: 0; font-size: 9.5pt; }
+  thead { display: table-header-group; }
+
+  .cierre { padding-top: 18pt; page-break-inside: avoid; }
+  a { color: var(--ocre); text-decoration: none; }
+}
+</style>

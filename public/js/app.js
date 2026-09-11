@@ -1,0 +1,818 @@
+(() => {
+  'use strict';
+
+  const $ = (id) => document.getElementById(id);
+  /**
+   * Formato de moneda peruano: separador de miles y dos decimales.
+   * Defensivo a proposito — antes un NaN se colaba hasta la pantalla como
+   * "S/ NaN", que en un carrito destruye la confianza del comprador.
+   */
+  const soles = (n) => {
+    const v = Number(n);
+    if (!Number.isFinite(v)) return 'S/ —';
+    return 'S/ ' + v.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
+  const escapar = (t) => String(t).replace(/[&<>"']/g,
+    (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  // Iconos dibujados, no emoji: el emoji lo pinta el sistema operativo y cada
+  // uno lo dibuja distinto. En una marca eso se nota y se ve improvisado.
+  const ICONO = {
+    lupa: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg>',
+    bolsa: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M6 8h12l-1.2 12H7.2Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>',
+    visto: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M7.5 12.5 11 16l6-7"/></svg>',
+  };
+
+  // Cadena de respaldo de imagen: foto → ilustración del producto → marca.
+  // El evento `error` no burbujea, pero sí se puede capturar en la fase de
+  // captura. Un solo oyente cubre todas las imágenes, incluidas las que aún
+  // no existen cuando esto se registra.
+  document.addEventListener('error', (e) => {
+    const img = e.target;
+    if (img.tagName !== 'IMG') return;
+    const cola = (img.dataset.respaldos || '').split(',').filter(Boolean);
+    if (!cola.length) return;
+    img.dataset.respaldos = cola.slice(1).join(',');   // consume un nivel
+    img.src = cola[0];
+  }, true);
+
+  /** src + la cola de respaldos, lista para volcar en el atributo. */
+  const imagenDe = (p) => p.imagen
+    ? { src: p.imagen, respaldos: `/img/${p.sku}.svg,/img/placeholder.svg` }
+    : { src: `/img/${p.sku}.svg`, respaldos: '/img/placeholder.svg' };
+
+  const quieto = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  let catalogo = [];
+  let filtro = 'Todos';
+  let busqueda = '';
+  let carrito = cargarCarrito();
+  let etapa = 'carrito'; // carrito | datos | exito
+  let ultimoPedido = null;
+
+  // -------------------------------------------------------------- persistencia
+  function cargarCarrito() {
+    try {
+      const guardado = JSON.parse(localStorage.getItem('ra_carrito') || '[]');
+      return Array.isArray(guardado) ? guardado : [];
+    } catch { return []; }
+  }
+  function guardarCarrito() {
+    try { localStorage.setItem('ra_carrito', JSON.stringify(carrito)); } catch { /* modo privado */ }
+  }
+
+  // --------------------------------------------------------------------- toast
+  let temporizador;
+  function avisar(texto) {
+    const t = $('toast');
+    t.textContent = texto;
+    t.classList.add('visible');
+    clearTimeout(temporizador);
+    temporizador = setTimeout(() => t.classList.remove('visible'), 2600);
+  }
+
+  // ------------------------------------------------------------------ catalogo
+  async function cargarCatalogo() {
+    try {
+      const r = await fetch('/api/productos');
+      catalogo = await r.json();
+      // El contador del hero lee `data-contar` en cada cuadro; si ya terminó,
+      // le escribimos el número directamente.
+      const contador = $('dato-productos');
+      contador.dataset.contar = catalogo.length;
+      if (contador.dataset.contado) contador.textContent = catalogo.length;
+      pintarFiltros();
+      pintarGrilla();
+    } catch {
+      $('grilla').innerHTML = '<p class="vacio">No pudimos cargar el catálogo. Revisa que el servidor esté encendido.</p>';
+    }
+  }
+
+  function pintarFiltros() {
+    const propias = [...new Set(catalogo.map((p) => p.categoria))];
+    const cats = ['Todos', ...propias];
+    $('filtros').innerHTML = cats.map((c) =>
+      `<button class="filtro${c === filtro ? ' activo' : ''}" data-cat="${escapar(c)}">${escapar(c)}</button>`
+    ).join('');
+
+    // La marquesina del inicio lista las categorías: si se escribe a mano, en
+    // cuanto el dueño crea una nueva desde el panel queda mintiendo. El HTML
+    // trae unas fijas como respaldo para quien llegue sin JS; aquí se
+    // reemplazan por las que el negocio tiene de verdad.
+    const pista = $('marquesina');
+    if (pista && propias.length) {
+      const tira = propias.map((c) => `<span>${escapar(c)}</span>`).join('');
+      pista.innerHTML = tira + tira;   // duplicada, para que el bucle no deje hueco
+    }
+  }
+
+  function visibles() {
+    const q = busqueda.toLowerCase().trim();
+    return catalogo.filter((p) => {
+      if (filtro !== 'Todos' && p.categoria !== filtro) return false;
+      if (!q) return true;
+      // `beneficios` entra en la búsqueda a propósito: mucha gente no busca
+      // "manzanilla", busca "para dormir".
+      return (p.nombre + ' ' + p.etiquetas + ' ' + p.origen + ' '
+        + p.descripcion + ' ' + (p.beneficios || ''))
+        .toLowerCase().includes(q);
+    });
+  }
+
+  /** Con RUC la venta es factura; con DNI, boleta. Lo decide el servidor. */
+  const esComprobanteFactura = (p) => p.comprobante === 'factura';
+
+  // El catálogo pasó de dos docenas a cientos de productos. Pintarlos todos
+  // deja cientos de tarjetas con imagen en el DOM y el celular se arrastra;
+  // se muestran por tandas y el resto llega con el botón o al filtrar.
+  const TANDA = 48;
+  let mostrando = TANDA;
+
+  function pintarGrilla(resaltar = []) {
+    const lista = visibles();
+    $('conteo-catalogo').textContent = lista.length === catalogo.length
+      ? `${catalogo.length} productos, cada uno con su origen y su historia`
+      : `${lista.length} de ${catalogo.length} productos`;
+
+    if (!lista.length) {
+      $('grilla').innerHTML =
+        `<p class="vacio"><span class="vacio-icono">${ICONO.lupa}</span>No encontramos productos con ese criterio.</p>`;
+      return;
+    }
+
+    // Un producto resaltado por el asesor tiene que verse, aunque esté más allá
+    // del corte: si no, el consejo lleva a una grilla donde no aparece nada.
+    if (resaltar.length) {
+      const ultimo = Math.max(...resaltar.map((id) => lista.findIndex((p) => p.id === id)));
+      if (ultimo >= mostrando) mostrando = ultimo + 1;
+    }
+
+    $('grilla').innerHTML = lista.slice(0, mostrando).map((p) => {
+      const agotado = p.stock <= 0;
+      const bajo = !agotado && p.stock <= p.stock_min;
+      const nota = agotado
+        ? '<span class="stock-nota stock-cero">Agotado</span>'
+        : bajo
+          ? `<span class="stock-nota stock-bajo">Últimas ${p.stock}</span>`
+          : '<span class="stock-nota stock-ok">Disponible</span>';
+      return `
+      <article class="tarjeta${resaltar.includes(p.id) ? ' resaltada' : ''}" data-id="${p.id}">
+        <div class="tarjeta-figura">
+          <span class="tarjeta-cat">${escapar(p.categoria)}</span>
+          <img src="${escapar(imagenDe(p).src)}" data-respaldos="${imagenDe(p).respaldos}"
+               alt="${escapar(p.nombre)}" loading="lazy">
+        </div>
+        <div class="tarjeta-cuerpo">
+          <h3>${escapar(p.nombre)}</h3>
+          <div class="tarjeta-origen">${escapar(p.origen)}</div>
+          ${p.beneficios ? `<p class="tarjeta-para">${escapar(p.beneficios)}</p>` : ''}
+          <p class="tarjeta-desc">${escapar(p.descripcion)}</p>
+          <p class="tarjeta-tradicion">${escapar(p.uso_tradicional)}</p>
+          <div class="tarjeta-pie">
+            <div class="precio">${soles(p.precio)}<small>${escapar(p.presentacion)}</small></div>
+            ${nota}
+          </div>
+          <button class="btn btn-primario btn-bloque agregar" data-id="${p.id}" ${agotado ? 'disabled' : ''}>
+            ${agotado ? 'Sin stock' : 'Agregar'}
+          </button>
+        </div>
+      </article>`;
+    }).join('') + (lista.length > mostrando ? `
+      <div class="ver-mas">
+        <p>Mostrando ${mostrando} de ${lista.length} productos</p>
+        <button class="btn btn-claro" id="btn-ver-mas">Ver más productos</button>
+      </div>` : '');
+
+    // Las tarjetas nacen después de que el landing registró sus animaciones,
+    // así que hay que darlas de alta para que entren con el mismo revelado.
+    if (window.revelarNuevos) {
+      window.revelarNuevos([...$('grilla').querySelectorAll('.tarjeta')]);
+    }
+  }
+
+  // -------------------------------------------------------------------- carrito
+  function agregar(id, boton) {
+    const p = catalogo.find((x) => x.id === id);
+    if (!p || p.stock <= 0) return;
+    const linea = carrito.find((l) => l.id === id);
+    const actual = linea ? linea.cantidad : 0;
+    if (actual + 1 > p.stock) return avisar(`Solo quedan ${p.stock} de ${p.nombre}`);
+    if (linea) linea.cantidad++;
+    else carrito.push({ id, cantidad: 1 });
+    guardarCarrito();
+    refrescarCuenta(true);
+    if (boton) volarAlCarrito(boton);
+    avisar(`${p.nombre} agregado`);
+  }
+
+  function cambiar(id, delta) {
+    const linea = carrito.find((l) => l.id === id);
+    if (!linea) return;
+    const p = catalogo.find((x) => x.id === id);
+    const nueva = linea.cantidad + delta;
+    if (nueva < 1) return quitar(id);
+    if (p && nueva > p.stock) return avisar(`Solo quedan ${p.stock} unidades`);
+    linea.cantidad = nueva;
+    guardarCarrito();
+    refrescarCuenta();
+    pintarPanel();
+  }
+
+  /** Se colapsa la fila antes de repintar: si desaparece de golpe, el cliente
+      no alcanza a ver cuál quitó y duda de si borró lo correcto. */
+  function quitar(id) {
+    const fila = document.querySelector(`[data-linea="${id}"]`);
+    const borrar = () => {
+      carrito = carrito.filter((l) => l.id !== id);
+      guardarCarrito();
+      refrescarCuenta();
+      pintarPanel();
+    };
+    if (!fila || quieto) return borrar();
+
+    fila.animate([
+      { opacity: 1, transform: 'translateX(0)', maxHeight: fila.offsetHeight + 'px' },
+      { opacity: 0, transform: 'translateX(28px)', maxHeight: '0px', paddingTop: 0, paddingBottom: 0 },
+    ], { duration: 260, easing: 'cubic-bezier(.4,0,1,1)', fill: 'forwards' })
+      .addEventListener('finish', borrar);
+  }
+
+  const lineasDetalladas = () => carrito
+    .map((l) => ({ ...l, prod: catalogo.find((p) => p.id === l.id) }))
+    .filter((l) => l.prod);
+
+  const total = () => lineasDetalladas().reduce((s, l) => s + l.prod.precio * l.cantidad, 0);
+
+  function refrescarCuenta(latir = false) {
+    const globo = $('cuenta-carrito');
+    const n = carrito.reduce((s, l) => s + l.cantidad, 0);
+
+    // Con el carrito vacío el globo desaparece. Un "0" permanente en la esquina
+    // se lee como un error de la página, no como información.
+    globo.textContent = n > 99 ? '99+' : n;
+    globo.hidden = n === 0;
+
+    if (!latir || quieto || n === 0) return;
+    globo.classList.remove('late');
+    void globo.offsetWidth;              // reinicia la animación CSS
+    globo.classList.add('late');
+  }
+
+  // ------------------------------------------------------------- envío gratis
+  // El umbral sale de tienda.config.js vía /api/tienda: si el dueño lo cambia,
+  // el carrito lo refleja sin tocar código.
+  let TIENDA = { delivery: { gratisDesde: 0 } };
+  fetch('/api/tienda')
+    .then((r) => r.json())
+    .then((t) => { TIENDA = t; pintarContacto(t); })
+    .catch(() => {});
+
+  /**
+   * El pie se llena desde tienda.config.js.
+   * Antes el teléfono estaba escrito a mano en el HTML: al cambiarlo en la
+   * configuración, el pie seguía mostrando el viejo. Un dato de contacto
+   * equivocado en la web es peor que no tenerlo.
+   */
+  function pintarContacto(t) {
+    const solo = (n) => String(n || '').replace(/\D/g, '');
+    const internacional = (t.pais || '') + solo(t.telefono);
+
+    const tel = $('pie-tel');
+    if (tel && t.telefono) { tel.textContent = t.telefono; tel.href = 'tel:+' + internacional; }
+
+    const wa = $('pie-whatsapp');
+    if (wa && t.whatsapp) {
+      wa.href = 'https://wa.me/' + (t.pais || '') + solo(t.whatsapp)
+        + '?text=' + encodeURIComponent('Hola, quiero hacer un pedido');
+    }
+
+    const mail = $('pie-email');
+    if (mail && t.email) { mail.textContent = t.email; mail.href = 'mailto:' + t.email; }
+
+    if ($('pie-direccion') && t.direccion) {
+      $('pie-direccion').textContent = t.direccion;
+    }
+    if ($('pie-horario') && t.horario) $('pie-horario').textContent = t.horario;
+    if ($('pie-abierto')) {
+      $('pie-abierto').textContent = t.abierto ? 'Abierto ahora' : 'Cerrado ahora';
+      $('pie-abierto').style.color = t.abierto ? 'var(--verde)' : 'var(--crema-suave)';
+    }
+  }
+
+  function costoEnvio(subtotal) {
+    const umbral = TIENDA.delivery?.gratisDesde || 0;
+    if (umbral && subtotal >= umbral) return { monto: 0, texto: 'Gratis' };
+    return { monto: 0, texto: 'Según tu zona' };
+  }
+
+  /** Barra de avance hacia el envío gratis. Es la palanca que sube el ticket. */
+  function barraEnvio(subtotal) {
+    const umbral = TIENDA.delivery?.gratisDesde || 0;
+    if (!umbral) return '';
+    if (subtotal >= umbral) {
+      return `<div class="envio-aviso logrado">
+        ${ICONO.visto}<span>¡Listo! Tu envío va <strong>gratis</strong>.</span></div>`;
+    }
+    const falta = umbral - subtotal;
+    const pct = Math.min(100, Math.round((subtotal / umbral) * 100));
+    return `<div class="envio-aviso">
+      <span>Te faltan <strong>${soles(falta)}</strong> para el envío gratis</span>
+      <div class="envio-barra"><i style="width:${pct}%"></i></div>
+    </div>`;
+  }
+
+  // -------------------------------------------------------- vuelo al carrito
+  /** La foto del producto viaja hasta el carrito. Confirma la acción sin toast. */
+  function volarAlCarrito(boton) {
+    if (quieto) return;
+    // Sirve para las tarjetas del catálogo y para las fichas del asesor.
+    const contenedor = boton.closest('.tarjeta, .ficha-asesor');
+    const origen = contenedor?.querySelector('img');
+    const destino = $('btn-carrito');
+    if (!origen || !destino) return;
+
+    const a = origen.getBoundingClientRect();
+    const b = destino.getBoundingClientRect();
+    const clon = origen.cloneNode();
+    clon.className = 'vuela';
+    Object.assign(clon.style, {
+      left: a.left + 'px', top: a.top + 'px',
+      width: a.width + 'px', height: a.height + 'px',
+    });
+    document.body.appendChild(clon);
+
+    const dx = (b.left + b.width / 2) - (a.left + a.width / 2);
+    const dy = (b.top + b.height / 2) - (a.top + a.height / 2);
+
+    // Arco: sube antes de caer al carrito. Un movimiento recto se ve mecánico.
+    clon.animate([
+      { transform: 'translate(0,0) scale(1)', opacity: 1, borderRadius: '16px' },
+      { transform: `translate(${dx * 0.55}px, ${dy * 0.5 - 70}px) scale(.5)`, opacity: .95, offset: .55 },
+      { transform: `translate(${dx}px, ${dy}px) scale(.12)`, opacity: 0, borderRadius: '50%' },
+    ], { duration: 720, easing: 'cubic-bezier(.42,0,.28,1)' })
+      .addEventListener('finish', () => clon.remove());
+  }
+
+  function abrirPanel() { $('velo').hidden = false; $('panel-carrito').hidden = false; pintarPanel(); }
+  function cerrarPanel() {
+    $('velo').hidden = true; $('panel-carrito').hidden = true;
+    if (etapa === 'exito') { etapa = 'carrito'; ultimoPedido = null; }
+  }
+
+  function pintarPanel() {
+    const cuerpo = $('cuerpo-carrito');
+    const pie = $('pie-carrito');
+
+    if (etapa === 'exito' && ultimoPedido) {
+      cuerpo.innerHTML = `
+        <div class="exito">
+          <span class="exito-icono">${ICONO.visto}</span>
+          <h3>¡Pedido registrado!</h3>
+          <p>Te llamamos para coordinar la entrega.</p>
+          <div class="codigo">${escapar(ultimoPedido.codigo)}</div>
+          <p><strong>${esComprobanteFactura(ultimoPedido) ? 'Factura' : 'Boleta'}
+             ${escapar(ultimoPedido.numeroComprobante || '')}</strong>
+             por <strong>${soles(ultimoPedido.total)}</strong></p>
+          <p>${escapar(ultimoPedido.entrega || '')} · ${escapar(ultimoPedido.plazo || '')}</p>
+          <p style="margin-top:14px;font-size:13px">
+            Guarda tu código: con él y los últimos 4 dígitos de tu teléfono
+            puedes seguir tu pedido cuando quieras.
+          </p>
+          <div class="exito-acciones">
+            ${ultimoPedido.numeroComprobante ? `
+              <a class="btn btn-primario"
+                 href="/comprobante.html?codigo=${encodeURIComponent(ultimoPedido.codigo)}&tel=${encodeURIComponent(ultimoPedido.tel4 || '')}">
+                Ver mi ${esComprobanteFactura(ultimoPedido) ? 'factura' : 'boleta'}
+              </a>` : ''}
+            <a class="btn btn-fantasma"
+               href="/mi-pedido.html?codigo=${encodeURIComponent(ultimoPedido.codigo)}">
+              Seguir mi pedido →
+            </a>
+          </div>
+        </div>`;
+      pie.innerHTML = '<button class="btn btn-secundario btn-bloque" id="btn-seguir">Seguir comprando</button>';
+      $('btn-seguir').onclick = cerrarPanel;
+      return;
+    }
+
+    const lineas = lineasDetalladas();
+    if (!lineas.length) {
+      cuerpo.innerHTML = `<div class="vacio"><span class="vacio-icono">${ICONO.bolsa}</span>Tu carrito está vacío.<br>Agrega productos del catálogo.</div>`;
+      pie.innerHTML = '';
+      return;
+    }
+
+    if (etapa === 'carrito') {
+      cuerpo.innerHTML = barraEnvio(total()) + lineas.map((l) => {
+        const img = imagenDe(l.prod);
+        const tope = l.cantidad >= l.prod.stock;
+        return `
+        <div class="linea" data-linea="${l.id}">
+          <div class="linea-icono">
+            <img src="${escapar(img.src)}" data-respaldos="${img.respaldos}" alt="">
+          </div>
+          <div class="linea-info">
+            <strong>${escapar(l.prod.nombre)}</strong>
+            <span>${escapar(l.prod.presentacion)} · ${soles(l.prod.precio)} c/u</span>
+            <div class="contador">
+              <button data-menos="${l.id}" aria-label="Quitar uno">−</button>
+              <span data-cant="${l.id}">${l.cantidad}</span>
+              <button data-mas="${l.id}" aria-label="Agregar uno" ${tope ? 'disabled' : ''}>+</button>
+              ${tope ? '<em class="tope">máximo en stock</em>' : ''}
+            </div>
+          </div>
+          <div class="linea-derecha">
+            <div class="linea-total">${soles(l.prod.precio * l.cantidad)}</div>
+            <button class="quitar" data-quitar="${l.id}" aria-label="Eliminar">Eliminar</button>
+          </div>
+        </div>`;
+      }).join('');
+
+      const envio = costoEnvio(total());
+      const t = total() + envio.monto;
+      const pct = TIENDA.igv?.porcentaje ?? 0;
+
+      // En Perú el precio de catálogo ya incluye IGV, así que el desglose se
+      // calcula hacia atrás: base = total / (1 + tasa). Mostrarlo no cambia lo
+      // que paga el cliente, pero es lo que un comprobante tiene que reflejar.
+      const base = pct ? t / (1 + pct / 100) : t;
+      const igv = t - base;
+
+      pie.innerHTML = `
+        <div class="resumen">
+          <div class="resumen-fila"><span>Subtotal</span><span>${soles(total())}</span></div>
+          <div class="resumen-fila"><span>Envío</span><span>${envio.texto}</span></div>
+          ${pct ? `
+          <div class="resumen-fila resumen-fino"><span>Op. gravada</span><span>${soles(base)}</span></div>
+          <div class="resumen-fila resumen-fino"><span>IGV ${pct}%</span><span>${soles(igv)}</span></div>` : ''}
+          <div class="resumen-fila resumen-total">
+            <span>Total</span><span class="precio">${soles(t)}</span>
+          </div>
+        </div>
+        <button class="btn btn-primario btn-bloque" id="btn-datos">Continuar con el pedido</button>
+        <p class="pie-nota">Pago contra entrega o por Yape al recibir.</p>`;
+      $('btn-datos').onclick = () => { etapa = 'datos'; pintarPanel(); };
+      return;
+    }
+
+    // etapa === 'datos'
+    cuerpo.innerHTML = `
+      <div class="aviso aviso-error" id="error-forma" hidden></div>
+
+      <div class="grupo-campos">
+        <h4>¿A nombre de quién va el comprobante?</h4>
+        <div class="pestanas" id="tipo-doc">
+          <button type="button" class="pestana activo" data-doc="DNI">Boleta · DNI</button>
+          <button type="button" class="pestana" data-doc="RUC">Factura · RUC</button>
+        </div>
+
+        <div class="campo"><label for="f-nombre" id="lbl-nombre">Nombre y apellido</label>
+          <input id="f-nombre" autocomplete="name" placeholder="María Quispe" maxlength="120"></div>
+
+        <div class="campo"><label for="f-doc" id="lbl-doc">DNI</label>
+          <input id="f-doc" inputmode="numeric" maxlength="11" placeholder="8 dígitos"></div>
+
+        <div class="campo" id="campo-razon" hidden>
+          <label for="f-razon">Razón social</label>
+          <input id="f-razon" placeholder="Comercial Los Andes S.A.C." maxlength="120"></div>
+
+        <div class="campo"><label for="f-tel">Celular</label>
+          <input id="f-tel" inputmode="tel" autocomplete="tel" placeholder="9XX XXX XXX" maxlength="15"></div>
+
+        <div class="campo"><label for="f-email" id="lbl-email">Correo (opcional)</label>
+          <input id="f-email" type="email" inputmode="email" autocomplete="email"
+                 placeholder="para enviarte el comprobante" maxlength="120"></div>
+      </div>
+
+      <div class="grupo-campos">
+        <h4>¿Dónde te lo dejamos?</h4>
+        <div class="campo-doble">
+          <div class="campo"><label for="f-dep">Departamento</label>
+            <select id="f-dep"><option value="">Elige…</option></select></div>
+          <div class="campo"><label for="f-prov">Provincia</label>
+            <select id="f-prov" disabled><option value="">—</option></select></div>
+        </div>
+        <div class="campo"><label for="f-dist">Distrito</label>
+          <select id="f-dist" disabled><option value="">—</option></select></div>
+
+        <div class="campo"><label for="f-dir">Dirección</label>
+          <input id="f-dir" autocomplete="street-address" placeholder="Av. Los Álamos 234, dpto. 302" maxlength="200"></div>
+        <div class="campo"><label for="f-ref">Referencia (opcional)</label>
+          <input id="f-ref" placeholder="Frente al parque, portón verde" maxlength="200"></div>
+        <div class="campo"><label for="f-nota">Nota para el pedido (opcional)</label>
+          <textarea id="f-nota" placeholder="Ej: dejar con el portero" maxlength="300"></textarea></div>
+
+        <div class="envio-aviso" id="envio-calculado" hidden></div>
+      </div>
+
+      <div class="resumen" id="resumen-final"></div>`;
+
+    pie.innerHTML = `
+      <button class="btn btn-primario btn-bloque" id="btn-confirmar">Confirmar pedido</button>
+      <button class="btn btn-secundario btn-bloque" style="margin-top:8px" id="btn-volver">Volver al carrito</button>`;
+
+    $('btn-volver').onclick = () => { etapa = 'carrito'; pintarPanel(); };
+    $('btn-confirmar').onclick = confirmar;
+    prepararFormulario();
+  }
+
+  // ------------------------------------------------------- checkout peruano
+  let UBIGEO = null;
+  let envioActual = null;
+
+  /** El ubigeo se descarga una sola vez, al abrir el checkout. */
+  async function cargarUbigeo() {
+    if (UBIGEO) return UBIGEO;
+    try {
+      UBIGEO = await (await fetch('/ubigeo.json')).json();
+    } catch { UBIGEO = {}; }
+    return UBIGEO;
+  }
+
+  function opciones(select, valores, vacio) {
+    select.innerHTML = `<option value="">${vacio}</option>` +
+      valores.map((v) => `<option value="${escapar(v)}">${escapar(v)}</option>`).join('');
+    select.disabled = valores.length === 0;
+  }
+
+  async function prepararFormulario() {
+    const datos = await cargarUbigeo();
+    if (!$('f-dep')) return;   // el usuario cerró el panel mientras cargaba
+
+    const deps = Object.values(datos)
+      .map(([nombre], i) => ({ nombre, clave: Object.keys(datos)[i] }))
+      .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+
+    opciones($('f-dep'), deps.map((d) => d.nombre), 'Elige…');
+
+    $('f-dep').onchange = () => {
+      const dep = Object.values(datos).find(([n]) => n === $('f-dep').value);
+      opciones($('f-prov'), dep ? dep[1].map((p) => p[0]) : [], dep ? 'Elige…' : '—');
+      opciones($('f-dist'), [], '—');
+      cotizarEnvio();
+    };
+    $('f-prov').onchange = () => {
+      const dep = Object.values(datos).find(([n]) => n === $('f-dep').value);
+      const prov = dep?.[1].find((p) => p[0] === $('f-prov').value);
+      opciones($('f-dist'), prov ? prov[1] : [], prov ? 'Elige…' : '—');
+      cotizarEnvio();
+    };
+    $('f-dist').onchange = cotizarEnvio;
+
+    // Cambiar entre boleta y factura reetiqueta el formulario: es el mismo
+    // campo, pero "DNI" y "RUC" no piden lo mismo ni tienen el mismo largo.
+    $('tipo-doc').onclick = (e) => {
+      const b = e.target.closest('[data-doc]');
+      if (!b) return;
+      const esRuc = b.dataset.doc === 'RUC';
+      [...$('tipo-doc').children].forEach((x) => x.classList.toggle('activo', x === b));
+      $('lbl-doc').textContent = esRuc ? 'RUC' : 'DNI';
+      $('f-doc').placeholder = esRuc ? '11 dígitos' : '8 dígitos';
+      $('f-doc').maxLength = esRuc ? 11 : 8;
+      $('f-doc').value = '';
+      $('campo-razon').hidden = !esRuc;
+      $('lbl-nombre').textContent = esRuc ? 'Nombre de contacto' : 'Nombre y apellido';
+      $('lbl-email').textContent = esRuc ? 'Correo' : 'Correo (opcional)';
+    };
+
+    // Solo dígitos en el documento: evita el 90 % de los errores de tipeo.
+    $('f-doc').oninput = (e) => { e.target.value = e.target.value.replace(/\D/g, ''); };
+
+    pintarResumenFinal();
+  }
+
+  const tipoDoc = () => $('tipo-doc')?.querySelector('.activo')?.dataset.doc || 'DNI';
+
+  /** Pregunta al servidor cuánto cuesta el envío a ese distrito. */
+  async function cotizarEnvio() {
+    const dep = $('f-dep')?.value, prov = $('f-prov')?.value, dist = $('f-dist')?.value;
+    const caja = $('envio-calculado');
+    if (!caja) return;
+
+    if (!dep || !prov || !dist) {
+      envioActual = null; caja.hidden = true; pintarResumenFinal(); return;
+    }
+
+    try {
+      const r = await fetch('/api/envio', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ departamento: dep, provincia: prov, distrito: dist, subtotal: total() }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error);
+
+      envioActual = d;
+      caja.hidden = false;
+      caja.className = 'envio-aviso' + (d.gratis ? ' logrado' : '');
+      caja.innerHTML = d.tipo === 'provincia'
+        ? `<span><strong>${escapar(d.zona)}</strong> — envío por agencia, ${escapar(d.plazo)}.
+           ${escapar(d.nota)}.</span>`
+        : `<span><strong>${escapar(d.zona)}</strong> — ${d.gratis ? 'envío gratis' : soles(d.costo)},
+           ${escapar(d.plazo)}.</span>` +
+          (d.faltaParaGratis > 0
+            ? `<div class="envio-barra"><i style="width:${Math.min(100, Math.round(total() / (total() + d.faltaParaGratis) * 100))}%"></i></div>`
+            : '');
+    } catch {
+      envioActual = null; caja.hidden = true;
+    }
+    pintarResumenFinal();
+  }
+
+  function pintarResumenFinal() {
+    const caja = $('resumen-final');
+    if (!caja) return;
+    const envio = envioActual && envioActual.costo !== null ? envioActual.costo : 0;
+    const t = total() + envio;
+    const pct = TIENDA.igv?.porcentaje ?? 0;
+    const base = pct ? t / (1 + pct / 100) : t;
+
+    caja.innerHTML = `
+      <div class="resumen-fila"><span>Subtotal</span><span>${soles(total())}</span></div>
+      <div class="resumen-fila"><span>Envío</span><span>${
+        !envioActual ? 'elige tu distrito'
+          : envioActual.costo === null ? 'en la agencia'
+          : envioActual.gratis ? 'Gratis' : soles(envioActual.costo)}</span></div>
+      ${pct ? `
+      <div class="resumen-fila resumen-fino"><span>Op. gravada</span><span>${soles(base)}</span></div>
+      <div class="resumen-fila resumen-fino"><span>IGV ${pct}%</span><span>${soles(t - base)}</span></div>` : ''}
+      <div class="resumen-fila resumen-total">
+        <span>${tipoDoc() === 'RUC' ? 'Total (factura)' : 'Total (boleta)'}</span>
+        <span class="precio">${soles(t)}</span>
+      </div>`;
+  }
+
+  async function confirmar() {
+    const err = $('error-forma');
+    const boton = $('btn-confirmar');
+    err.hidden = true;
+    boton.disabled = true;
+    boton.textContent = 'Registrando…';
+
+    try {
+      const r = await fetch('/api/pedidos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          cliente: {
+            nombre: $('f-nombre').value,
+            telefono: $('f-tel').value,
+            direccion: $('f-dir').value,
+            // Datos peruanos. El servidor los revalida: esto es solo lo que
+            // se envía, no lo que se da por bueno.
+            tipo_doc: tipoDoc(),
+            num_doc: $('f-doc').value,
+            razon_social: $('f-razon').value,
+            email: $('f-email').value,
+            departamento: $('f-dep').value,
+            provincia: $('f-prov').value,
+            distrito: $('f-dist').value,
+            referencia: $('f-ref').value,
+          },
+          nota: $('f-nota').value,
+          items: carrito,
+        }),
+      });
+      const datos = await r.json();
+
+      if (!r.ok) {
+        let mensaje = datos.error || 'No pudimos registrar el pedido.';
+        if (datos.faltantes) {
+          mensaje += ' ' + datos.faltantes
+            .map((f) => `${f.nombre}: pediste ${f.pedido}, quedan ${f.disponible}`)
+            .join('. ');
+          await cargarCatalogo();
+        }
+        err.textContent = mensaje;
+        err.hidden = false;
+        return;
+      }
+
+      ultimoPedido = datos.pedido;
+      // Los últimos cuatro dígitos del teléfono que acaba de escribir son la
+      // otra mitad de la llave de su pedido. Guardarlos aquí le evita volver a
+      // teclearlos para abrir su propia boleta.
+      ultimoPedido.tel4 = $('f-tel').value.replace(/\D/g, '').slice(-4);
+      etapa = 'exito';
+      carrito = [];
+      guardarCarrito();
+      refrescarCuenta();
+      await cargarCatalogo();
+      pintarPanel();
+    } catch {
+      err.textContent = 'Se perdió la conexión con la tienda. Intenta otra vez.';
+      err.hidden = false;
+    } finally {
+      boton.disabled = false;
+      boton.textContent = 'Confirmar pedido';
+    }
+  }
+
+  // --------------------------------------------------------------------- asesor
+  async function consultarAsesor(texto) {
+    const caja = $('respuesta-asesor');
+    const boton = $('btn-asesor');
+    caja.hidden = false;
+    $('burbuja').textContent = 'Revisando el inventario…';
+    $('fuente-asesor').textContent = '';
+    $('fichas-asesor').innerHTML = '';
+    boton.disabled = true;
+
+    try {
+      const r = await fetch('/api/asesor', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ consulta: texto }),
+      });
+      const datos = await r.json();
+      $('burbuja').textContent = datos.mensaje || datos.error;
+
+      const recomendados = datos.recomendaciones || [];
+      const ids = recomendados.map((x) => x.id);
+
+      // Las fichas van dentro de la respuesta. Antes había que bajar al catálogo
+      // a buscar lo recomendado: la venta se enfriaba en el camino.
+      $('fichas-asesor').innerHTML = recomendados.map((p) => {
+        const img = imagenDe(p);
+        const completo = catalogo.find((x) => x.id === p.id) || p;
+        const agotado = completo.stock <= 0;
+        return `
+        <article class="ficha-asesor">
+          <img src="${escapar(img.src)}" data-respaldos="${img.respaldos}" alt="${escapar(p.nombre)}">
+          <div class="ficha-cuerpo">
+            <strong>${escapar(p.nombre)}</strong>
+            <span class="ficha-origen">${escapar(p.origen)}</span>
+            <div class="ficha-pie">
+              <span class="ficha-precio">${soles(p.precio)}</span>
+              <button class="btn btn-primario btn-chico agregar" data-id="${p.id}" ${agotado ? 'disabled' : ''}>
+                ${agotado ? 'Sin stock' : 'Agregar'}
+              </button>
+            </div>
+          </div>
+        </article>`;
+      }).join('');
+
+      $('fuente-asesor').textContent = ids.length
+        ? `Verificado contra el stock de hoy · ${ids.length} disponible(s)`
+        : 'Verificado contra el stock de hoy';
+
+      pintarGrilla(ids);
+    } catch {
+      $('burbuja').textContent = 'No pudimos consultar en este momento. Intenta de nuevo.';
+      $('fichas-asesor').innerHTML = '';
+    } finally {
+      boton.disabled = false;
+    }
+  }
+
+  // ---------------------------------------------------------------- cableado
+  document.addEventListener('click', (e) => {
+    const agregarBtn = e.target.closest('.agregar');
+    if (agregarBtn) return agregar(Number(agregarBtn.dataset.id), agregarBtn);
+
+    if (e.target.closest('#btn-ver-mas')) {
+      mostrando += TANDA;
+      pintarGrilla();
+      return;
+    }
+
+    const filtroBtn = e.target.closest('.filtro');
+    if (filtroBtn) {
+      filtro = filtroBtn.dataset.cat;
+      mostrando = TANDA;             // otra categoría empieza desde arriba
+      pintarFiltros();
+      pintarGrilla();
+      return;
+    }
+
+    const sug = e.target.closest('.sugerencia');
+    if (sug) {
+      $('consulta').value = sug.textContent;
+      return consultarAsesor(sug.textContent);
+    }
+
+    if (e.target.dataset.mas) return cambiar(Number(e.target.dataset.mas), 1);
+    if (e.target.dataset.menos) return cambiar(Number(e.target.dataset.menos), -1);
+    if (e.target.dataset.quitar) return quitar(Number(e.target.dataset.quitar));
+  });
+
+  $('btn-carrito').onclick = abrirPanel;
+  $('cerrar-carrito').onclick = cerrarPanel;
+  $('velo').onclick = cerrarPanel;
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') cerrarPanel(); });
+
+  $('forma-asesor').onsubmit = (e) => {
+    e.preventDefault();
+    const texto = $('consulta').value.trim();
+    if (texto) consultarAsesor(texto);
+  };
+
+  let debounce;
+  $('buscar').oninput = (e) => {
+    clearTimeout(debounce);
+    debounce = setTimeout(() => { busqueda = e.target.value; mostrando = TANDA; pintarGrilla(); }, 180);
+  };
+
+  refrescarCuenta();
+  cargarCatalogo();
+})();

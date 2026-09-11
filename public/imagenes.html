@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ilustraciones de producto — Raíz Andina</title>
+<link rel="icon" type="image/svg+xml" href="/img/marca/favicon-panel.svg">
+<link rel="stylesheet" href="/css/panel.css">
+<style>
+  .hoja { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 18px; }
+  .ficha { background: var(--humo); border: 1px solid var(--borde); border-radius: 16px; overflow: hidden; }
+  .ficha img { width: 100%; display: block; aspect-ratio: 4/3; object-fit: cover; }
+  .ficha div { padding: 10px 12px; }
+  .ficha strong { display: block; font-size: 14px; }
+  .ficha span { font-size: 12px; color: var(--crema-suave); font-family: Consolas, monospace; }
+  .nota { background: rgba(240,165,44,.08); border: 1px solid rgba(240,165,44,.28); border-radius: 16px; padding: 18px 20px; margin: 22px 0; font-size: 14.5px; color: var(--crema-suave); }
+  .nota code { background: rgba(11,10,8,.6); color: var(--ocre); padding: 2px 7px; border-radius: 5px; font-size: 12.5px; }
+</style>
+</head>
+<body>
+<header class="admin-cabecera"><div class="contenedor">
+  <a href="/" class="marca">
+    <img class="marca-icono" src="/img/marca/marca-panel.svg" alt="" width="42" height="42">
+    <div><div class="marca-nombre">Ilustraciones</div>
+    <div class="marca-bajada">Hoja de contactos</div></div>
+  </a>
+  <div class="acciones"><a class="btn btn-claro" href="/admin.html">Panel</a><a class="btn btn-claro" href="/">Ver tienda</a></div>
+</div></header>
+
+<main class="contenedor" style="padding-top:34px;padding-bottom:70px">
+  <div class="seccion-cabeza"><div>
+    <h2>Las 24 ilustraciones</h2>
+    <p>Revisa que ninguna se vea rara antes de presentar. Se regeneran con <code>node gen-imagenes.mjs</code>.</p>
+  </div></div>
+
+  <div class="nota">
+    <strong>¿Prefieres fotos reales?</strong> No hay que tocar el código. En la tabla
+    <code>productos</code>, la columna <code>imagen</code> acepta cualquier URL:
+    <code>UPDATE productos SET imagen = 'https://…/maca.jpg' WHERE sku = 'MAC-001';</code><br>
+    Si esa URL falla (sin internet, enlace roto), la tarjeta cae sola al emoji en vez
+    de mostrar un cuadro gris. Por eso la demo aguanta sin conexión.
+  </div>
+
+  <div class="hoja" id="hoja"></div>
+</main>
+
+<script src="/js/imagenes.js"></script>
+</body>
+</html>

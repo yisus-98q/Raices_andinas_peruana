@@ -1,0 +1,503 @@
+/* ============================================================================
+   Panel interno — mismo sistema visual que la tienda.
+   Antes usaba un tema claro aparte: en la demo se pasa de la tienda al panel en
+   un clic, y el salto de estilo hacía parecer que eran dos productos distintos.
+   Una "solución integral" tiene que verse como una sola cosa.
+   ========================================================================= */
+:root {
+  --negro: #0b0a08;
+  --carbon: #131110;
+  --humo: #1d1a16;
+  --piedra: #2a2621;
+  --crema: #f7f0e2;
+  --crema-suave: #cbc0ad;
+  --ocre: #f0a52c;
+  --ocre-vivo: #ff8a1f;
+  --terra: #c2502c;
+  --verde: #5c8f65;
+  --borde: rgba(247, 240, 226, .12);
+  --ancho: 1320px;
+  --display: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0; background: var(--negro); color: var(--crema);
+  font-family: var(--display); font-size: 15px; line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3 { margin: 0; font-weight: 800; letter-spacing: -.025em; line-height: 1.15; }
+a { color: inherit; text-decoration: none; }
+button { font: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+img { max-width: 100%; display: block; }
+
+.contenedor { width: 100%; max-width: var(--ancho); margin: 0 auto; padding: 0 24px; }
+
+.marca-nombre { font-weight: 800; font-size: 16px; letter-spacing: -.02em; }
+.marca-bajada {
+  font-size: 10px; letter-spacing: .2em; text-transform: uppercase;
+  color: var(--crema-suave);
+}
+
+/* ------------------------------------------------------------------ botones */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 10px 18px; border-radius: 10px; font-size: 13.5px; font-weight: 600;
+  transition: background .2s, border-color .2s, color .2s, transform .15s;
+}
+.btn-primario { background: var(--ocre); color: var(--negro); font-weight: 700; }
+.btn-primario:hover { background: var(--ocre-vivo); }
+.btn-claro, .btn-secundario, .btn-fantasma {
+  border: 1px solid var(--borde); color: var(--crema-suave);
+}
+.btn-claro:hover, .btn-secundario:hover, .btn-fantasma:hover {
+  border-color: var(--ocre); color: var(--ocre);
+}
+.btn-verde { background: var(--verde); color: #fff; font-weight: 700; }
+.btn-verde:hover { background: #6ba375; }
+.btn-bloque { width: 100%; padding: 14px; }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+
+/* --------------------------------------------------------------- cabecera */
+.admin-cabecera {
+  position: sticky; top: 0; z-index: 40;
+  background: rgba(11, 10, 8, .9); backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--borde); padding: 14px 0;
+}
+.admin-cabecera .contenedor { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.admin-cabecera h1 { font-size: 17px; }
+.marca-icono { width: 40px; height: 40px; border-radius: 11px; flex: none; }
+.admin-cabecera .acciones { margin-left: auto; display: flex; gap: 10px; align-items: center; }
+
+.pulso { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: var(--crema-suave); }
+.pulso i {
+  width: 7px; height: 7px; border-radius: 999px; background: var(--verde);
+  animation: latido 2.2s ease-in-out infinite;
+}
+@keyframes latido { 0%, 100% { opacity: 1 } 50% { opacity: .25 } }
+
+.quien {
+  font-size: 12.5px; color: var(--crema); background: var(--humo);
+  border: 1px solid var(--borde); border-radius: 999px; padding: 5px 13px;
+  white-space: nowrap; font-weight: 600;
+}
+
+/* --------------------------------------------------------------------- KPI */
+.kpis {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 16px; margin: 28px 0;
+}
+.kpi {
+  background: linear-gradient(165deg, var(--humo), var(--carbon));
+  border: 1px solid var(--borde); border-radius: 16px; padding: 20px 22px;
+  position: relative; overflow: hidden;
+}
+.kpi::after {
+  content: ""; position: absolute; left: 0; top: 0; width: 3px; height: 100%;
+  background: var(--ocre); opacity: .5;
+}
+.kpi-etiqueta {
+  font-size: 11px; letter-spacing: .16em; text-transform: uppercase;
+  color: var(--crema-suave); font-weight: 700;
+}
+.kpi-valor {
+  font-size: 32px; font-weight: 800; letter-spacing: -.035em;
+  margin-top: 8px; line-height: 1;
+}
+.kpi-nota { font-size: 12.5px; color: var(--crema-suave); margin-top: 5px; }
+.kpi.alerta { border-color: rgba(194, 80, 44, .45); }
+.kpi.alerta::after { background: var(--terra); opacity: 1; }
+.kpi.alerta .kpi-valor { color: var(--terra); }
+
+/* ---------------------------------------------------------------- bloques */
+.tarjetas-admin { display: grid; grid-template-columns: 1.4fr 1fr; gap: 20px; align-items: start; }
+@media (max-width: 1000px) { .tarjetas-admin { grid-template-columns: 1fr; } }
+
+.bloque {
+  background: linear-gradient(165deg, var(--humo), var(--carbon));
+  border: 1px solid var(--borde); border-radius: 18px;
+  overflow: hidden; margin-bottom: 20px;
+}
+.bloque-cabeza {
+  padding: 17px 22px; border-bottom: 1px solid var(--borde);
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+}
+.bloque-cabeza h2 { font-size: 15.5px; letter-spacing: -.01em; }
+.bloque-cuerpo { padding: 4px 22px 18px; max-height: 560px; overflow-y: auto; }
+.bloque-cuerpo::-webkit-scrollbar { width: 8px; }
+.bloque-cuerpo::-webkit-scrollbar-thumb { background: var(--piedra); border-radius: 999px; }
+
+/* ---------------------------------------------------------------- pedidos */
+.pedido { border-bottom: 1px solid var(--borde); padding: 17px 0; }
+.pedido:last-child { border-bottom: none; }
+.pedido-fila { display: flex; align-items: center; gap: 11px; flex-wrap: wrap; }
+.pedido-codigo {
+  font-family: Consolas, "SF Mono", monospace; font-weight: 700; font-size: 13px;
+  color: var(--ocre); letter-spacing: .02em;
+}
+.pedido-total {
+  margin-left: auto; font-size: 18px; font-weight: 800; letter-spacing: -.03em;
+}
+.pedido-meta { font-size: 13px; color: var(--crema-suave); margin-top: 7px; line-height: 1.6; }
+.pedido-meta b { color: var(--crema); font-weight: 600; }
+.pedido-items {
+  font-size: 12.5px; color: var(--crema-suave); margin-top: 9px;
+  padding-left: 13px; border-left: 2px solid var(--piedra);
+}
+
+.estado {
+  font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .1em;
+  padding: 4px 10px; border-radius: 999px; border: 1px solid transparent;
+}
+.e-pendiente  { background: rgba(240,165,44,.13); color: var(--ocre); border-color: rgba(240,165,44,.32); }
+.e-preparando { background: rgba(93,145,214,.13); color: #8fb4e8; border-color: rgba(93,145,214,.32); }
+.e-enviado    { background: rgba(146,120,214,.13); color: #b3a0e8; border-color: rgba(146,120,214,.32); }
+.e-entregado  { background: rgba(92,143,101,.15); color: #8fc199; border-color: rgba(92,143,101,.35); }
+.e-anulado    { background: rgba(247,240,226,.06); color: var(--crema-suave); text-decoration: line-through; }
+
+.acciones-pedido { display: flex; gap: 7px; margin-top: 12px; flex-wrap: wrap; }
+.mini {
+  font-size: 12.5px; padding: 6px 13px; border-radius: 9px;
+  border: 1px solid var(--borde); color: var(--crema-suave); transition: .2s;
+}
+.mini:hover { border-color: var(--verde); color: var(--verde); }
+.mini-peligro:hover { border-color: var(--terra); color: var(--terra); }
+.mini:disabled { opacity: .4; }
+
+/* ------------------------------------------------------------------ stock */
+.fila-stock {
+  display: flex; align-items: center; gap: 13px;
+  padding: 13px 0; border-bottom: 1px solid var(--borde);
+}
+.fila-stock:last-child { border-bottom: none; }
+.fila-stock .emoji {
+  width: 46px; height: 46px; flex: none; border-radius: 11px;
+  overflow: hidden; background: var(--piedra);
+}
+.fila-stock .emoji img { width: 100%; height: 100%; object-fit: cover; }
+.fila-stock .info { flex: 1; min-width: 0; }
+.fila-stock .info strong { display: block; font-size: 14px; font-weight: 600; }
+.fila-stock .info span { font-size: 12px; color: var(--crema-suave); }
+
+.barra {
+  height: 5px; background: rgba(247,240,226,.1); border-radius: 999px;
+  margin-top: 7px; overflow: hidden;
+}
+.barra i { display: block; height: 100%; border-radius: 999px; background: var(--terra); }
+.barra i.medio { background: var(--ocre); }
+.barra i.lleno { background: var(--verde); }
+
+/* ------------------------------------------------------------ movimientos */
+.mov { display: flex; gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--borde); font-size: 13px; }
+.mov:last-child { border-bottom: none; }
+.mov-signo {
+  font-family: Consolas, monospace; font-weight: 800; min-width: 42px; font-size: 13.5px;
+}
+.mov-baja { color: var(--terra); }
+.mov-alta { color: var(--verde); }
+.mov-info { flex: 1; min-width: 0; }
+.mov-info span { display: block; font-size: 11.5px; color: var(--crema-suave); margin-top: 2px; }
+
+/* ------------------------------------------------------------ más vendidos */
+.tabla-top { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.tabla-top td { padding: 11px 0; border-bottom: 1px solid var(--borde); }
+.tabla-top td:last-child { text-align: right; font-weight: 700; color: var(--ocre); white-space: nowrap; }
+.tabla-top tr:last-child td { border-bottom: none; }
+
+.vacio { text-align: center; color: var(--crema-suave); padding: 40px 20px; font-size: 14px; opacity: .75; }
+
+/* ------------------------------------------------------------ formularios */
+.campo { margin-bottom: 14px; }
+.campo label {
+  display: block; font-size: 11px; font-weight: 700; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--crema-suave); margin-bottom: 7px;
+}
+.campo input, .campo textarea {
+  width: 100%; padding: 12px 15px; font: inherit; font-size: 14.5px; color: var(--crema);
+  background: rgba(11, 10, 8, .6); border: 1px solid var(--borde); border-radius: 11px;
+}
+.campo input:focus, .campo textarea:focus { outline: none; border-color: var(--ocre); }
+
+.aviso { padding: 12px 15px; border-radius: 11px; font-size: 13.5px; margin-bottom: 16px; }
+.aviso[hidden] { display: none; }
+.aviso-error { background: rgba(194,80,44,.14); border: 1px solid rgba(194,80,44,.42); color: #f0a58c; }
+.aviso-ok { background: rgba(92,143,101,.14); border: 1px solid rgba(92,143,101,.4); color: #8fc199; }
+
+/* ---------------------------------------------------------------- ingreso */
+.caja {
+  width: min(410px, calc(100vw - 36px));
+  background: linear-gradient(165deg, var(--humo), var(--carbon));
+  border: 1px solid var(--borde); border-radius: 20px; overflow: hidden;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, .6);
+}
+.caja-cabeza { padding: 34px 30px 26px; text-align: center; position: relative; overflow: hidden; }
+.caja-cabeza::before {
+  content: ""; position: absolute; left: 50%; top: -140px; transform: translateX(-50%);
+  width: 340px; height: 340px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(240,165,44,.2), transparent 68%);
+}
+.caja-cabeza > * { position: relative; }
+.caja-cabeza .marca-icono { margin: 0 auto 16px; width: 52px; height: 52px; }
+.caja-cabeza h1 { font-size: 21px; margin-bottom: 5px; }
+.caja-cabeza p { margin: 0; font-size: 13px; color: var(--crema-suave); }
+.caja-cuerpo { padding: 6px 30px 28px; }
+.caja-pie {
+  padding: 15px 30px; border-top: 1px solid var(--borde); background: rgba(11, 10, 8, .5);
+  font-size: 12.5px; color: var(--crema-suave);
+  display: flex; justify-content: space-between; gap: 12px;
+}
+.caja-pie a:hover { color: var(--ocre); }
+
+/* ------------------------------------------------------------------ toast */
+.toast {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px);
+  background: var(--crema); color: var(--negro); padding: 12px 22px; border-radius: 999px;
+  font-size: 14px; font-weight: 600; z-index: 90; opacity: 0; pointer-events: none;
+  transition: transform .3s cubic-bezier(.2,.8,.3,1), opacity .3s;
+  box-shadow: 0 12px 34px rgba(0, 0, 0, .55);
+}
+.toast.visible { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+@media (max-width: 640px) {
+  .contenedor { padding: 0 16px; }
+  .admin-cabecera .acciones { width: 100%; margin-left: 0; }
+  .kpi-valor { font-size: 26px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
+
+/* Cabecera de sección y bloque de marca — venían de la hoja antigua. */
+.marca { display: flex; align-items: center; gap: 12px; }
+.seccion-cabeza { margin-bottom: 30px; }
+.seccion-cabeza h2 { font-size: 26px; margin-bottom: 8px; }
+.seccion-cabeza p { margin: 0; color: var(--crema-suave); font-size: 14.5px; }
+.seccion-cabeza code {
+  background: rgba(11,10,8,.6); color: var(--ocre);
+  padding: 2px 7px; border-radius: 5px; font-size: 12.5px;
+}
+
+/* Devuelto: la venta se deshizo. Se distingue de anulado, que nunca salió. */
+.e-devuelto {
+  background: rgba(194, 80, 44, .13); color: #e0917a;
+  border-color: rgba(194, 80, 44, .34);
+}
+
+/* --------------------------------------------------- buscador de pedidos
+   Con 22 pedidos en pantalla, atender una llamada era leerlos a ojo. */
+.cabeza-derecha { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.buscar-panel {
+  width: 250px; padding: 8px 13px; font: inherit; font-size: 13px;
+  color: var(--crema); background: rgba(11, 10, 8, .6);
+  border: 1px solid var(--borde); border-radius: 9px; transition: border-color .2s;
+}
+.buscar-panel::placeholder { color: rgba(203, 192, 173, .5); }
+.buscar-panel:focus { outline: none; border-color: var(--ocre); }
+
+/* ------------------------------------------------- ingreso de mercadería
+   El proveedor trae lo que trae, no la cantidad "sugerida". */
+.reponer { display: flex; align-items: center; gap: 7px; flex: none; }
+.reponer input {
+  width: 62px; padding: 7px 9px; font: inherit; font-size: 13px; text-align: center;
+  color: var(--crema); background: rgba(11, 10, 8, .6);
+  border: 1px solid var(--borde); border-radius: 8px;
+}
+.reponer input:focus { outline: none; border-color: var(--ocre); }
+.reponer input::-webkit-outer-spin-button,
+.reponer input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.reponer input[type=number] { -moz-appearance: textfield; appearance: textfield; }
+
+@media (max-width: 640px) {
+  .buscar-panel { width: 100%; }
+  .cabeza-derecha { width: 100%; }
+}
+
+/* ===========================================================================
+   Catálogo editable — precio, mínimo y alta/baja
+   El stock NO se edita aquí a propósito: se mueve solo por ventas, ingresos y
+   devoluciones, para que el kardex siempre explique cada unidad.
+   ======================================================================== */
+.fila-prod {
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr) 116px 92px 62px 190px;
+  gap: 14px; align-items: center;
+  padding: 12px 0; border-bottom: 1px solid var(--borde);
+  transition: background .2s;
+}
+.fila-prod:last-child { border-bottom: none; }
+.fila-prod.editando { background: rgba(240, 165, 44, .06); }
+.fila-prod.de-baja { opacity: .5; }
+.fila-prod.de-baja .prod-info strong { text-decoration: line-through; }
+
+.cabecera-prod {
+  padding: 0 0 10px; border-bottom: 2px solid var(--borde);
+  font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--crema-suave); font-weight: 700;
+}
+.cabecera-prod:hover { background: none; }
+
+.prod-foto {
+  width: 46px; height: 46px; border-radius: 10px;
+  overflow: hidden; background: var(--piedra);
+}
+.prod-foto img { width: 100%; height: 100%; object-fit: cover; }
+.prod-info { min-width: 0; }
+.prod-info strong { display: block; font-size: 14px; font-weight: 600; }
+.prod-info span { font-size: 11.5px; color: var(--crema-suave); }
+
+.prod-campo { position: relative; display: flex; align-items: center; }
+.prod-campo .prefijo {
+  position: absolute; left: 10px; font-size: 12px;
+  color: var(--crema-suave); pointer-events: none;
+}
+.prod-campo input {
+  width: 100%; padding: 8px 10px; font: inherit; font-size: 13.5px;
+  color: var(--crema); background: rgba(11, 10, 8, .6);
+  border: 1px solid var(--borde); border-radius: 9px; transition: border-color .2s;
+}
+.prod-campo:has(.prefijo) input { padding-left: 30px; }
+.prod-campo input:focus { outline: none; border-color: var(--ocre); }
+.prod-campo input::-webkit-outer-spin-button,
+.prod-campo input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.prod-campo input[type=number] { -moz-appearance: textfield; appearance: textfield; }
+
+.prod-stock { text-align: center; font-weight: 700; font-size: 15px; }
+.prod-stock.bajo { color: var(--terra); }
+
+.prod-acciones { display: flex; gap: 7px; justify-content: flex-end; }
+.guardar:not(:disabled) {
+  background: var(--ocre); border-color: var(--ocre); color: var(--negro); font-weight: 700;
+}
+.guardar:not(:disabled):hover { background: var(--ocre-vivo); border-color: var(--ocre-vivo); }
+
+.interruptor {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-size: 12.5px; color: var(--crema-suave); cursor: pointer; user-select: none;
+}
+.interruptor input { accent-color: var(--ocre); cursor: pointer; }
+
+@media (max-width: 900px) {
+  .fila-prod {
+    grid-template-columns: 46px 1fr; grid-auto-rows: auto;
+    gap: 8px 12px; padding: 16px 0;
+  }
+  .cabecera-prod { display: none; }
+  .prod-campo, .prod-stock, .prod-acciones { grid-column: 2; }
+  .prod-acciones { justify-content: flex-start; }
+  .prod-stock { text-align: left; }
+}
+
+/* Boleta o factura, de un vistazo: es lo primero que el dueño necesita saber
+   para emitir el comprobante correcto. */
+.comprobante {
+  font-size: 10.5px; font-weight: 700; letter-spacing: .08em;
+  padding: 3px 9px; border-radius: 999px; border: 1px solid transparent;
+}
+.c-boleta  { background: rgba(247,240,226,.07); color: var(--crema-suave); border-color: var(--borde); }
+.c-factura { background: rgba(240,165,44,.13); color: var(--ocre); border-color: rgba(240,165,44,.3); }
+
+/* Lista de comprobantes emitidos. Cada fila abre su representación impresa. */
+.cmp {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 0; border-bottom: 1px solid var(--borde); transition: .2s;
+}
+.cmp:last-child { border-bottom: none; }
+.cmp:hover { background: rgba(240, 165, 44, .05); }
+.cmp-info { flex: 1; min-width: 0; }
+.cmp-info strong {
+  display: block; font-family: Consolas, monospace; font-size: 13px;
+  color: var(--ocre); letter-spacing: .02em;
+}
+.cmp-info span { font-size: 12px; color: var(--crema-suave); }
+.cmp-derecha { text-align: right; white-space: nowrap; }
+.cmp-total { display: block; font-weight: 700; font-size: 14px; }
+.cmp-estado {
+  font-size: 10.5px; color: var(--ocre); letter-spacing: .05em; text-transform: uppercase;
+}
+
+/* ---------------------------------------------------------------- alta de ficha
+   El alta es el unico formulario largo del panel. Va en <dialog> nativo: el
+   navegador ya sabe centrarlo, atrapar el foco dentro y cerrarlo con Escape.
+   Escribir eso a mano son cien lineas de JS que se rompen solas. */
+.btn-chico { padding: 8px 14px; font-size: 13px; }
+
+.dlg {
+  width: min(620px, calc(100vw - 32px));
+  max-height: calc(100vh - 48px);
+  padding: 0;
+  border: 1px solid var(--borde);
+  border-radius: 18px;
+  background: var(--carbon);
+  color: var(--crema);
+  box-shadow: 0 30px 90px rgba(0, 0, 0, .6);
+}
+.dlg::backdrop { background: rgba(6, 5, 4, .72); }
+.dlg form { display: flex; flex-direction: column; max-height: calc(100vh - 48px); }
+
+.dlg-cabeza {
+  display: flex; align-items: center; gap: 12px;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--borde);
+}
+.dlg-cabeza h2 { margin: 0; font-size: 18px; letter-spacing: -.02em; }
+.dlg-cerrar {
+  margin-left: auto; width: 32px; height: 32px; border-radius: 9px;
+  background: none; border: 1px solid var(--borde); color: var(--crema-suave);
+  font-size: 19px; line-height: 1; cursor: pointer;
+}
+.dlg-cerrar:hover { border-color: var(--terra); color: var(--terra); }
+
+.dlg-cuerpo { padding: 20px 24px 6px; overflow-y: auto; }
+.dlg-pie {
+  display: flex; justify-content: flex-end; gap: 10px;
+  padding: 16px 24px 20px;
+  border-top: 1px solid var(--borde);
+}
+
+.campo-doble, .campo-triple { display: grid; gap: 14px; }
+.campo-doble { grid-template-columns: 1fr 1fr; }
+.campo-triple { grid-template-columns: 1fr 1fr .7fr; }
+@media (max-width: 560px) {
+  .campo-doble, .campo-triple { grid-template-columns: 1fr; }
+}
+
+.req { color: var(--ocre); }
+
+/* El margen no se escribe: se calcula mientras el dueño teclea. Ver el numero
+   bajando es lo que frena un precio mal puesto antes de guardarlo. */
+.salida-margen {
+  display: flex; align-items: center; height: 42px;
+  padding: 0 13px; border-radius: 11px;
+  border: 1px solid var(--borde); background: var(--humo);
+  font-weight: 700; font-size: 15px; color: var(--verde);
+}
+.salida-margen.flojo { color: var(--ocre); }
+.salida-margen.perdida { color: var(--terra); }
+
+.dlg-grupo {
+  margin: 4px 0 16px; padding: 14px 16px 2px;
+  border: 1px solid var(--borde); border-radius: 13px;
+}
+.dlg-grupo legend { padding: 0 8px; font-size: 12.5px; color: var(--ocre); font-weight: 700; }
+.dlg-ayuda { margin: 0 0 14px; font-size: 12.5px; line-height: 1.6; color: var(--crema-suave); }
+
+.dlg-avanzado { margin-bottom: 14px; }
+.dlg-avanzado summary {
+  cursor: pointer; font-size: 13px; color: var(--crema-suave);
+  padding: 9px 0; user-select: none;
+}
+.dlg-avanzado summary:hover { color: var(--ocre); }
+.dlg-avanzado[open] summary { margin-bottom: 10px; }
+
+/* Con 400 productos la lista no se pinta entera: se corta y se avisa. */
+.mas-productos {
+  text-align: center; padding: 18px 10px 6px;
+  font-size: 13px; color: var(--crema-suave);
+}
+
+/* El número del comprobante abre la boleta de ese cliente. */
+.enlace-cmp { text-decoration: none; cursor: pointer; }
+.enlace-cmp:hover { border-color: currentColor; filter: brightness(1.25); }

@@ -1,0 +1,15 @@
+{
+  "name": "raiz-andina",
+  "version": "1.0.0",
+  "description": "Solucion digital integral para tienda naturista: tienda online, control de stock, gestion de pedidos y asesor IA.",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "seed": "node db.js --reset",
+    "test": "node --test \"test/*.test.mjs\""
+  },
+  "engines": {
+    "node": ">=22.5.0"
+  }
+}

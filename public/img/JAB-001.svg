@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" role="img">
+
+  <defs>
+    <linearGradient id="gJAB001" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fcefe8"/><stop offset="1" stop-color="#f3d6c5"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="400" fill="url(#gJAB001)"/>
+  <circle cx="200" cy="200" r="150" fill="none" stroke="#b26a48" stroke-width="2" opacity=".22"/>
+  <circle cx="200" cy="200" r="128" fill="#fffdf8" opacity=".45"/>
+<rect x="132" y="156" width="156" height="96" rx="22" fill="#b26a48"
+     stroke="#241a12" stroke-width="7" stroke-linejoin="round"/>
+<rect x="116" y="178" width="156" height="96" rx="22" fill="#d8916d"
+     stroke="#241a12" stroke-width="7" stroke-linejoin="round"/>
+<ellipse cx="194" cy="226" rx="50" ry="30" fill="#fcefe8" opacity=".8"/>
+<circle cx="194" cy="226" r="16" fill="#b26a48"
+     stroke="#241a12" stroke-width="7"/>
+</svg>

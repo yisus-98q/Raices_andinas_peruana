@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" role="img">
+
+  <defs>
+    <linearGradient id="gbarramiel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fdf3d6"/><stop offset="1" stop-color="#f8e2a2"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="400" fill="url(#gbarramiel)"/>
+  <circle cx="200" cy="200" r="150" fill="none" stroke="#c78d16" stroke-width="2" opacity=".22"/>
+  <circle cx="200" cy="200" r="128" fill="#fffdf8" opacity=".45"/>
+<rect x="132" y="156" width="156" height="96" rx="22" fill="#c78d16"
+     stroke="#241a12" stroke-width="7" stroke-linejoin="round"/>
+<rect x="116" y="178" width="156" height="96" rx="22" fill="#eeb63a"
+     stroke="#241a12" stroke-width="7" stroke-linejoin="round"/>
+<ellipse cx="194" cy="226" rx="50" ry="30" fill="#fdf3d6" opacity=".8"/>
+<circle cx="194" cy="226" r="16" fill="#c78d16"
+     stroke="#241a12" stroke-width="7"/>
+</svg>

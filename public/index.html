@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Raíz Andina — Lo que la tierra ya sabía</title>
+<meta name="description" content="Maca negra de Junín, uña de gato de Tarapoto, camu camu del Ucayali. Productos naturales peruanos con origen trazado, stock real y asesoría inteligente.">
+<link rel="canonical" href="{{SITIO}}/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Raíz Andina">
+<meta property="og:locale" content="es_PE">
+<meta property="og:url" content="{{SITIO}}/">
+<meta property="og:title" content="Raíz Andina — Lo que la tierra ya sabía">
+<meta property="og:description" content="Tónicos, cremas, hierbas, esencias y superalimentos del Perú, con origen trazado y stock real.">
+<meta property="og:image" content="{{SITIO}}/img/marca/marca.svg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" type="image/svg+xml" href="/img/marca/favicon.svg">
+<link rel="apple-touch-icon" href="/img/marca/favicon.svg">
+<meta name="theme-color" content="#0b0a08">
+<link rel="stylesheet" href="/css/premium.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "HealthAndBeautyBusiness",
+  "name": "Raíz Andina",
+  "description": "Productos naturales peruanos con origen trazado.",
+  "url": "{{SITIO}}/",
+  "telephone": "+51910343930",
+  "priceRange": "S/ 8 - S/ 35",
+  "address": {
+    "@type": "PostalAddress",
+    "streetAddress": "Jr. Ayacucho 412, puesto 87, Mercado Central",
+    "addressLocality": "Lima",
+    "addressCountry": "PE"
+  },
+  "openingHoursSpecification": {
+    "@type": "OpeningHoursSpecification",
+    "dayOfWeek": ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"],
+    "opens": "08:00", "closes": "19:00"
+  }
+}
+</script>
+</head>
+<body>
+
+<canvas id="particulas"></canvas>
+
+<!-- ══════════════════════════════════════════════════════════ navegación -->
+<header class="nav" id="nav">
+  <div class="contenedor nav-fila">
+    <a href="#inicio" class="marca">
+      <img class="marca-sello" src="/img/marca/marca.svg" alt="Raíz Andina" width="40" height="40">
+      <div>
+        <div class="marca-nombre">Raíz Andina</div>
+        <div class="marca-bajada">Naturaleza con origen</div>
+      </div>
+    </a>
+
+    <nav class="nav-enlaces">
+      <a href="#origenes">Orígenes</a>
+      <a href="#asesor">Asesor</a>
+      <a href="#catalogo">Catálogo</a>
+      <a href="#proceso">Proceso</a>
+      <a href="/mi-pedido.html">Mi pedido</a>
+    </nav>
+
+    <div class="nav-acciones">
+      <div class="buscador">
+        <input type="search" id="buscar" placeholder="Buscar maca, muña…" aria-label="Buscar productos">
+      </div>
+      <button class="btn btn-primario btn-chico pastilla-carrito" id="btn-carrito"
+              aria-label="Abrir carrito">
+        Carrito
+        <span class="cuenta" id="cuenta-carrito" hidden>0</span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<!-- ════════════════════════════════════════════════════════════════ hero -->
+<section class="hero" id="inicio">
+  <div class="hero-rejilla"></div>
+  <div class="hero-luz" id="luz"></div>
+
+  <div class="contenedor hero-inner">
+    <div class="hero-texto">
+      <span class="kicker">Mercado Central · Desde 1998</span>
+      <h1 class="enorme">
+        <span>Lo que</span>
+        <span class="contorno">la tierra</span>
+        <span>ya sabía</span>
+      </h1>
+      <p class="hero-sub">
+        Tónicos, cremas, hierbas, esencias y superalimentos del Perú.
+        <strong>Cada envase con su origen, su altura y el uso que le dieron
+        antes que nosotros.</strong>
+      </p>
+      <div class="hero-ctas">
+        <a class="btn btn-primario" href="#catalogo" id="cta-magnetico">Ver el catálogo →</a>
+        <a class="btn btn-fantasma" href="#asesor">Consultar al asesor</a>
+      </div>
+
+      <div class="hero-datos">
+        <div class="dato"><strong data-contar="24" id="dato-productos">24</strong><span>Productos con origen trazado</span></div>
+        <div class="dato"><strong data-contar="27">27</strong><span>Años en el mismo puesto</span></div>
+        <div class="dato"><strong data-contar="4000" data-sufijo=" m">4000 m</strong><span>Altura de nuestros cultivos</span></div>
+      </div>
+    </div>
+
+    <!-- Envase 3D: cilindro con mapeado de textura en canvas. Recorre la gama
+         completa (tónico, crema, hierba, esencia, superalimento). -->
+    <div class="escena">
+      <div class="halo"></div>
+      <div class="vapor"><i></i><i></i><i></i></div>
+      <canvas id="frasco3d" aria-label="Envases de Raíz Andina girando" role="img"></canvas>
+
+      <div class="frasco-pie">
+        <strong id="frasco-nombre">MACA NEGRA</strong>
+        <span id="frasco-pie">Molida en piedra · Bolsa 250 g</span>
+        <div class="puntos" id="frasco-puntos">
+          <button type="button" aria-label="Tónico"></button>
+          <button type="button" aria-label="Crema"></button>
+          <button type="button" aria-label="Hierba"></button>
+          <button type="button" aria-label="Esencia"></button>
+          <button type="button" aria-label="Superalimento"></button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════ marquesina -->
+<div class="marquesina">
+  <div class="marquesina-pista" id="marquesina">
+    <span>Tónicos</span><span>Cremas</span><span>Hierbas</span>
+    <span>Esencias</span><span>Aceites</span><span>Superalimentos</span>
+    <span>Apícolas</span><span>Colágeno</span><span>Suplementos</span>
+    <span>Cuidado personal</span>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ manifiesto -->
+<section class="seccion manifiesto">
+  <div class="contenedor">
+    <p id="manifiesto">
+      No vendemos <b>milagros</b>. Vendemos plantas que alguien
+      <b>cultivó</b>, secó y trajo desde su <b>chacra</b>, con el nombre
+      del sitio del que salieron.
+    </p>
+    <div class="manifiesto-pie revelar">
+      <i></i>
+      <span>Compra directa al productor · Sin intermediarios · Guía de lote por producto</span>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════ orígenes -->
+<section class="seccion" id="origenes">
+  <div class="contenedor">
+    <div class="seccion-cabeza revelar">
+      <span class="kicker">De dónde viene</span>
+      <h2 class="grande">Tres pisos<br>ecológicos</h2>
+      <p>El Perú produce en tres mundos distintos a la vez. Cada uno da lo que
+         el otro no puede, y eso se nota en lo que llega al mostrador.</p>
+    </div>
+
+    <div class="tierras">
+      <article class="tierra revelar" data-retraso="1">
+        <span class="tierra-num">01</span>
+        <h3>Sierra alta</h3>
+        <div class="altura">3 800 – 4 300 m s. n. m.</div>
+        <p>Donde el frío obliga a la planta a concentrarse para sobrevivir.
+           La maca crece en suelos que ningún otro cultivo aguanta, y esa dureza
+           es exactamente lo que se busca en la raíz.</p>
+        <div class="tierra-productos"><b>Maca negra</b> · Hercampuri · Quinua de Puno</div>
+      </article>
+
+      <article class="tierra revelar" data-retraso="2">
+        <span class="tierra-num">02</span>
+        <h3>Selva alta</h3>
+        <div class="altura">800 – 1 800 m s. n. m.</div>
+        <p>Neblina permanente y floración todo el año. De acá salen las mieles
+           y el propóleo, que dependen de que haya flor distinta cada mes.</p>
+        <div class="tierra-productos"><b>Miel multifloral</b> · Propóleo · Sacha inchi</div>
+      </article>
+
+      <article class="tierra revelar" data-retraso="3">
+        <span class="tierra-num">03</span>
+        <h3>Amazonía</h3>
+        <div class="altura">100 – 300 m s. n. m.</div>
+        <p>Cortezas, resinas y frutos de creciente. Se recolecta sin talar:
+           la uña de gato y la sangre de grado se sacan del árbol vivo,
+           que sigue produciendo por años.</p>
+        <div class="tierra-productos"><b>Uña de gato</b> · Sangre de grado · Camu camu</div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════ asesor -->
+<section class="seccion" id="asesor">
+  <div class="contenedor">
+    <div class="seccion-cabeza revelar">
+      <span class="kicker">Asesoría</span>
+      <h2 class="grande">Dinos qué<br>te pasa</h2>
+    </div>
+
+    <div class="asesor-caja revelar">
+      <div class="asesor-cabeza">
+        <h3>Asesor Raíz</h3>
+        <span class="etiqueta-ia">IA</span>
+      </div>
+      <p class="asesor-sub">
+        Cuéntanos con tus palabras qué necesitas. Te sugerimos
+        <strong>solo lo que hay en tienda hoy</strong> — si algo se agotó, deja de
+        ofrecerlo automáticamente. También responde por delivery, horarios,
+        pagos y pedidos al por mayor.
+      </p>
+
+      <form class="asesor-fila" id="forma-asesor">
+        <input id="consulta" placeholder="Ej: no puedo dormir y ando con mucho estrés" autocomplete="off" required>
+        <button class="btn btn-solido" type="submit" id="btn-asesor">Consultar</button>
+      </form>
+
+      <div class="sugerencias" id="sugerencias">
+        <button class="sugerencia" type="button">no puedo dormir</button>
+        <button class="sugerencia" type="button">me duelen las rodillas</button>
+        <button class="sugerencia" type="button">ando cansado todo el día</button>
+        <button class="sugerencia" type="button">cuánto me sale 50 bolsas de maca negra</button>
+        <button class="sugerencia" type="button">hacen delivery a Arequipa</button>
+      </div>
+
+      <div class="asesor-respuesta" id="respuesta-asesor" hidden>
+        <div class="burbuja" id="burbuja"></div>
+        <div class="fichas-asesor" id="fichas-asesor"></div>
+        <div class="asesor-fuente" id="fuente-asesor"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════ catálogo -->
+<section class="seccion" id="catalogo">
+  <div class="contenedor">
+    <div class="seccion-cabeza revelar">
+      <span class="kicker">Catálogo</span>
+      <h2 class="grande">Lo que hay<br>hoy en tienda</h2>
+      <p id="conteo-catalogo">Cargando productos…</p>
+    </div>
+
+    <div class="filtros revelar" id="filtros"></div>
+    <div class="grilla" id="grilla"></div>
+  </div>
+</section>
+
+<!-- ═════════════════════════════════════════════════════════════ proceso -->
+<section class="seccion proceso" id="proceso">
+  <div class="contenedor">
+    <div class="seccion-cabeza revelar">
+      <span class="kicker">Cómo trabajamos</span>
+      <h2 class="grande">Del productor<br>a tu casa</h2>
+    </div>
+
+    <div class="pasos">
+      <div class="paso revelar" data-retraso="1">
+        <div class="paso-num">01</div>
+        <h3>Compra directa</h3>
+        <p>Vamos a la zona y compramos al productor. Guardamos la guía de cada
+           lote: si preguntas de dónde salió tu frasco, te lo mostramos.</p>
+      </div>
+      <div class="paso revelar" data-retraso="2">
+        <div class="paso-num">02</div>
+        <h3>Secado y envasado</h3>
+        <p>A la sombra y a baja temperatura. El calor de más abarata el proceso
+           y arruina lo que estás pagando.</p>
+      </div>
+      <div class="paso revelar" data-retraso="3">
+        <div class="paso-num">03</div>
+        <h3>Stock en tiempo real</h3>
+        <p>Lo que ves disponible es lo que hay en el almacén ahora. No vendemos
+           lo que no tenemos, ni al por menor ni al por mayor.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════ cierre -->
+<section class="seccion cierre">
+  <div class="contenedor">
+    <span class="kicker revelar">Ven al puesto 87</span>
+    <h2 class="enorme revelar" data-retraso="1">Te esperamos</h2>
+    <p class="revelar" data-retraso="2">
+      Jr. Ayacucho 412, Mercado Central. De lunes a sábado, de 8 de la mañana
+      a 7 de la noche. Pregunta por lo que necesites: si no lo tenemos, te lo decimos.
+    </p>
+    <a class="btn btn-primario revelar" data-retraso="3" href="#catalogo">Empezar mi pedido →</a>
+  </div>
+</section>
+
+<!-- ═════════════════════════════════════════════════════════════════ pie -->
+<footer class="pie">
+  <div class="contenedor">
+    <div class="pie-grilla">
+      <div>
+        <div class="marca" style="margin-bottom:16px">
+          <img class="marca-sello" src="/img/marca/marca.svg" alt="" width="40" height="40">
+          <div>
+            <div class="marca-nombre">Raíz Andina</div>
+            <div class="marca-bajada">Naturaleza con origen</div>
+          </div>
+        </div>
+        <p id="pie-direccion">Jr. Ayacucho 412, puesto 87<br>Mercado Central, Lima</p>
+      </div>
+      <div>
+        <h4>Tienda</h4>
+        <ul>
+          <li><a href="#catalogo">Catálogo</a></li>
+          <li><a href="#asesor">Asesor Raíz</a></li>
+          <li><a href="#origenes">Orígenes</a></li>
+          <li><a href="#proceso">Cómo trabajamos</a></li>
+          <li><a href="/mi-pedido.html">Seguir mi pedido</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Contacto</h4>
+        <ul>
+          <li><a id="pie-tel" href="#">—</a></li>
+          <li><a id="pie-whatsapp" href="#" target="_blank" rel="noopener">WhatsApp pedidos</a></li>
+          <li><a id="pie-email" href="#">—</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Horario</h4>
+        <ul>
+          <li id="pie-horario">—</li>
+          <li id="pie-abierto"></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="pie-legal">
+      <span>© 2026 Raíz Andina · Mercado Central de Lima ·
+        <a href="/creditos.html">Créditos de imágenes</a></span>
+      <span>Los productos naturales no son medicamentos ni reemplazan un tratamiento médico.</span>
+    </div>
+  </div>
+</footer>
+
+<!-- ═════════════════════════════════════════════════════════════ carrito -->
+<div class="velo" id="velo" hidden></div>
+
+<aside class="panel" id="panel-carrito" hidden aria-label="Carrito de compras">
+  <div class="panel-cabeza">
+    <h2>Tu pedido</h2>
+    <button class="cerrar" id="cerrar-carrito" aria-label="Cerrar">&times;</button>
+  </div>
+  <div class="panel-cuerpo" id="cuerpo-carrito"></div>
+  <div class="panel-pie" id="pie-carrito"></div>
+</aside>
+
+<div class="toast" id="toast"></div>
+
+<script src="/js/frasco.js"></script>
+<script src="/js/landing.js"></script>
+<script src="/js/app.js"></script>
+</body>
+</html>

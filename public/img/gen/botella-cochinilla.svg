@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" role="img">
+
+  <defs>
+    <linearGradient id="gbotellacochinilla" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fbe9e4"/><stop offset="1" stop-color="#f2cabe"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="400" fill="url(#gbotellacochinilla)"/>
+  <circle cx="200" cy="200" r="150" fill="none" stroke="#a23e28" stroke-width="2" opacity=".22"/>
+  <circle cx="200" cy="200" r="128" fill="#fffdf8" opacity=".45"/>
+<rect x="176" y="88" width="48" height="30" rx="6" fill="#76281a"
+     stroke="#241a12" stroke-width="7" stroke-linejoin="round"/>
+<rect x="184" y="116" width="32" height="46" rx="4" fill="#a23e28"
+     stroke="#241a12" stroke-width="7" stroke-linejoin="round"/>
+<rect x="148" y="160" width="104" height="160" rx="18" fill="#cb5f45"
+     stroke="#241a12" stroke-width="7" stroke-linejoin="round"/>
+<rect x="148" y="210" width="104" height="72" rx="4" fill="#fbe9e4"
+     stroke="#241a12" stroke-width="7" stroke-linejoin="round"/>
+<rect x="164" y="180" width="13" height="122" rx="6" fill="#fff" opacity=".3"/>
+<circle cx="200" cy="246" r="20" fill="#a23e28"
+     stroke="#241a12" stroke-width="7"/>
+</svg>

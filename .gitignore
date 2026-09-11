@@ -1,0 +1,21 @@
+# La base de datos es estado, no fuente: se regenera con `node db.js --reset`.
+# Además guarda el hash de la contraseña del panel y las sesiones abiertas.
+data/tienda.db
+data/tienda.db-shm
+data/tienda.db-wal
+
+# Copia local de la configuracion. El que se versiona es .env.example.
+.env
+
+# Descarga del INEI que usa gen-ubigeo.mjs. Lo que hace falta para arrancar es
+# su salida, public/ubigeo.json, que si esta versionada.
+.cache/
+
+# El proyecto no instala paquetes, pero por si alguien prueba el asesor con
+# @anthropic-ai/sdk.
+node_modules/
+
+# Basura del sistema
+Thumbs.db
+desktop.ini
+.DS_Store

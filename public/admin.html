@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Panel interno — Raíz Andina</title>
+<link rel="icon" type="image/svg+xml" href="/img/marca/favicon-panel.svg">
+<link rel="stylesheet" href="/css/panel.css">
+</head>
+<body>
+
+<header class="admin-cabecera">
+  <div class="contenedor">
+    <img class="marca-icono" src="/img/marca/marca-panel.svg" alt="" width="42" height="42">
+    <div>
+      <h1>Panel interno</h1>
+      <div class="marca-bajada">Raíz Andina · Mercado Central</div>
+    </div>
+    <div class="acciones">
+      <span class="pulso"><i></i> Actualizado <span id="hora">—</span></span>
+      <span class="quien" id="quien"></span>
+      <button class="btn btn-claro" id="btn-ruta">Imprimir ruta</button>
+      <button class="btn btn-claro" id="btn-refrescar">Actualizar</button>
+      <a class="btn btn-claro" href="/">Ver tienda</a>
+      <button class="btn btn-claro" id="btn-salir">Salir</button>
+    </div>
+  </div>
+</header>
+
+<main class="contenedor">
+  <div class="kpis" id="kpis"></div>
+
+  <div class="tarjetas-admin">
+    <div>
+      <section class="bloque">
+        <div class="bloque-cabeza">
+          <h2>Pedidos recientes</h2>
+          <div class="cabeza-derecha">
+            <input type="search" id="buscar-pedido" class="buscar-panel"
+                   placeholder="Buscar por código, nombre o teléfono…"
+                   aria-label="Buscar pedidos">
+            <span class="kpi-nota" id="conteo-pedidos"></span>
+          </div>
+        </div>
+        <div class="bloque-cuerpo" id="lista-pedidos"></div>
+      </section>
+
+      <section class="bloque">
+        <div class="bloque-cabeza"><h2>Movimientos de inventario</h2></div>
+        <div class="bloque-cuerpo" id="lista-movimientos"></div>
+      </section>
+    </div>
+
+    <div>
+      <section class="bloque">
+        <div class="bloque-cabeza">
+          <h2>Reposición urgente</h2>
+          <span class="kpi-nota">stock ≤ mínimo</span>
+        </div>
+        <div class="bloque-cuerpo" id="lista-stock"></div>
+      </section>
+
+      <section class="bloque">
+        <div class="bloque-cabeza"><h2>Más vendidos</h2></div>
+        <div class="bloque-cuerpo"><table class="tabla-top"><tbody id="lista-top"></tbody></table></div>
+      </section>
+
+      <section class="bloque">
+        <div class="bloque-cabeza">
+          <h2>Comprobantes</h2>
+          <span class="kpi-nota" id="conteo-comprobantes"></span>
+        </div>
+        <div class="bloque-cuerpo" id="lista-comprobantes"></div>
+      </section>
+
+      <section class="bloque" id="bloque-cambios" hidden>
+        <div class="bloque-cabeza"><h2>Cambios de ficha</h2></div>
+        <div class="bloque-cuerpo" id="lista-cambios"></div>
+      </section>
+    </div>
+  </div>
+
+  <section class="bloque" style="margin-bottom:40px">
+    <div class="bloque-cabeza">
+      <h2>Catálogo</h2>
+      <div class="cabeza-derecha">
+        <input type="search" id="buscar-producto" class="buscar-panel"
+               placeholder="Buscar producto…" aria-label="Buscar productos">
+        <label class="interruptor">
+          <input type="checkbox" id="ver-bajas"> Ver dados de baja
+        </label>
+        <span class="kpi-nota" id="conteo-productos"></span>
+        <button class="btn btn-primario btn-chico" id="abrir-alta">+ Nuevo producto</button>
+      </div>
+    </div>
+    <div class="bloque-cuerpo" id="lista-productos" style="max-height:none"></div>
+  </section>
+</main>
+
+<!--
+  Alta de producto. Lo que se pide arriba es lo que no se puede adivinar; lo
+  de "Para el asesor" es lo que hace que el producto aparezca cuando un cliente
+  escribe un malestar, por eso va explicado y no como un campo suelto.
+-->
+<dialog id="dlg-alta" class="dlg">
+  <form id="forma-alta" method="dialog">
+    <header class="dlg-cabeza">
+      <h2>Nuevo producto</h2>
+      <button type="button" class="dlg-cerrar" id="cerrar-alta" aria-label="Cerrar">×</button>
+    </header>
+
+    <div class="dlg-cuerpo">
+      <div class="aviso aviso-error" id="alta-error" hidden></div>
+
+      <div class="campo">
+        <label for="a-nombre">Nombre <span class="req">*</span></label>
+        <input id="a-nombre" name="nombre" maxlength="90" required
+               placeholder="Uña de Gato en cápsulas">
+      </div>
+
+      <div class="campo-doble">
+        <div class="campo">
+          <label for="a-categoria">Categoría <span class="req">*</span></label>
+          <input id="a-categoria" name="categoria" list="cats" maxlength="40" required
+                 placeholder="Hierbas">
+          <datalist id="cats"></datalist>
+        </div>
+        <div class="campo">
+          <label for="a-presentacion">Presentación <span class="req">*</span></label>
+          <input id="a-presentacion" name="presentacion" maxlength="60" required
+                 placeholder="Bolsa 250 g">
+        </div>
+      </div>
+
+      <div class="campo-triple">
+        <div class="campo">
+          <label for="a-precio">Precio de venta <span class="req">*</span></label>
+          <input id="a-precio" name="precio" type="number" step="0.10" min="0.10"
+                 max="99999" required placeholder="24.00">
+        </div>
+        <div class="campo">
+          <label for="a-costo">Costo</label>
+          <input id="a-costo" name="costo" type="number" step="0.10" min="0"
+                 max="99999" placeholder="13.00">
+        </div>
+        <div class="campo">
+          <label for="a-margen">Margen</label>
+          <output id="a-margen" class="salida-margen">—</output>
+        </div>
+      </div>
+
+      <div class="campo-doble">
+        <div class="campo">
+          <label for="a-stock">Stock inicial</label>
+          <input id="a-stock" name="stock" type="number" step="1" min="0" max="99999"
+                 value="0">
+        </div>
+        <div class="campo">
+          <label for="a-stock-min">Avisar cuando baje de</label>
+          <input id="a-stock-min" name="stock_min" type="number" step="1" min="0"
+                 max="9999" value="5">
+        </div>
+      </div>
+
+      <div class="campo">
+        <label for="a-origen">Origen</label>
+        <input id="a-origen" name="origen" maxlength="80" placeholder="Tarapoto, San Martín">
+      </div>
+
+      <fieldset class="dlg-grupo">
+        <legend>Para el asesor</legend>
+        <p class="dlg-ayuda">
+          Esto es lo que hace que el producto salga cuando alguien escribe
+          «me duele la cabeza». Sin etiquetas, el producto existe pero el
+          asesor no lo va a ofrecer nunca.
+        </p>
+        <div class="campo">
+          <label for="a-beneficios">¿Para qué sirve?</label>
+          <input id="a-beneficios" name="beneficios" maxlength="200"
+                 placeholder="Alivia dolores de articulaciones">
+        </div>
+        <div class="campo">
+          <label for="a-etiquetas">Malestares, separados por coma</label>
+          <input id="a-etiquetas" name="etiquetas" maxlength="400"
+                 placeholder="rodilla, artritis, inflamación, dolor">
+        </div>
+      </fieldset>
+
+      <details class="dlg-avanzado">
+        <summary>Descripción, foto y código</summary>
+        <div class="campo">
+          <label for="a-descripcion">Descripción</label>
+          <textarea id="a-descripcion" name="descripcion" rows="2" maxlength="400"></textarea>
+        </div>
+        <div class="campo">
+          <label for="a-uso">Uso tradicional</label>
+          <textarea id="a-uso" name="uso_tradicional" rows="2" maxlength="400"></textarea>
+        </div>
+        <div class="campo-doble">
+          <div class="campo">
+            <label for="a-imagen">Foto</label>
+            <input id="a-imagen" name="imagen" maxlength="300"
+                   placeholder="/img/fotos/mi-foto.jpg">
+          </div>
+          <div class="campo">
+            <label for="a-sku">Código</label>
+            <input id="a-sku" name="sku" maxlength="20" placeholder="se genera solo">
+          </div>
+        </div>
+      </details>
+    </div>
+
+    <footer class="dlg-pie">
+      <button type="button" class="btn btn-claro" id="cancelar-alta">Cancelar</button>
+      <button type="submit" class="btn btn-primario" id="guardar-alta">
+        Guardar producto
+      </button>
+    </footer>
+  </form>
+</dialog>
+
+<div class="toast" id="toast"></div>
+
+<script src="/js/admin.js"></script>
+</body>
+</html>

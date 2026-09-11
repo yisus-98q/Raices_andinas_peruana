@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" role="img">
+
+  <defs>
+    <linearGradient id="graizmiel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fdf3d6"/><stop offset="1" stop-color="#f8e2a2"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="400" fill="url(#graizmiel)"/>
+  <circle cx="200" cy="200" r="150" fill="none" stroke="#c78d16" stroke-width="2" opacity=".22"/>
+  <circle cx="200" cy="200" r="128" fill="#fffdf8" opacity=".45"/>
+<path d="M200 148 L200 112" fill="none" stroke="#241a12" stroke-width="5"
+     stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M200 130 C178 106 154 100 140 110 C152 132 178 142 200 130 Z" fill="#c78d16" stroke="#241a12" stroke-width="7"
+     stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M200 130 C222 106 246 100 260 110 C248 132 222 142 200 130 Z" fill="#c78d16" stroke="#241a12" stroke-width="7"
+     stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M200 146 C154 146 132 186 132 224 C132 270 162 302 200 302 C238 302 268 270 268 224 C268 186 246 146 200 146 Z" fill="#eeb63a" stroke="#241a12" stroke-width="7"
+     stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M200 302 L200 336" fill="none" stroke="#241a12" stroke-width="5"
+     stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M172 294 L152 326" fill="none" stroke="#241a12" stroke-width="5"
+     stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M228 294 L248 326" fill="none" stroke="#241a12" stroke-width="5"
+     stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M200 186 L200 268" fill="none" stroke="#241a12" stroke-width="4"
+     stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
