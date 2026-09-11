@@ -452,6 +452,87 @@
       </a>`).join(''));
   }
 
+  // ------------------------------------------------------- menu de secciones
+  /**
+   * Las secciones del panel, con lo que hace cada una.
+   *
+   * El panel creció hasta diez bloques en dos columnas, y en una pantalla de
+   * laptop no entran: hay que bajar buscando. El menú es la lista de lo que
+   * hay, y la linea de abajo dice PARA QUE sirve — quien atiende tres veces
+   * por semana no tiene por que acordarse de que «Movimientos» es el kardex.
+   *
+   * `soloDueno` no protege nada: el servidor ya corta. Es para no ofrecer un
+   * sitio al que el mostrador no puede llegar.
+   */
+  const SECCIONES = [
+    { id: 'bloque-pedidos', nombre: 'Pedidos recientes',
+      hace: 'Lo que hay que atender hoy: preparar, enviar, anular.' },
+    { id: 'bloque-calendario', nombre: 'Calendario de ventas',
+      hace: 'Cuánto entró cada día del mes y cuál fue el mejor.' },
+    { id: 'bloque-movimientos', nombre: 'Movimientos de inventario',
+      hace: 'Cada unidad que entró o salió, y por qué.' },
+    { id: 'bloque-stock', nombre: 'Reposición urgente',
+      hace: 'Lo que está por acabarse, con cuánto pedir.' },
+    { id: 'bloque-top', nombre: 'Más vendidos',
+      hace: 'Qué se mueve y qué está parado.' },
+    { id: 'bloque-clientes', nombre: 'Clientes',
+      hace: 'Quién compra, cuánto gastó y qué se llevó antes.' },
+    { id: 'bloque-comprobantes', nombre: 'Comprobantes',
+      hace: 'Boletas y facturas emitidas, para imprimir o mandar.' },
+    { id: 'bloque-respaldo', nombre: 'Respaldo', soloDueno: true,
+      hace: 'La copia de seguridad del negocio. Debe estar al día.' },
+    { id: 'bloque-cambios', nombre: 'Cambios de ficha', soloDueno: true,
+      hace: 'Quién cambió un precio o un mínimo, y cuándo.' },
+    { id: 'bloque-catalogo', nombre: 'Catálogo',
+      hace: 'Todos los productos: precio, mínimo y stock.' },
+  ];
+
+  function pintarMenu() {
+    const visibles = SECCIONES.filter((s) => {
+      if (s.soloDueno && !esDueno) return false;
+      // Un bloque oculto por no tener nada que mostrar tampoco se ofrece:
+      // llevar a alguien a una sección vacía es peor que no ofrecerla.
+      const el = $(s.id);
+      return el && !el.hidden;
+    });
+    pintar('menu-secciones', visibles.map((s) => `
+      <button class="menu-item" data-ir="${s.id}">
+        <strong>${s.nombre}</strong>
+        <span>${s.hace}</span>
+      </button>`).join(''));
+  }
+
+  const cerrarMenu = () => {
+    $('menu-secciones').hidden = true;
+    $('menu-boton').setAttribute('aria-expanded', 'false');
+  };
+
+  function alternarMenu() {
+    const nav = $('menu-secciones');
+    if (nav.hidden) {
+      pintarMenu();                 // al abrir, no al cargar: el rol y los
+      nav.hidden = false;           // bloques ocultos cambian entre medias
+      $('menu-boton').setAttribute('aria-expanded', 'true');
+    } else cerrarMenu();
+  }
+
+  /**
+   * Lleva a la sección y la enmarca un momento. Sin el destello, en una
+   * pantalla con diez bloques iguales uno no sabe a cuál llegó.
+   */
+  function irA(id) {
+    cerrarMenu();
+    const el = $(id);
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    el.classList.remove('recien-llegado');
+    // Reflow forzado: sin esto, quitar y poner la clase en el mismo cuadro no
+    // reinicia la animación y el segundo clic en la misma sección no destella.
+    void el.offsetWidth;
+    el.classList.add('recien-llegado');
+    setTimeout(() => el.classList.remove('recien-llegado'), 1600);
+  }
+
   // ----------------------------------------------------------- respaldo
   const kb = (b) => `${Math.round(b / 1024).toLocaleString('es-PE')} KB`;
 
@@ -925,6 +1006,23 @@
   $('lista-clientes').addEventListener('click', (e) => {
     const cabeza = e.target.closest('.cliente-cabeza');
     if (cabeza) return abrirCliente(cabeza.dataset.doc);
+  });
+
+  $('menu-boton').onclick = alternarMenu;
+  $('menu-secciones').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-ir]');
+    if (b) irA(b.dataset.ir);
+  });
+  // Clic fuera y Escape cierran. Un menú que solo cierra con su propio botón
+  // se queda abierto tapando el panel.
+  document.addEventListener('click', (e) => {
+    if (!$('menu-secciones').hidden && !e.target.closest('.menu-envoltura')) cerrarMenu();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !$('menu-secciones').hidden) {
+      cerrarMenu();
+      $('menu-boton').focus();
+    }
   });
 
   $('btn-respaldar').onclick = respaldarAhora;

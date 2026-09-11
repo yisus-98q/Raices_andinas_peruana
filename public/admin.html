@@ -11,6 +11,13 @@
 
 <header class="admin-cabecera">
   <div class="contenedor">
+    <div class="menu-envoltura">
+      <button class="menu-boton" id="menu-boton" aria-expanded="false"
+              aria-controls="menu-secciones" aria-label="Secciones del panel">
+        <span></span><span></span><span></span>
+      </button>
+      <nav class="menu-secciones" id="menu-secciones" hidden></nav>
+    </div>
     <img class="marca-icono" src="/img/marca/marca-panel.svg" alt="" width="42" height="42">
     <div>
       <h1>Panel interno</h1>
@@ -32,7 +39,7 @@
 
   <div class="tarjetas-admin">
     <div>
-      <section class="bloque">
+      <section class="bloque" id="bloque-pedidos">
         <div class="bloque-cabeza">
           <h2>Pedidos recientes</h2>
           <div class="cabeza-derecha">
@@ -45,7 +52,7 @@
         <div class="bloque-cuerpo" id="lista-pedidos"></div>
       </section>
 
-      <section class="bloque">
+      <section class="bloque" id="bloque-calendario">
         <div class="bloque-cabeza">
           <h2>Calendario de ventas</h2>
           <div class="cabeza-derecha">
@@ -57,14 +64,14 @@
         <div class="bloque-cuerpo" id="calendario"></div>
       </section>
 
-      <section class="bloque">
+      <section class="bloque" id="bloque-movimientos">
         <div class="bloque-cabeza"><h2>Movimientos de inventario</h2></div>
         <div class="bloque-cuerpo" id="lista-movimientos"></div>
       </section>
     </div>
 
     <div>
-      <section class="bloque">
+      <section class="bloque" id="bloque-stock">
         <div class="bloque-cabeza">
           <h2>Reposición urgente</h2>
           <span class="kpi-nota">stock ≤ mínimo</span>
@@ -72,7 +79,7 @@
         <div class="bloque-cuerpo" id="lista-stock"></div>
       </section>
 
-      <section class="bloque">
+      <section class="bloque" id="bloque-top">
         <div class="bloque-cabeza"><h2>Más vendidos</h2></div>
         <div class="bloque-cuerpo"><table class="tabla-top"><tbody id="lista-top"></tbody></table></div>
       </section>
@@ -85,7 +92,7 @@
         <div class="bloque-cuerpo" id="respaldo"></div>
       </section>
 
-      <section class="bloque">
+      <section class="bloque" id="bloque-clientes">
         <div class="bloque-cabeza">
           <h2>Clientes</h2>
           <div class="cabeza-derecha">
@@ -98,7 +105,7 @@
         <div class="bloque-cuerpo" id="lista-clientes"></div>
       </section>
 
-      <section class="bloque">
+      <section class="bloque" id="bloque-comprobantes">
         <div class="bloque-cabeza">
           <h2>Comprobantes</h2>
           <span class="kpi-nota" id="conteo-comprobantes"></span>
@@ -113,7 +120,7 @@
     </div>
   </div>
 
-  <section class="bloque" style="margin-bottom:40px">
+  <section class="bloque" id="bloque-catalogo" style="margin-bottom:40px">
     <div class="bloque-cabeza">
       <h2>Catálogo</h2>
       <div class="cabeza-derecha">

@@ -676,3 +676,73 @@ img { max-width: 100%; display: block; }
   color: var(--crema-suave);
 }
 .resp-peso { color: var(--crema); }
+
+/* ------------------------------------------------- menu de secciones
+   El panel creció hasta diez bloques en dos columnas y en una laptop no
+   entran. El menú va arriba a la izquierda, antes de la marca: es lo
+   primero que se lee y no compite con los botones de la derecha. */
+.menu-envoltura { position: relative; flex: none; }
+
+.menu-boton {
+  width: 38px; height: 38px;
+  display: flex; flex-direction: column; justify-content: center; gap: 5px;
+  padding: 0 9px;
+  background: var(--humo);
+  border: 1px solid var(--borde);
+  border-radius: 10px;
+  cursor: pointer;
+}
+.menu-boton span {
+  display: block; height: 2px; border-radius: 2px;
+  background: var(--crema);
+  transition: background .15s;
+}
+.menu-boton:hover { border-color: var(--ocre); }
+.menu-boton:hover span { background: var(--ocre); }
+/* La X al abrir: la primera y la última se cruzan, la del medio se va. */
+.menu-boton[aria-expanded="true"] span:first-child { transform: translateY(7px) rotate(45deg); }
+.menu-boton[aria-expanded="true"] span:nth-child(2) { opacity: 0; }
+.menu-boton[aria-expanded="true"] span:last-child { transform: translateY(-7px) rotate(-45deg); }
+.menu-boton span { transition: transform .18s, opacity .18s, background .15s; }
+
+.menu-secciones {
+  position: absolute; top: calc(100% + 9px); left: 0; z-index: 60;
+  width: min(340px, calc(100vw - 32px));
+  max-height: min(70vh, 560px);
+  overflow-y: auto;
+  background: var(--carbon);
+  border: 1px solid var(--borde);
+  border-radius: 12px;
+  padding: 6px;
+  box-shadow: 0 18px 44px rgba(0, 0, 0, .55);
+}
+.menu-item {
+  display: block; width: 100%;
+  text-align: left;
+  background: none; border: none;
+  color: inherit; font: inherit;
+  padding: 9px 11px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.menu-item + .menu-item { border-top: 1px solid var(--borde); border-radius: 0; }
+.menu-item:hover, .menu-item:focus-visible {
+  background: var(--humo);
+  outline: none;
+}
+.menu-item strong { display: block; font-size: 13.5px; font-weight: 600; }
+.menu-item:hover strong { color: var(--ocre); }
+.menu-item span {
+  display: block; font-size: 11.5px; color: var(--crema-suave);
+  line-height: 1.4; margin-top: 2px;
+}
+
+/* El destello al llegar: con diez bloques iguales, sin esto uno no sabe a
+   cuál aterrizó. El scroll deja el bloque bajo la cabecera pegajosa, así
+   que el margen superior es lo que evita que quede tapado. */
+.bloque { scroll-margin-top: 86px; }
+.recien-llegado { animation: aterrizar 1.5s ease-out; }
+@keyframes aterrizar {
+  0%, 30% { border-color: var(--ocre); box-shadow: 0 0 0 3px rgba(240, 165, 44, .16); }
+  100% { border-color: var(--borde); box-shadow: none; }
+}
