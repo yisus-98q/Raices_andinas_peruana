@@ -501,3 +501,144 @@ img { max-width: 100%; display: block; }
 /* El número del comprobante abre la boleta de ese cliente. */
 .enlace-cmp { text-decoration: none; cursor: pointer; }
 .enlace-cmp:hover { border-color: currentColor; filter: brightness(1.25); }
+
+/* ------------------------------------------------ calendario de ventas
+   La rejilla es de siete columnas fijas: un calendario que reflúa no se
+   lee como calendario. El fondo de cada día sale de --fuerza, que el JS
+   calcula contra el mejor día del propio mes. */
+.cal-rejilla {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  padding: 6px 0 12px;
+}
+.dia-cabeza {
+  text-align: center;
+  font-size: 11px;
+  letter-spacing: .06em;
+  color: var(--crema-suave);
+  opacity: .7;
+  padding-bottom: 4px;
+}
+/* Un mes ocupa lo que ocupa: el tope de 560px de .bloque-cuerpo le cortaba el
+   pie por la mitad, y un calendario con barra de scroll no se lee de un golpe. */
+#calendario { max-height: none; }
+
+.dia-cal {
+  /* Algo mas ancho que alto: es la proporcion en la que una cifra de cuatro
+     digitos entra sin partirse. */
+  aspect-ratio: 1.15;
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  padding: 5px 6px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background: rgba(240, 165, 44, var(--fuerza, 0));
+}
+.dia-cal.vacia { border-color: transparent; background: none; }
+.dia-num { font-size: 11.5px; color: var(--crema-suave); }
+.dia-cal.vendio .dia-num { color: var(--crema); font-weight: 600; }
+.dia-monto {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--crema);
+  line-height: 1.1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Hoy se marca con el borde, no con el fondo: el fondo ya significa cuánto
+   se vendió y dos significados en el mismo color no se distinguen. */
+.dia-cal.es-hoy { border-color: var(--ocre); }
+.dia-cal.mejor { box-shadow: inset 0 0 0 1px var(--ocre-vivo); }
+
+.cal-pie {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  justify-content: space-between;
+  font-size: 12.5px;
+  color: var(--crema-suave);
+  border-top: 1px solid var(--borde);
+  padding-top: 10px;
+}
+.cal-pie strong { color: var(--crema); }
+.cal-mejor { color: var(--ocre); }
+
+.btn-mini {
+  background: var(--humo);
+  border: 1px solid var(--borde);
+  color: var(--crema);
+  border-radius: 7px;
+  width: 26px;
+  height: 26px;
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+}
+.btn-mini:hover { border-color: var(--ocre); color: var(--ocre); }
+
+/* --------------------------------------------------- historial de cliente */
+.cliente { border-bottom: 1px solid var(--borde); }
+.cliente:last-child { border-bottom: none; }
+.cliente-cabeza {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 2px;
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+}
+.cliente-cabeza:hover .cliente-info strong { color: var(--ocre); }
+.cliente-info { min-width: 0; }
+.cliente-info strong { display: block; font-size: 14px; font-weight: 600; }
+.cliente-info span { font-size: 12px; color: var(--crema-suave); }
+.cliente-derecha { text-align: right; flex-shrink: 0; }
+.cliente-gastado { display: block; font-size: 14px; font-weight: 700; color: var(--crema); }
+.cliente-veces { font-size: 11.5px; color: var(--crema-suave); }
+/* Quien vuelve es el dato que vale: se resalta para que salte a la vista. */
+.cliente-veces.repite { color: var(--verde); font-weight: 600; }
+
+.cliente-cuerpo {
+  padding: 2px 2px 14px;
+  border-top: 1px dashed var(--borde);
+  margin-top: -1px;
+}
+.cliente-resumen {
+  font-size: 11.5px;
+  color: var(--crema-suave);
+  padding: 8px 0 10px;
+}
+.hist { padding: 8px 10px; background: var(--humo); border-radius: 8px; margin-bottom: 6px; }
+.hist-cabeza { display: flex; align-items: baseline; gap: 8px; }
+.hist-codigo {
+  font-family: ui-monospace, "Consolas", monospace;
+  font-size: 11.5px;
+  color: var(--ocre);
+  text-decoration: none;
+}
+.hist-codigo:hover { text-decoration: underline; }
+.hist-fecha { font-size: 11px; color: var(--crema-suave); flex: 1; }
+.hist-total { font-size: 13px; font-weight: 700; }
+.hist-items { font-size: 11.5px; color: var(--crema-suave); margin-top: 3px; line-height: 1.45; }
+/* Un anulado se tacha, no se esconde: para atender a alguien hace falta saber
+   que devolvió. */
+.hist-nulo { opacity: .55; }
+.hist-nulo .hist-total { text-decoration: line-through; }
+.hist-estado { font-size: 10.5px; color: var(--terra); text-transform: uppercase; letter-spacing: .05em; margin-top: 4px; }
+.cargando { font-size: 12px; color: var(--crema-suave); }
+
+/* En pantalla estrecha la cifra no entra en 50px de celda. Se calla y queda el
+   color, que es el que dice donde hubo movimiento; el importe sigue en el
+   title de la celda y en el pie del bloque. */
+@media (max-width: 560px) {
+  .dia-monto { display: none; }
+  .dia-cal { aspect-ratio: 1; padding: 4px; }
+}

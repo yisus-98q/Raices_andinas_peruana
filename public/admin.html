@@ -46,6 +46,18 @@
       </section>
 
       <section class="bloque">
+        <div class="bloque-cabeza">
+          <h2>Calendario de ventas</h2>
+          <div class="cabeza-derecha">
+            <button class="btn-mini" id="mes-antes" aria-label="Mes anterior">&larr;</button>
+            <span class="kpi-nota" id="mes-nombre"></span>
+            <button class="btn-mini" id="mes-despues" aria-label="Mes siguiente">&rarr;</button>
+          </div>
+        </div>
+        <div class="bloque-cuerpo" id="calendario"></div>
+      </section>
+
+      <section class="bloque">
         <div class="bloque-cabeza"><h2>Movimientos de inventario</h2></div>
         <div class="bloque-cuerpo" id="lista-movimientos"></div>
       </section>
@@ -63,6 +75,19 @@
       <section class="bloque">
         <div class="bloque-cabeza"><h2>Más vendidos</h2></div>
         <div class="bloque-cuerpo"><table class="tabla-top"><tbody id="lista-top"></tbody></table></div>
+      </section>
+
+      <section class="bloque">
+        <div class="bloque-cabeza">
+          <h2>Clientes</h2>
+          <div class="cabeza-derecha">
+            <input type="search" id="buscar-cliente" class="buscar-panel"
+                   placeholder="Nombre, documento o teléfono…"
+                   aria-label="Buscar clientes">
+            <span class="kpi-nota" id="conteo-clientes"></span>
+          </div>
+        </div>
+        <div class="bloque-cuerpo" id="lista-clientes"></div>
       </section>
 
       <section class="bloque">

@@ -208,6 +208,48 @@ const Q = {
     (producto_id, campo, antes, despues, usuario) VALUES (?,?,?,?,?)`),
   cambios: db.prepare(`SELECT c.*, p.nombre, p.sku FROM cambios_producto c
     JOIN productos p ON p.id = c.producto_id ORDER BY c.id DESC LIMIT 40`),
+
+  // --- Calendario de ventas -------------------------------------------------
+  // Un anulado o un devuelto NO es una venta, igual que en `resumen()`. Si
+  // contaran, el calendario diria una cifra y la caja del dia otra, y el dueno
+  // dejaria de creerle a las dos.
+  ventasDelMes: db.prepare(`SELECT date(creado_en) dia, COUNT(*) pedidos,
+      COALESCE(SUM(total),0) total
+    FROM pedidos
+    WHERE strftime('%Y-%m', creado_en) = ? AND estado NOT IN ('anulado','devuelto')
+    GROUP BY dia ORDER BY dia`),
+  // Meses con algo vendido: es lo que permite que las flechas del calendario
+  // no lleven a meses vacios cuando la tienda todavia tiene poca historia.
+  mesesConVentas: db.prepare(`SELECT strftime('%Y-%m', creado_en) mes
+    FROM pedidos WHERE estado NOT IN ('anulado','devuelto')
+    GROUP BY mes ORDER BY mes`),
+
+  // --- Historial de cliente -------------------------------------------------
+  // Se agrupa por `num_doc`, no por telefono ni por nombre: el documento es lo
+  // que va en el comprobante y lo unico que no cambia. El nombre se escribe
+  // distinto cada vez ("Rosa Q.", "rosa quispe") y el telefono se cambia.
+  // Se muestra el ultimo nombre y telefono que dejo, que es con el que hay que
+  // llamarlo hoy.
+  clientes: db.prepare(`SELECT
+      num_doc, tipo_doc,
+      COUNT(*) pedidos,
+      COALESCE(SUM(total),0) gastado,
+      MIN(date(creado_en)) primera,
+      MAX(date(creado_en)) ultima,
+      (SELECT cliente_nombre FROM pedidos b
+         WHERE b.num_doc = a.num_doc ORDER BY b.id DESC LIMIT 1) nombre,
+      (SELECT cliente_tel FROM pedidos b
+         WHERE b.num_doc = a.num_doc ORDER BY b.id DESC LIMIT 1) telefono,
+      (SELECT razon_social FROM pedidos b
+         WHERE b.num_doc = a.num_doc ORDER BY b.id DESC LIMIT 1) razon_social
+    FROM pedidos a
+    WHERE num_doc <> '' AND estado NOT IN ('anulado','devuelto')
+    GROUP BY num_doc ORDER BY gastado DESC LIMIT 200`),
+  // El historial si incluye anulados y devueltos: para atender a alguien hace
+  // falta saber que devolvio, no solo lo que pago.
+  historialDe: db.prepare(`SELECT id, codigo, creado_en, total, estado,
+      tipo_comprobante, cliente_dir, distrito, provincia
+    FROM pedidos WHERE num_doc = ? ORDER BY id DESC LIMIT 50`),
 };
 
 // ------------------------------------------------------------- alta de ficha
@@ -866,6 +908,26 @@ async function api(req, res, url) {
     return json(res, 200, Q.movimientos.all());
   }
 
+  // Cuanto se vendio cada dia del mes. Sin `?mes=`, el mes en curso.
+  if (metodo === 'GET' && ruta === '/api/admin/calendario') {
+    if (!requiereSesion(req, res)) return;
+    return json(res, 200, calendario(url.searchParams.get('mes')));
+  }
+
+  // Quienes compran y que compro cada uno. Con `?doc=`, el historial de ese.
+  if (metodo === 'GET' && ruta === '/api/admin/clientes') {
+    if (!requiereSesion(req, res)) return;
+    const doc = url.searchParams.get('doc');
+    if (doc) {
+      const pedidos = Q.historialDe.all(doc).map((p) => ({
+        ...p, items: Q.itemsDe.all(p.id),
+      }));
+      if (pedidos.length === 0) return json(res, 404, { error: 'Sin historial' });
+      return json(res, 200, pedidos);
+    }
+    return json(res, 200, Q.clientes.all());
+  }
+
   return json(res, 404, { error: 'Ruta no encontrada' });
 }
 
@@ -1056,6 +1118,52 @@ function resumen() {
       sugerido: Math.max(p.stock_min * 2 - p.stock, p.stock_min),
     })),
     top_productos: top,
+  };
+}
+
+/**
+ * Ventas dia por dia de un mes. Devuelve los 28-31 dias completos, tambien los
+ * que no vendieron nada: un calendario con huecos se lee como un error de
+ * carga, y un cero es informacion — ese martes no entro nada.
+ *
+ * `mes` llega del navegador, asi que se valida: cualquier cosa que no sea
+ * AAAA-MM cae al mes en curso en vez de ir a la consulta.
+ */
+function calendario(mes) {
+  const hoy = new Date();
+  const enCurso = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}`;
+  const m = /^\d{4}-(0[1-9]|1[0-2])$/.test(mes || '') ? mes : enCurso;
+
+  const [anio, num] = m.split('-').map(Number);
+  const cuantos = new Date(anio, num, 0).getDate();
+
+  const porDia = new Map(Q.ventasDelMes.all(m).map((d) => [d.dia, d]));
+  const dias = [];
+  for (let i = 1; i <= cuantos; i++) {
+    const fecha = `${m}-${String(i).padStart(2, '0')}`;
+    const d = porDia.get(fecha);
+    dias.push({
+      fecha,
+      dia: i,
+      // getDay() con la fecha en hora local: se construye a mano para que no
+      // la corra el uso horario, que en Peru restaria un dia.
+      semana: new Date(anio, num - 1, i).getDay(),
+      pedidos: d ? d.pedidos : 0,
+      total: d ? +d.total.toFixed(2) : 0,
+    });
+  }
+
+  const conVenta = dias.filter((d) => d.total > 0);
+  const mejor = conVenta.reduce((a, b) => (b.total > (a?.total ?? 0) ? b : a), null);
+
+  return {
+    mes: m,
+    dias,
+    total_mes: +conVenta.reduce((t, d) => t + d.total, 0).toFixed(2),
+    pedidos_mes: conVenta.reduce((t, d) => t + d.pedidos, 0),
+    dias_con_venta: conVenta.length,
+    mejor_dia: mejor && { fecha: mejor.fecha, total: mejor.total },
+    meses: Q.mesesConVentas.all().map((r) => r.mes),
   };
 }
 

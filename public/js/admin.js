@@ -32,6 +32,15 @@
   let filtro = '';
   let filtroProducto = '';
   let verBajas = false;
+  let filtroCliente = '';
+  // Mes que se esta mirando en el calendario y documento del cliente abierto.
+  // Viven fuera de `cargar()` porque el panel se refresca solo cada 15 s: si se
+  // guardaran dentro, mirar agosto o el historial de alguien duraria hasta el
+  // siguiente refresco.
+  let mesVisto = null;
+  let clienteAbierto = null;
+  let ultimosClientes = [];
+  let historial = {};
 
   let temporizador;
   function avisar(texto) {
@@ -110,13 +119,16 @@
 
   async function cargar() {
     try {
-      const [resumen, pedidos, movimientos, productos, cambios, comprobantes] = await Promise.all([
+      const [resumen, pedidos, movimientos, productos, cambios, comprobantes,
+        cal, clientes] = await Promise.all([
         pedir('/api/admin/resumen'),
         pedir('/api/pedidos'),
         pedir('/api/admin/movimientos'),
         pedir('/api/admin/productos'),
         pedir('/api/admin/cambios'),
         pedir('/api/admin/comprobantes'),
+        pedir('/api/admin/calendario' + (mesVisto ? '?mes=' + mesVisto : '')),
+        pedir('/api/admin/clientes'),
       ]);
       ultimosPedidos = pedidos;
       ultimosProductos = productos;
@@ -130,6 +142,9 @@
       pintarProductos();
       pintarCambios(cambios);
       pintarComprobantes(comprobantes);
+      pintarCalendario(cal);
+      ultimosClientes = clientes;
+      pintarClientes();
       $('hora').textContent = new Date().toLocaleTimeString('es-PE',
         { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     } catch (e) {
@@ -404,6 +419,164 @@
       </a>`).join(''));
   }
 
+  // ------------------------------------------------- calendario de ventas
+  const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio',
+    'agosto', 'setiembre', 'octubre', 'noviembre', 'diciembre'];
+  const DIAS_SEMANA = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
+
+  const hoyISO = () => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  };
+
+  /**
+   * Rejilla del mes con lo vendido cada dia. La intensidad del fondo es
+   * relativa al mejor dia del propio mes, no a una escala fija: un mes flojo
+   * se sigue leyendo, y no hace falta saber cuanto es "mucho" para ver donde
+   * estuvo el movimiento.
+   */
+  function pintarCalendario(cal) {
+    mesVisto = cal.mes;
+    const [anio, num] = cal.mes.split('-').map(Number);
+    $('mes-nombre').textContent = `${MESES[num - 1]} ${anio}`;
+
+    // La semana peruana empieza en lunes; getDay() devuelve 0 para domingo.
+    const columna = (semana) => (semana + 6) % 7;
+    const huecos = columna(cal.dias[0].semana);
+    const techo = cal.mejor_dia ? cal.mejor_dia.total : 0;
+    const hoy = hoyISO();
+
+    const celdas = cal.dias.map((d) => {
+      // 0.10 de piso para que un dia con venta minima no se vea igual que uno
+      // en blanco: lo que importa es distinguir "vendio algo" de "no vendio".
+      const fuerza = d.total > 0 && techo > 0 ? 0.10 + 0.60 * (d.total / techo) : 0;
+      const clases = ['dia-cal'];
+      if (d.total > 0) clases.push('vendio');
+      if (d.fecha === hoy) clases.push('es-hoy');
+      if (cal.mejor_dia && d.fecha === cal.mejor_dia.fecha && cal.dias_con_venta > 1) clases.push('mejor');
+      const titulo = d.total > 0
+        ? `${d.fecha} · ${d.pedidos} pedido(s) · ${soles(d.total)}`
+        : `${d.fecha} · sin ventas`;
+      return `<div class="${clases.join(' ')}" title="${titulo}"
+        style="--fuerza:${fuerza.toFixed(3)}">
+        <span class="dia-num">${d.dia}</span>
+        <span class="dia-monto">${d.total > 0 ? soles(d.total).replace('S/ ', '') : ''}</span>
+      </div>`;
+    });
+
+    pintar('calendario', `
+      <div class="cal-rejilla">
+        ${DIAS_SEMANA.map((n) => `<div class="dia-cabeza">${n}</div>`).join('')}
+        ${'<div class="dia-cal vacia"></div>'.repeat(huecos)}
+        ${celdas.join('')}
+      </div>
+      <div class="cal-pie">
+        ${cal.dias_con_venta
+          ? `<span><strong>${soles(cal.total_mes)}</strong> en ${cal.pedidos_mes} pedido(s),
+             repartidos en ${cal.dias_con_venta} día(s)</span>`
+          : '<span>Este mes todavía no registra ventas.</span>'}
+        ${cal.mejor_dia
+          ? `<span class="cal-mejor">Mejor día: ${Number(cal.mejor_dia.fecha.slice(8))} de
+             ${MESES[num - 1]}, ${soles(cal.mejor_dia.total)}</span>`
+          : ''}
+      </div>`);
+  }
+
+  /** Corre el mes visto. `null` en `mesVisto` vuelve a significar "el actual". */
+  function moverMes(paso) {
+    const [anio, num] = (mesVisto || hoyISO().slice(0, 7)).split('-').map(Number);
+    const d = new Date(anio, num - 1 + paso, 1);
+    mesVisto = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    return cargar();
+  }
+
+  // ----------------------------------------------------- historial de cliente
+  /**
+   * Quienes compran, ordenados por lo que han gastado. Al tocar uno se pide su
+   * historial y se despliega debajo: un cliente con doce compras no cabe en la
+   * lista, y el dueno casi siempre quiere ver el de uno solo — el que tiene al
+   * teléfono en ese momento.
+   */
+  function pintarClientes() {
+    const lista = filtroCliente
+      ? ultimosClientes.filter((c) => [c.nombre, c.num_doc, c.telefono, c.razon_social]
+        .join(' ').toLowerCase().includes(filtroCliente))
+      : ultimosClientes;
+
+    $('conteo-clientes').textContent = ultimosClientes.length
+      ? (filtroCliente ? `${lista.length} de ${ultimosClientes.length}` : `${ultimosClientes.length} en total`)
+      : '';
+
+    if (!ultimosClientes.length) {
+      return pintar('lista-clientes',
+        '<div class="vacio">Todavía no hay clientes. Cada pedido registra uno.</div>');
+    }
+    if (!lista.length) {
+      return pintar('lista-clientes',
+        `<div class="vacio">Ningún cliente coincide con «${escapar(filtroCliente)}».</div>`);
+    }
+
+    pintar('lista-clientes', lista.map((c) => {
+      const abierto = clienteAbierto === c.num_doc;
+      const repite = c.pedidos > 1;
+      return `
+      <div class="cliente${abierto ? ' abierto' : ''}">
+        <button class="cliente-cabeza" data-doc="${escapar(c.num_doc)}"
+                aria-expanded="${abierto}">
+          <div class="cliente-info">
+            <strong>${escapar(c.razon_social || c.nombre)}</strong>
+            <span>${escapar(c.tipo_doc)} ${escapar(c.num_doc)} · ${escapar(c.telefono)}</span>
+          </div>
+          <div class="cliente-derecha">
+            <span class="cliente-gastado">${soles(c.gastado)}</span>
+            <span class="cliente-veces${repite ? ' repite' : ''}">
+              ${c.pedidos} ${c.pedidos === 1 ? 'compra' : 'compras'}</span>
+          </div>
+        </button>
+        ${abierto ? pintarHistorial(c) : ''}
+      </div>`;
+    }).join(''));
+  }
+
+  function pintarHistorial(c) {
+    const h = historial[c.num_doc];
+    if (!h) return '<div class="cliente-cuerpo"><span class="cargando">Cargando…</span></div>';
+    return `<div class="cliente-cuerpo">
+      <div class="cliente-resumen">
+        Cliente desde el ${escapar(c.primera)} · última compra el ${escapar(c.ultima)}
+      </div>
+      ${h.map((p) => `
+        <div class="hist${['anulado', 'devuelto'].includes(p.estado) ? ' hist-nulo' : ''}">
+          <div class="hist-cabeza">
+            <a href="/comprobante.html?id=${p.id}" class="hist-codigo">${escapar(p.codigo)}</a>
+            <span class="hist-fecha">${escapar(String(p.creado_en).slice(0, 16))}</span>
+            <span class="hist-total">${soles(p.total)}</span>
+          </div>
+          <div class="hist-items">
+            ${p.items.map((i) => `${i.cantidad} × ${escapar(i.nombre)}`).join(' · ')}
+          </div>
+          ${['anulado', 'devuelto'].includes(p.estado)
+            ? `<div class="hist-estado">${escapar(p.estado)}</div>` : ''}
+        </div>`).join('')}
+    </div>`;
+  }
+
+  /** Despliega un cliente. El historial se pide una vez y se guarda. */
+  async function abrirCliente(doc) {
+    if (clienteAbierto === doc) { clienteAbierto = null; pintarClientes(); return; }
+    clienteAbierto = doc;
+    pintarClientes();
+    if (!historial[doc]) {
+      try {
+        historial[doc] = await pedir('/api/admin/clientes?doc=' + encodeURIComponent(doc));
+      } catch (e) {
+        if (e.message !== 'sin sesión') avisar('No se pudo traer el historial');
+        clienteAbierto = null;
+      }
+      pintarClientes();
+    }
+  }
+
   function pintarCambios(cambios) {
     const bloque = $('bloque-cambios');
     if (!cambios.length) { bloque.hidden = true; return; }
@@ -635,6 +808,25 @@
   };
 
   $('ver-bajas').onchange = (e) => { verBajas = e.target.checked; pintarProductos(); };
+
+  let retardoCli;
+  $('buscar-cliente').oninput = (e) => {
+    clearTimeout(retardoCli);
+    retardoCli = setTimeout(() => {
+      filtroCliente = e.target.value.trim().toLowerCase();
+      pintarClientes();
+    }, 160);
+  };
+
+  // Delegado: la lista se vuelve a pintar cada 15 s y unos onclick puestos a
+  // mano se perderian en cada repintado.
+  $('lista-clientes').addEventListener('click', (e) => {
+    const cabeza = e.target.closest('.cliente-cabeza');
+    if (cabeza) return abrirCliente(cabeza.dataset.doc);
+  });
+
+  $('mes-antes').onclick = () => moverMes(-1);
+  $('mes-despues').onclick = () => moverMes(1);
 
   $('btn-refrescar').onclick = cargar;
   $('btn-ruta').onclick = imprimirRuta;
