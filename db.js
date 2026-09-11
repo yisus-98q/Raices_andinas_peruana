@@ -527,7 +527,50 @@ export function resetSeed() {
   return n;
 }
 
-if (process.argv.includes('--reset')) {
+/**
+ * Vacia el catalogo dejando el resto de la base en pie.
+ *
+ * Es el paso previo a cargar el catalogo real del cliente, y hace falta por una
+ * razon que no se ve venir: **el nombre de un producto es unico**, asi que los
+ * 376 de relleno OCUPAN los nombres de verdad. Si el dueño vende «Maca Negra en
+ * polvo» y la demo ya la tiene, su producto real se rechaza — y darla de baja no
+ * libera el nombre, porque la baja no borra la fila.
+ *
+ * Un producto con ventas no se borra: esta referenciado por el pedido y
+ * borrarlo dejaria una venta sin producto. Ese se da de baja, que lo saca de la
+ * tienda y del asesor pero conserva el historial. Devuelve cuantos de cada.
+ */
+export function vaciarCatalogo() {
+  let borrados = 0;
+  let dados_de_baja = 0;
+
+  for (const p of db.prepare('SELECT id FROM productos').all()) {
+    try {
+      db.exec('BEGIN IMMEDIATE');
+      db.prepare('DELETE FROM cambios_producto WHERE producto_id = ?').run(p.id);
+      db.prepare('DELETE FROM movimientos_stock WHERE producto_id = ?').run(p.id);
+      db.prepare('DELETE FROM productos WHERE id = ?').run(p.id);
+      db.exec('COMMIT');
+      borrados++;
+    } catch {
+      // Lo retiene un pedido: se conserva de baja y con el nombre marcado, para
+      // que el nombre real quede libre.
+      db.exec('ROLLBACK');
+      db.prepare(`UPDATE productos SET activo = 0,
+        nombre = nombre || ' (retirado)' WHERE id = ?`).run(p.id);
+      dados_de_baja++;
+    }
+  }
+  return { borrados, dados_de_baja };
+}
+
+if (process.argv.includes('--vacio')) {
+  const r = vaciarCatalogo();
+  console.log(`Catalogo vaciado: ${r.borrados} borrados`
+    + (r.dados_de_baja ? `, ${r.dados_de_baja} conservados de baja por tener ventas` : '')
+    + '.');
+  console.log('Ahora carga el real:  node importar-catalogo.mjs lista.csv');
+} else if (process.argv.includes('--reset')) {
   const n = resetSeed();
   console.log('Base de datos reiniciada con ' + n + ' productos.');
 }

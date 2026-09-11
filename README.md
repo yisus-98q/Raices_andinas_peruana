@@ -30,6 +30,56 @@ Una foto propia manda sobre cualquier otra: `traer-fotos.mjs` no la pisa ni con
 `traer-fotos.mjs` es lo unico que necesita internet, y una sola vez: las fotos
 quedan en `public/img/fotos/`. Despues la tienda funciona desconectada.
 
+## El catalogo real del negocio
+
+La tienda arranca con 400 productos de ejemplo, que son relleno para que el
+catalogo se vea lleno y el asesor tenga con que trabajar. Para cargar los del
+negocio:
+
+```bash
+node db.js --vacio                                   # 1. vaciar el de ejemplo
+node importar-catalogo.mjs lista.csv --probar        # 2. ver que pasaria
+node importar-catalogo.mjs lista.csv                 # 3. cargarlo
+node importar-fotos.mjs                              # 4. las fotos
+```
+
+**El paso 1 no es opcional, y no es evidente por que.** El nombre de un producto
+es unico, asi que los 400 de ejemplo **ocupan los nombres de verdad**: si el
+negocio vende «Maca Negra en polvo» y el ejemplo ya la tiene, el producto real se
+rechaza. Darlo de baja no libera el nombre, porque la baja no borra la fila.
+`--vacio` borra los productos y conserva el resto de la base — usuarios,
+pedidos, comprobantes; un producto que ya tuvo una venta no se borra (dejaria una
+venta sin producto), se conserva de baja y marcado `(retirado)`.
+
+**El archivo se puede armar en Excel y guardar como CSV.** `plantilla-catalogo.csv`
+es el modelo. Solo cuatro columnas son obligatorias — `nombre`, `categoria`,
+`presentacion`, `precio` — y el resto rellenan la ficha: `costo`, `stock`,
+`stock_min`, `origen`, `beneficios`, `uso_tradicional`, `etiquetas`, `sku`,
+`descripcion`, `imagen`.
+
+El lector aguanta el archivo tal como sale del Excel peruano: separador `;` o
+coma, coma decimal (`28,50`), el `S/` delante, tildes y mayusculas en las
+cabeceras (`Categoría`, `Stock min`), el BOM invisible y los saltos CRLF.
+`--probar` no escribe nada; sin `--probar`, **antes de tocar el catalogo se hace
+un respaldo**.
+
+Las filas con problemas se rechazan **una por una, diciendo el numero de linea
+del archivo** y el motivo con las palabras del propio sistema: precio en cero,
+costo por encima del precio, nombre repetido. Las buenas entran igual, asi que se
+corrigen las malas y se vuelve a pasar el mismo archivo — lo que ya entro se
+rechaza solo por nombre repetido y no se duplica.
+
+El importador entra por `POST /api/productos`, **la misma puerta que el panel**,
+por eso necesita el servidor encendido. Las reglas de un producto viven en un
+solo sitio: lo que el panel rechaza, esto lo rechaza, sin escribir la regla dos
+veces. El SKU lo asigna el sistema por categoria (`SUP-001`, `HIE-001`) si el
+archivo no trae uno, y el stock inicial entra como movimiento de kardex, no como
+un numero puesto a dedo.
+
+Mientras no haya fotos, cada producto usa la ilustracion que le corresponde por
+presentacion y categoria. Con `node importar-catalogo.mjs --bajar-demo` se saca
+de la tienda el relleno que quede activo, sin borrarlo.
+
 ## Respaldo
 
 Todo el negocio vive en un archivo, `data/tienda.db`. **El respaldo se hace
