@@ -1,7 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Raiz Andina">
-  <rect width="64" height="64" rx="16" fill="#1f1a14" stroke="#3a3128" stroke-width="1.5"/>
-  <path d="M11 41 L24 17 L33 33 L39 22 L53 41 Z" fill="#f0a52c"/>
-  <path d="M32 41 L32 52" stroke="#f0a52c" stroke-width="3.4" stroke-linecap="round"/>
-  <path d="M32 45 C27 47 24.5 49 23 53" stroke="#f0a52c" stroke-width="2.8" stroke-linecap="round" fill="none"/>
-  <path d="M32 45 C37 47 39.5 49 41 53" stroke="#f0a52c" stroke-width="2.8" stroke-linecap="round" fill="none"/>
-</svg>

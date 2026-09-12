@@ -205,6 +205,38 @@
     avisar(`${p.nombre} agregado`);
   }
 
+  /**
+   * Cantidades de un toque.
+   *
+   * El + y el − sirven para corregir, no para comprar: llevarse 5 de algo
+   * costaba cuatro pulsaciones sobre un boton de 28 px, y en el telefono eso es
+   * donde se abandona el carrito. Los atajos ponen las cantidades que de verdad
+   * se piden a un solo toque, y de paso dejan ver en que cantidad va la linea
+   * sin leer el numero chico entre los dos botones.
+   *
+   * 10 esta en la lista porque es el primer escalon de regateo del negocio
+   * (ver politicas.regateo en tienda.config.js): el mayorista lo encuentra.
+   */
+  const ATAJOS = [1, 2, 3, 4, 5, 10];
+
+  /** Los atajos que caben en el stock, mas la cantidad actual si no esta. */
+  function atajosDe(l) {
+    const nums = ATAJOS.filter((n) => n <= l.prod.stock);
+    if (!nums.includes(l.cantidad)) nums.push(l.cantidad);
+    return nums.sort((a, b) => a - b);
+  }
+
+  function fijar(id, n) {
+    const linea = carrito.find((l) => l.id === id);
+    if (!linea || linea.cantidad === n) return;
+    const p = catalogo.find((x) => x.id === id);
+    if (p && n > p.stock) return avisar(`Solo quedan ${p.stock} unidades`);
+    linea.cantidad = n;
+    guardarCarrito();
+    refrescarCuenta();
+    pintarPanel();
+  }
+
   function cambiar(id, delta) {
     const linea = carrito.find((l) => l.id === id);
     if (!linea) return;
@@ -368,7 +400,9 @@
         <div class="exito">
           <span class="exito-icono">${ICONO.visto}</span>
           <h3>¡Pedido registrado!</h3>
-          <p>Te llamamos para coordinar la entrega.</p>
+          <p>${ultimoPedido.modoEntrega === 'recojo'
+            ? 'Pásalo a recoger por el local cuando quieras.'
+            : 'Te llamamos para coordinar la entrega.'}</p>
           <div class="codigo">${escapar(ultimoPedido.codigo)}</div>
           <p><strong>${esComprobanteFactura(ultimoPedido) ? 'Factura' : 'Boleta'}
              ${escapar(ultimoPedido.numeroComprobante || '')}</strong>
@@ -414,6 +448,11 @@
           <div class="linea-info">
             <strong>${escapar(l.prod.nombre)}</strong>
             <span>${escapar(l.prod.presentacion)} · ${soles(l.prod.precio)} c/u</span>
+            <div class="atajos" role="group" aria-label="Cantidad de ${escapar(l.prod.nombre)}">
+              ${atajosDe(l).map((n) => `<button class="atajo${n === l.cantidad ? ' activo' : ''}"
+                 data-fijar="${l.id}" data-n="${n}"
+                 aria-pressed="${n === l.cantidad}">${n}</button>`).join('')}
+            </div>
             <div class="contador">
               <button data-menos="${l.id}" aria-label="Quitar uno">−</button>
               <span data-cant="${l.id}">${l.cantidad}</span>
@@ -485,24 +524,40 @@
       </div>
 
       <div class="grupo-campos">
-        <h4>¿Dónde te lo dejamos?</h4>
-        <div class="campo-doble">
-          <div class="campo"><label for="f-dep">Departamento</label>
-            <select id="f-dep"><option value="">Elige…</option></select></div>
-          <div class="campo"><label for="f-prov">Provincia</label>
-            <select id="f-prov" disabled><option value="">—</option></select></div>
-        </div>
-        <div class="campo"><label for="f-dist">Distrito</label>
-          <select id="f-dist" disabled><option value="">—</option></select></div>
+        <h4>${hayRecojo() ? '¿Cómo lo recibes?' : '¿Dónde te lo dejamos?'}</h4>
+        ${hayRecojo() ? `
+        <div class="pestanas" id="modo-entrega">
+          <button type="button" class="pestana activo" data-modo="recojo">Local</button>
+          <button type="button" class="pestana" data-modo="envio">Domicilio</button>
+        </div>` : ''}
 
-        <div class="campo"><label for="f-dir">Dirección</label>
-          <input id="f-dir" autocomplete="street-address" placeholder="Av. Los Álamos 234, dpto. 302" maxlength="200"></div>
-        <div class="campo"><label for="f-ref">Referencia (opcional)</label>
-          <input id="f-ref" placeholder="Frente al parque, portón verde" maxlength="200"></div>
+        <div class="aviso-local" id="aviso-local" hidden></div>
+
+        <!-- Todo lo que solo tiene sentido si el pedido sale a la calle. Con
+             recojo se esconde entero: preguntarle el distrito a quien va a
+             pasar por el puesto es pedirle datos para nada. -->
+        <div id="campos-envio">
+          <div class="campo-doble">
+            <div class="campo"><label for="f-dep">Departamento</label>
+              <select id="f-dep"><option value="">Elige…</option></select></div>
+            <div class="campo"><label for="f-prov">Provincia</label>
+              <select id="f-prov" disabled><option value="">—</option></select></div>
+          </div>
+          <div class="campo"><label for="f-dist">Distrito</label>
+            <select id="f-dist" disabled><option value="">—</option></select></div>
+
+          <div class="campo"><label for="f-dir">Dirección</label>
+            <input id="f-dir" autocomplete="street-address" placeholder="Av. Los Álamos 234, dpto. 302" maxlength="200"></div>
+          <div class="campo"><label for="f-ref">Referencia (opcional)</label>
+            <input id="f-ref" placeholder="Frente al parque, portón verde" maxlength="200"></div>
+
+          <div class="envio-aviso" id="envio-calculado" hidden></div>
+        </div>
+
+        <!-- La nota vale en los dos casos: "paso después de las 5" es tan útil
+             como "dejar con el portero". -->
         <div class="campo"><label for="f-nota">Nota para el pedido (opcional)</label>
           <textarea id="f-nota" placeholder="Ej: dejar con el portero" maxlength="300"></textarea></div>
-
-        <div class="envio-aviso" id="envio-calculado" hidden></div>
       </div>
 
       <div class="resumen" id="resumen-final"></div>`;
@@ -513,6 +568,7 @@
 
     $('btn-volver').onclick = () => { etapa = 'carrito'; pintarPanel(); };
     $('btn-confirmar').onclick = confirmar;
+    aplicarModoEntrega();
     prepararFormulario();
   }
 
@@ -575,6 +631,15 @@
       $('lbl-email').textContent = esRuc ? 'Correo' : 'Correo (opcional)';
     };
 
+    if ($('modo-entrega')) {
+      $('modo-entrega').onclick = (e) => {
+        const b = e.target.closest('[data-modo]');
+        if (!b) return;
+        [...$('modo-entrega').children].forEach((x) => x.classList.toggle('activo', x === b));
+        aplicarModoEntrega();
+      };
+    }
+
     // Solo dígitos en el documento: evita el 90 % de los errores de tipeo.
     $('f-doc').oninput = (e) => { e.target.value = e.target.value.replace(/\D/g, ''); };
 
@@ -582,6 +647,45 @@
   }
 
   const tipoDoc = () => $('tipo-doc')?.querySelector('.activo')?.dataset.doc || 'DNI';
+
+  /** Lo ofrece la tienda, no el carrito: sale de tienda.config.js. */
+  const hayRecojo = () => !!TIENDA.delivery?.recojoEnTienda;
+
+  /**
+   * El recojo viene marcado de entrada.
+   *
+   * El negocio es un puesto de mercado y la mayoría de sus clientes compra a
+   * unas cuadras: arrancar en «Domicilio» les hacía llenar cuatro campos y
+   * pagar flete para algo que iban a ir a buscar igual. El que sí quiere
+   * reparto lo cambia de un toque y recupera el formulario entero.
+   *
+   * El `|| 'envio'` no es el defecto: es el caso en que la tienda NO ofrece
+   * recojo y no hay selector que leer. Ahí lo único posible es el envío.
+   */
+  const modoEntrega = () => $('modo-entrega')?.querySelector('.activo')?.dataset.modo || 'envio';
+
+  /**
+   * Muestra u oculta la mitad del formulario que es del reparto, y en su lugar
+   * pone donde queda el local. Al que recoge hay que decirle adonde ir y a que
+   * hora: sin eso, «recojo en el local» es una casilla que no informa nada.
+   */
+  function aplicarModoEntrega() {
+    const recojo = modoEntrega() === 'recojo';
+
+    if ($('campos-envio')) $('campos-envio').hidden = recojo;
+
+    const caja = $('aviso-local');
+    if (caja) {
+      caja.hidden = !recojo;
+      caja.innerHTML = recojo ? `
+        <strong>Pasa por el local y te lo entregamos</strong>
+        <span>${escapar(TIENDA.direccion || '')}${
+          TIENDA.referencia ? ' — ' + escapar(TIENDA.referencia) : ''}</span>
+        <span>${escapar(TIENDA.horario || '')} · sin costo de envío</span>` : '';
+    }
+
+    pintarResumenFinal();
+  }
 
   /** Pregunta al servidor cuánto cuesta el envío a ese distrito. */
   async function cotizarEnvio() {
@@ -622,7 +726,8 @@
   function pintarResumenFinal() {
     const caja = $('resumen-final');
     if (!caja) return;
-    const envio = envioActual && envioActual.costo !== null ? envioActual.costo : 0;
+    const recojo = modoEntrega() === 'recojo';
+    const envio = recojo || !envioActual || envioActual.costo === null ? 0 : envioActual.costo;
     const t = total() + envio;
     const pct = TIENDA.igv?.porcentaje ?? 0;
     const base = pct ? t / (1 + pct / 100) : t;
@@ -630,7 +735,8 @@
     caja.innerHTML = `
       <div class="resumen-fila"><span>Subtotal</span><span>${soles(total())}</span></div>
       <div class="resumen-fila"><span>Envío</span><span>${
-        !envioActual ? 'elige tu distrito'
+        recojo ? 'lo recoges tú'
+          : !envioActual ? 'elige tu distrito'
           : envioActual.costo === null ? 'en la agencia'
           : envioActual.gratis ? 'Gratis' : soles(envioActual.costo)}</span></div>
       ${pct ? `
@@ -670,6 +776,7 @@
             referencia: $('f-ref').value,
           },
           nota: $('f-nota').value,
+          entrega: modoEntrega(),
           items: carrito,
         }),
       });
@@ -790,6 +897,9 @@
       $('consulta').value = sug.textContent;
       return consultarAsesor(sug.textContent);
     }
+
+    const atajo = e.target.closest('[data-fijar]');
+    if (atajo) return fijar(Number(atajo.dataset.fijar), Number(atajo.dataset.n));
 
     if (e.target.dataset.mas) return cambiar(Number(e.target.dataset.mas), 1);
     if (e.target.dataset.menos) return cambiar(Number(e.target.dataset.menos), -1);

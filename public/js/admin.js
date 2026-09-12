@@ -39,6 +39,34 @@
    * roto. Esto es cortesia, no cerradura.
    */
   let esDueno = true;
+  /**
+   * El motorizado. Entra al mismo panel, pero lo suyo son dos cosas: la lista
+   * de lo que tiene que llevar y el botón de entregado. Todo lo demás se le
+   * quita de la vista, y el servidor además se lo niega si lo pide a mano.
+   */
+  let esReparto = false;
+
+  /** Los bloques que no son del reparto. El de pedidos y el de comprobantes sí. */
+  const BLOQUES_DEL_PUESTO = [
+    'bloque-mostrador', 'bloque-calendario', 'bloque-movimientos', 'bloque-stock',
+    'bloque-top', 'bloque-respaldo', 'bloque-clientes', 'bloque-cambios',
+    'bloque-catalogo',
+  ];
+  /**
+   * El carrito del mostrador: id del producto -> cuantas unidades.
+   *
+   * Vive fuera de `cargar()` porque el panel se refresca solo cada 15 s, y una
+   * venta a medias no puede borrarse mientras el cliente espera el vuelto.
+   */
+  const carrito = new Map();
+  let buscaMostrador = '';
+  /**
+   * Ficha que se esta editando, o `null` si el dialogo es un alta. El mismo
+   * formulario sirve para las dos cosas: son los mismos catorce campos, y
+   * mantener dos formularios gemelos garantiza que un dia se les pida algo
+   * distinto por error.
+   */
+  let editando = null;
   // Mes que se esta mirando en el calendario y documento del cliente abierto.
   // Viven fuera de `cargar()` porque el panel se refresca solo cada 15 s: si se
   // guardaran dentro, mirar agosto o el historial de alguien duraria hasta el
@@ -129,15 +157,21 @@
       // responderian 403. No se piden en vez de pedirlos y descartar la
       // respuesta — pedir lo que se sabe prohibido llena el registro del
       // servidor de 403 que no son un intento de nada.
+      // Al reparto el servidor le responde 403 en casi todo, por la misma
+      // razón por la que al mostrador se le niegan los del dueño. No se piden:
+      // pedir lo que se sabe prohibido llena el registro de 403 que no son un
+      // intento de nada, y esconde los que sí lo serían.
+      const delPuesto = (ruta, vacio) => (esReparto ? vacio : pedir(ruta));
+
       const [resumen, pedidos, movimientos, productos, comprobantes,
         cal, clientes, cambios, resp] = await Promise.all([
-        pedir('/api/admin/resumen'),
+        delPuesto('/api/admin/resumen', null),
         pedir('/api/pedidos'),
-        pedir('/api/admin/movimientos'),
-        pedir('/api/admin/productos'),
+        delPuesto('/api/admin/movimientos', []),
+        delPuesto('/api/admin/productos', []),
         pedir('/api/admin/comprobantes'),
-        pedir('/api/admin/calendario' + (mesVisto ? '?mes=' + mesVisto : '')),
-        pedir('/api/admin/clientes'),
+        delPuesto('/api/admin/calendario' + (mesVisto ? '?mes=' + mesVisto : ''), null),
+        delPuesto('/api/admin/clientes', []),
         esDueno ? pedir('/api/admin/cambios') : [],
         esDueno ? pedir('/api/admin/respaldos') : null,
       ]);
@@ -145,18 +179,23 @@
       ultimosProductos = productos;
       // Los comprobantes se guardan porque cada pedido enlaza al suyo.
       ultimosComprobantes = comprobantes;
-      pintarKpis(resumen);
-      pintarStock(resumen.bajo_stock);
-      pintarTop(resumen.top_productos);
+      if (resumen) {
+        pintarKpis(resumen);
+        pintarStock(resumen.bajo_stock);
+        pintarTop(resumen.top_productos);
+      }
       pintarPedidos();
-      pintarMovimientos(movimientos);
-      pintarProductos();
-      pintarCambios(cambios);
       pintarComprobantes(comprobantes);
-      pintarCalendario(cal);
-      ultimosClientes = clientes;
-      pintarClientes();
+      if (!esReparto) {
+        pintarMovimientos(movimientos);
+        pintarProductos();
+        pintarCambios(cambios);
+        pintarCalendario(cal);
+        ultimosClientes = clientes;
+        pintarClientes();
+      }
       if (resp) pintarRespaldo(resp);
+      pintarMostrador();
       $('hora').textContent = new Date().toLocaleTimeString('es-PE',
         { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     } catch (e) {
@@ -168,7 +207,11 @@
     try {
       const s = await pedir('/api/sesion');
       esDueno = s.rol === 'admin';
-      $('quien').textContent = esDueno ? s.nombre : `${s.nombre} · mostrador`;
+      esReparto = s.rol === 'reparto';
+
+      const papel = esDueno ? '' : esReparto ? ' · reparto' : ' · mostrador';
+      $('quien').textContent = s.nombre + papel;
+
       if (!esDueno) {
         // El respaldo y el alta de fichas son del dueño. Se quitan del todo en
         // vez de dejarlos deshabilitados: un boton apagado invita a preguntar
@@ -176,14 +219,41 @@
         $('bloque-respaldo').hidden = true;
         $('abrir-alta').hidden = true;
       }
+
+      if (esReparto) {
+        // Los indicadores de arriba son la caja del día, la ganancia y el valor
+        // del inventario: las tres cifras que resumen el negocio. El reparto
+        // lleva este panel abierto en la calle, en un teléfono que se presta y
+        // se pierde.
+        $('kpis').hidden = true;
+        for (const id of BLOQUES_DEL_PUESTO) {
+          if ($(id)) $(id).hidden = true;
+        }
+        // Y el bloque que le queda se llama por lo que es para él. Un panel con
+        // un solo bloque titulado «Pedidos recientes» parece un panel roto.
+        const titulo = document.querySelector('#bloque-pedidos h2');
+        if (titulo) titulo.textContent = 'Mi ruta de hoy';
+      }
     } catch { /* pedir() ya redirigió */ }
   }
 
   // --------------------------------------------------------------------- KPI
   function pintarKpis(r) {
     const tarjetas = [
-      { etiqueta: 'Ventas de hoy', valor: soles(r.ventas_hoy), nota: `${r.pedidos_hoy} pedido(s)` },
-      { etiqueta: 'Por atender', valor: r.pedidos_pendientes, nota: 'pendientes y en preparación' },
+      {
+        etiqueta: 'Ventas de hoy', valor: soles(r.ventas_hoy),
+        // Los dos canales, separados: es lo que permite comprobar que el
+        // stock cuadra. Si vendio 3 en el local y 2 por la web, el inventario
+        // tuvo que bajar 5.
+        nota: `${soles(r.ventas_local_hoy)} en el local · ${soles(r.ventas_web_hoy)} por la web`,
+      },
+      // La ganancia del dia solo le llega al dueño. Al mostrador, la cola.
+      r.ganancia_hoy === undefined
+        ? { etiqueta: 'Por atender', valor: r.pedidos_pendientes, nota: 'pendientes y en preparación' }
+        : {
+          etiqueta: 'Ganancia de hoy', valor: soles(r.ganancia_hoy),
+          nota: `${r.pedidos_pendientes} pedido(s) por atender`,
+        },
       {
         etiqueta: 'Reposición urgente', valor: r.bajo_stock.length,
         nota: r.agotados ? `${r.agotados} ya agotado(s)` : 'ninguno agotado aún',
@@ -228,14 +298,38 @@
    * necesita es abrirla desde el pedido que se está mirando. El número sale de
    * la lista de comprobantes que el panel ya trae: no hace falta pedir nada más.
    */
+  /**
+   * El comprobante del pedido, como boton y no como etiqueta.
+   *
+   * Antes era un chip con el numero y nada mas: habia que saber que se podia
+   * hacer clic. Lo que el mostrador necesita de un pedido es **entregarle el
+   * papel al cliente**, asi que ahora dice que documento es, su numero, y
+   * separa las dos cosas que se hacen con el: verlo para imprimir, o bajar el
+   * PDF para mandarlo por WhatsApp.
+   *
+   * El PDF pesa unos 4 KB porque no incrusta tipografias: en datos moviles,
+   * eso es la diferencia entre que llegue y que no.
+   */
   function comprobanteDe(p) {
-    const tipo = p.tipo_comprobante === 'factura' ? 'factura' : 'boleta';
+    const tipo = p.tipo_comprobante === 'factura' ? 'Factura' : 'Boleta';
     const cmp = ultimosComprobantes.find((c) => c.pedido_id === p.id);
-    if (!cmp) return `<span class="comprobante c-${tipo}">${tipo} pendiente</span>`;
-    return `<a class="comprobante c-${tipo} enlace-cmp"
-               href="/comprobante.html?id=${cmp.id}"
-               title="Ver e imprimir la ${tipo} de ${escapar(p.cliente_nombre)}"
-            >${escapar(cmp.numero)}</a>`;
+
+    // Sin comprobante emitido no hay nada que ofrecer. Se dice, en vez de
+    // dejar un boton que no lleva a ninguna parte.
+    if (!cmp) {
+      return `<span class="cmp-pendiente">${tipo} sin emitir</span>`;
+    }
+
+    return `
+      <span class="cmp-grupo">
+        <a class="cmp-boton" href="/comprobante.html?id=${cmp.id}"
+           title="Ver e imprimir la ${tipo.toLowerCase()} de ${escapar(p.cliente_nombre)}">
+          <span class="cmp-tipo">${tipo}</span>
+          <span class="cmp-numero">${escapar(cmp.numero)}</span>
+        </a>
+        <a class="cmp-pdf" href="/api/comprobantes/${cmp.id}/pdf" download
+           title="Descargar el PDF para mandarlo por WhatsApp">PDF</a>
+      </span>`;
   }
 
   function pintarPedidos() {
@@ -259,24 +353,34 @@
       const siguiente = SIGUIENTE[p.estado];
       const items = p.items.map((i) => `${i.cantidad} × ${escapar(i.nombre)}`).join(' · ');
 
-      // Un pedido entregado todavía admite devolución: la política da 7 días.
-      // Antes el botón se ocultaba y el dueño no podía procesarla.
       const acciones = [];
-      if (siguiente) {
-        acciones.push(`<button class="mini" data-estado="${siguiente}" data-id="${p.id}">${VERBO[siguiente]}</button>`);
-      }
-      if (p.estado === 'entregado') {
-        acciones.push(`<button class="mini mini-peligro" data-estado="devuelto" data-id="${p.id}">Registrar devolución</button>`);
-      } else if (p.estado !== 'anulado' && p.estado !== 'devuelto') {
-        acciones.push(`<button class="mini mini-peligro" data-estado="anulado" data-id="${p.id}">Anular y devolver stock</button>`);
+      if (esReparto) {
+        // Un solo botón, y es el que se pulsa con una mano en la puerta del
+        // cliente. Anular y devolver reponen stock y emiten nota de crédito:
+        // son decisiones de caja, y el servidor además se las niega.
+        if (p.estado !== 'entregado') {
+          acciones.push(`<button class="mini mini-entregar" data-estado="entregado" data-id="${p.id}">✓ Entregado</button>`);
+        }
+      } else {
+        // Un pedido entregado todavía admite devolución: la política da 7 días.
+        // Antes el botón se ocultaba y el dueño no podía procesarla.
+        if (siguiente) {
+          acciones.push(`<button class="mini" data-estado="${siguiente}" data-id="${p.id}">${VERBO[siguiente]}</button>`);
+        }
+        if (p.estado === 'entregado') {
+          acciones.push(`<button class="mini mini-peligro" data-estado="devuelto" data-id="${p.id}">Registrar devolución</button>`);
+        } else if (p.estado !== 'anulado' && p.estado !== 'devuelto') {
+          acciones.push(`<button class="mini mini-peligro" data-estado="anulado" data-id="${p.id}">Anular y devolver stock</button>`);
+        }
       }
 
       return `
       <div class="pedido">
         <div class="pedido-fila">
           <span class="pedido-codigo">${escapar(p.codigo)}</span>
-          <span class="estado e-${p.estado}">${p.estado}</span>
-          ${comprobanteDe(p)}
+          ${p.canal === 'mostrador' ? '<span class="canal">en el local</span>' : ''}
+          ${p.canal !== 'mostrador' && p.modo_entrega === 'recojo'
+            ? '<span class="canal canal-recojo">pasa a recoger</span>' : ''}
           <span class="pedido-total">${soles(p.total)}</span>
         </div>
         <div class="pedido-meta">
@@ -284,15 +388,32 @@
           ${p.num_doc ? `· ${escapar(p.tipo_doc)} ${escapar(p.num_doc)}` : ''}
           · ${escapar(p.cliente_tel)}
           ${p.cliente_email ? `<br>${escapar(p.cliente_email)}` : ''}
-          <br>${escapar(p.cliente_dir)}
-          ${p.distrito ? `<br><b>${escapar(p.distrito)}</b>, ${escapar(p.provincia)}, ${escapar(p.departamento)}` : ''}
+          ${p.modo_entrega === 'recojo'
+            ? '<br><b>Lo recoge en el local</b>'
+            : `<br>${escapar(p.cliente_dir)}` + (p.distrito
+              ? `<br><b>${escapar(p.distrito)}</b>, ${escapar(p.provincia)}, ${escapar(p.departamento)}`
+              : '')}
           ${p.referencia ? `<br><i>Ref: ${escapar(p.referencia)}</i>` : ''}
           <br>${soloFecha(p.creado_en)} ${horaCorta(p.creado_en)}
           ${p.costo_envio > 0 ? ` · envío ${soles(p.costo_envio)}` : ''}
           ${p.nota ? '<br><b>Nota:</b> ' + escapar(p.nota) : ''}
         </div>
         <div class="pedido-items">${items}</div>
-        <div class="acciones-pedido">${acciones.join('')}</div>
+
+        <!-- El pie: en qué va el pedido, el papel del cliente y qué se puede
+             hacer. Es lo que se mira para despachar, así que va al final y
+             en grande: arriba compite con el código y el total. -->
+        <div class="pedido-pie">
+          <span class="estado-grande e-${p.estado}">
+            <i></i>${p.estado}
+          </span>
+          ${acciones.length ? `<span class="acciones-pedido">${acciones.join('')}</span>` : ''}
+        </div>
+
+        <!-- El comprobante en su propia linea. Pegado al estado se leian como
+             una sola cosa, y son dos: en que va el pedido, y el papel que se
+             le entrega al cliente. -->
+        <div class="pedido-comprobante">${comprobanteDe(p)}</div>
       </div>`;
     }).join(''));
   }
@@ -420,6 +541,7 @@
         <div class="prod-stock ${p.stock <= p.stock_min ? 'bajo' : ''}">${p.stock}</div>
         <div class="prod-acciones">
           <button class="mini guardar" data-guardar="${p.id}" disabled>Guardar</button>
+          ${esDueno ? `<button class="mini" data-editar="${p.id}">Editar</button>` : ''}
           ${esDueno ? `
           <button class="mini ${p.activo ? 'mini-peligro' : ''}"
                   data-activo="${p.id}" data-valor="${p.activo ? 0 : 1}">
@@ -452,6 +574,197 @@
       </a>`).join(''));
   }
 
+  // ------------------------------------------------------ venta en el local
+  /**
+   * La tienda vende por dos canales y los dos descuentan del MISMO stock: la
+   * web y el mostrador. Hasta ahora el sistema solo sabia registrar la venta
+   * que entraba por la web, asi que lo que se vendia de frente —que es casi
+   * todo— no bajaba del inventario y el stock del panel era mentira a media
+   * mañana.
+   *
+   * Al buscar se muestra el stock de cada producto, porque la pregunta del
+   * mostrador no es «cuanto cuesta» sino «¿me queda?».
+   */
+  const TOPE_RESULTADOS = 6;
+
+  function pintarMostrador() {
+    pintarResultados();
+    pintarCarrito();
+  }
+
+  function pintarResultados() {
+    if (!buscaMostrador) return pintar('mos-resultados', '');
+
+    const q = buscaMostrador.toLowerCase();
+    const hallados = ultimosProductos
+      .filter((p) => p.activo === 1
+        && `${p.nombre} ${p.sku}`.toLowerCase().includes(q))
+      .slice(0, TOPE_RESULTADOS);
+
+    if (!hallados.length) {
+      return pintar('mos-resultados',
+        `<div class="vacio">Nada con «${escapar(buscaMostrador)}» en el catálogo.</div>`);
+    }
+
+    pintar('mos-resultados', hallados.map((p) => {
+      const enCarrito = carrito.get(p.id) || 0;
+      const libre = p.stock - enCarrito;
+      // Agotado no se puede vender, y se dice en vez de dejar el boton muerto.
+      const clase = libre <= 0 ? 'sin-stock' : (p.stock <= p.stock_min ? 'poco-stock' : '');
+      return `
+      <div class="mos-fila ${clase}">
+        <div class="mos-info">
+          <strong>${escapar(p.nombre)}</strong>
+          <span>${escapar(p.sku)} · ${escapar(p.presentacion || '')}</span>
+        </div>
+        <div class="mos-stock">${libre <= 0 ? 'agotado' : `quedan ${libre}`}</div>
+        <div class="mos-precio">${soles(p.precio)}</div>
+        <button class="mini" data-sumar="${p.id}" ${libre <= 0 ? 'disabled' : ''}>Agregar</button>
+      </div>`;
+    }).join(''));
+  }
+
+  function pintarCarrito() {
+    if (!carrito.size) {
+      return pintar('mos-carrito',
+        '<div class="mos-vacio">Busca un producto y agrégalo para empezar la venta.</div>');
+    }
+
+    const lineas = [...carrito].map(([id, cant]) => {
+      const p = ultimosProductos.find((x) => x.id === id);
+      return p && { p, cant, subtotal: +(p.precio * cant).toFixed(2) };
+    }).filter(Boolean);
+
+    const total = +lineas.reduce((t, l) => t + l.subtotal, 0).toFixed(2);
+    // El costo solo llega al dueño, asi que la ganancia solo se calcula para
+    // el. El mostrador cobra igual: simplemente no ve cuanto se gano.
+    const conCosto = esDueno && lineas.every((l) => Number.isFinite(l.p.costo));
+    const ganancia = conCosto
+      ? +lineas.reduce((g, l) => g + (l.p.precio - l.p.costo) * l.cant, 0).toFixed(2)
+      : null;
+
+    pintar('mos-carrito', `
+      <div class="mos-lineas">
+        ${lineas.map((l) => `
+          <div class="mos-linea">
+            <div class="mos-info">
+              <strong>${escapar(l.p.nombre)}</strong>
+              <span>${soles(l.p.precio)} c/u · quedan ${l.p.stock - l.cant}</span>
+            </div>
+            <div class="mos-cant">
+              <button class="mini" data-restar="${l.p.id}" aria-label="Quitar uno">−</button>
+              <span>${l.cant}</span>
+              <button class="mini" data-sumar="${l.p.id}"
+                      ${l.cant >= l.p.stock ? 'disabled' : ''} aria-label="Agregar uno">+</button>
+            </div>
+            <div class="mos-subtotal">${soles(l.subtotal)}</div>
+            <button class="mini mini-peligro" data-sacar="${l.p.id}"
+                    aria-label="Sacar del carrito">×</button>
+          </div>`).join('')}
+      </div>
+
+      <div class="mos-total">
+        <span>Total</span><strong>${soles(total)}</strong>
+      </div>
+      ${ganancia === null ? '' : `
+      <div class="mos-ganancia"><span>Ganancia de esta venta</span>
+        <strong>${soles(ganancia)}</strong></div>`}
+
+      <div class="mos-cliente">
+        <div class="mos-campos">
+          <input id="mos-nombre" placeholder="Nombre (opcional)" maxlength="120"
+                 aria-label="Nombre del cliente">
+          <input id="mos-doc" placeholder="DNI o RUC (opcional)" maxlength="11"
+                 inputmode="numeric" aria-label="Documento del cliente">
+          <input id="mos-tel" placeholder="Teléfono (opcional)" maxlength="15"
+                 inputmode="tel" aria-label="Teléfono del cliente">
+        </div>
+        <p class="mos-nota">Sin documento sale boleta a nombre del mostrador. Con
+          RUC sale factura y hace falta la razón social.</p>
+        <input id="mos-razon" placeholder="Razón social (solo con RUC)" maxlength="120"
+               aria-label="Razón social" hidden>
+      </div>
+
+      <div class="aviso aviso-error" id="mos-error" hidden></div>
+      <button class="btn btn-primario btn-bloque" id="mos-cobrar">
+        Cobrar ${soles(total)} y emitir comprobante
+      </button>`);
+  }
+
+  /** Suma respetando el stock: el carrito nunca puede prometer lo que no hay. */
+  function sumar(id) {
+    const p = ultimosProductos.find((x) => x.id === id);
+    if (!p) return;
+    const cant = (carrito.get(id) || 0) + 1;
+    if (cant > p.stock) {
+      return avisar(`De ${p.nombre} solo quedan ${p.stock}`);
+    }
+    carrito.set(id, cant);
+    pintarMostrador();
+  }
+
+  function restar(id) {
+    const cant = (carrito.get(id) || 0) - 1;
+    if (cant <= 0) carrito.delete(id);
+    else carrito.set(id, cant);
+    pintarMostrador();
+  }
+
+  async function cobrar() {
+    const b = $('mos-cobrar');
+    const err = $('mos-error');
+    err.hidden = true;
+    b.disabled = true;
+    b.textContent = 'Cobrando…';
+
+    const cuerpo = {
+      items: [...carrito].map(([id, cantidad]) => ({ id, cantidad })),
+      cliente: {
+        nombre: $('mos-nombre').value.trim(),
+        num_doc: $('mos-doc').value.trim(),
+        // El tipo se deduce del largo: 8 digitos es DNI, 11 es RUC. En el
+        // mostrador nadie va a elegir de una lista con el cliente esperando.
+        tipo_doc: $('mos-doc').value.trim().length === 11 ? 'RUC' : 'DNI',
+        razon_social: $('mos-razon').value.trim(),
+        telefono: $('mos-tel').value.trim(),
+      },
+    };
+
+    try {
+      const r = await fetch('/api/mostrador', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(cuerpo),
+      });
+      const j = await r.json();
+      if (!r.ok) {
+        // Un faltante se explica producto por producto: en el mostrador hay
+        // que poder decirle al cliente «de ese me queda uno».
+        err.textContent = j.faltantes?.length
+          ? `${j.error} ${j.faltantes.map((f) => `${f.nombre}: quedan ${f.disponible}`).join('; ')}`
+          : j.error;
+        err.hidden = false;
+        return;
+      }
+      carrito.clear();
+      avisar(`Venta ${j.venta.codigo} · ${soles(j.venta.total)}`
+        + (j.venta.numeroComprobante ? ` · ${j.venta.numeroComprobante}` : '')
+        + (j.venta.ganancia === undefined ? '' : ` · ganancia ${soles(j.venta.ganancia)}`));
+      for (const a of j.alertas || []) {
+        avisar(`${a.nombre} quedó en ${a.stock} (mínimo ${a.stock_min})`);
+      }
+      buscaMostrador = '';
+      $('mos-buscar').value = '';
+      await cargar();
+    } catch {
+      err.textContent = 'No se pudo cobrar: sin conexión con el servidor.';
+      err.hidden = false;
+    } finally {
+      b.disabled = false;
+      pintarCarrito();
+    }
+  }
+
   // ------------------------------------------------------- menu de secciones
   /**
    * Las secciones del panel, con lo que hace cada una.
@@ -465,6 +778,8 @@
    * sitio al que el mostrador no puede llegar.
    */
   const SECCIONES = [
+    { id: 'bloque-mostrador', nombre: 'Venta en el local',
+      hace: 'Cobrar al que está en el puesto. Descuenta del mismo stock.' },
     { id: 'bloque-pedidos', nombre: 'Pedidos recientes',
       hace: 'Lo que hay que atender hoy: preparar, enviar, anular.' },
     { id: 'bloque-calendario', nombre: 'Calendario de ventas',
@@ -824,8 +1139,11 @@
    * Sin esto había que dictarle las direcciones por teléfono una por una.
    */
   function imprimirRuta() {
-    const salen = ultimosPedidos.filter(
-      (p) => p.estado === 'pendiente' || p.estado === 'preparando' || p.estado === 'enviado');
+    // Lo que el cliente pasa a recoger NO entra en la ruta: mandarlo con el
+    // repartidor a la dirección del propio local es un viaje en falso, y además
+    // dejaría al pedido fuera del puesto justo cuando su dueño llega a buscarlo.
+    const salen = ultimosPedidos.filter((p) => p.modo_entrega !== 'recojo'
+      && (p.estado === 'pendiente' || p.estado === 'preparando' || p.estado === 'enviado'));
 
     if (!salen.length) return avisar('No hay pedidos por entregar');
 
@@ -914,6 +1232,15 @@
 
     const btnGuardar = e.target.closest('[data-guardar]');
     if (btnGuardar) return guardarProducto(btnGuardar.dataset.guardar);
+
+    const btnEditar = e.target.closest('[data-editar]');
+    if (btnEditar) {
+      // La ficha se toma de lo ya cargado y no se vuelve a pedir: el panel se
+      // refresca cada 15 s, asi que es de hace segundos.
+      const p = ultimosProductos.find((x) => x.id === Number(btnEditar.dataset.editar));
+      if (p) return abrirFicha(p);
+      return avisar('No encuentro esa ficha; actualiza el panel');
+    }
 
     const btnActivo = e.target.closest('[data-activo]');
     if (btnActivo) {
@@ -1008,6 +1335,34 @@
     if (cabeza) return abrirCliente(cabeza.dataset.doc);
   });
 
+  let retardoMos;
+  $('mos-buscar').oninput = (e) => {
+    clearTimeout(retardoMos);
+    retardoMos = setTimeout(() => {
+      buscaMostrador = e.target.value.trim();
+      pintarResultados();
+    }, 140);
+  };
+
+  // Delegado en la seccion entera: resultados y carrito se repintan en cada
+  // cambio y unos onclick puestos a mano se perderian.
+  $('bloque-mostrador').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-sumar],[data-restar],[data-sacar],#mos-cobrar');
+    if (!b) return;
+    if (b.dataset.sumar) return sumar(Number(b.dataset.sumar));
+    if (b.dataset.restar) return restar(Number(b.dataset.restar));
+    if (b.dataset.sacar) { carrito.delete(Number(b.dataset.sacar)); return pintarMostrador(); }
+    if (b.id === 'mos-cobrar') return cobrar();
+  });
+
+  // La razon social aparece sola al escribir un RUC: son 11 digitos, y pedirla
+  // siempre estorba en una venta de S/ 9.
+  $('bloque-mostrador').addEventListener('input', (e) => {
+    if (e.target.id !== 'mos-doc') return;
+    const razon = $('mos-razon');
+    if (razon) razon.hidden = e.target.value.trim().length !== 11;
+  });
+
   $('menu-boton').onclick = alternarMenu;
   $('menu-secciones').addEventListener('click', (e) => {
     const b = e.target.closest('[data-ir]');
@@ -1045,9 +1400,41 @@
 
   const dlg = $('dlg-alta');
 
-  async function abrirAlta() {
+  /**
+   * Abre el dialogo. Sin `producto` es un alta; con `producto`, una edicion de
+   * esa ficha.
+   *
+   * Dos campos se apagan al editar y esta la razon en el servidor: el SKU es la
+   * identidad del producto en el kardex y en los comprobantes ya emitidos, y el
+   * stock solo se mueve por ventas, ingresos y ajustes — nunca a dedo.
+   */
+  async function abrirFicha(producto = null) {
+    editando = producto;
     $('forma-alta').reset();
     $('alta-error').hidden = true;
+
+    $('dlg-titulo').textContent = producto ? `Editar ${producto.nombre}` : 'Nuevo producto';
+    $('guardar-alta').textContent = producto ? 'Guardar cambios' : 'Guardar producto';
+
+    for (const el of document.querySelectorAll('[data-solo-alta]')) {
+      el.disabled = Boolean(producto);
+      el.closest('.campo')?.classList.toggle('campo-apagado', Boolean(producto));
+    }
+
+    if (producto) {
+      for (const [campo, valor] of Object.entries({
+        nombre: producto.nombre, categoria: producto.categoria,
+        presentacion: producto.presentacion, precio: producto.precio,
+        costo: producto.costo, origen: producto.origen,
+        beneficios: producto.beneficios, etiquetas: producto.etiquetas,
+        descripcion: producto.descripcion, uso_tradicional: producto.uso_tradicional,
+        imagen: producto.imagen, sku: producto.sku, stock: producto.stock,
+      })) {
+        const el = document.querySelector(`[name="${campo}"]`);
+        if (el) el.value = valor ?? '';
+      }
+    }
+
     calcularMargen();
 
     // Las categorías se piden al abrir, no al cargar el panel: así incluyen la
@@ -1083,21 +1470,39 @@
     else if (pct < 20) salida.classList.add('flojo');
   }
 
-  async function guardarAlta(e) {
+  async function guardarFicha(e) {
     e.preventDefault();
     const error = $('alta-error');
     error.hidden = true;
 
     const datos = Object.fromEntries(new FormData($('forma-alta')).entries());
     const boton = $('guardar-alta');
+    const anterior = boton.textContent;
     boton.disabled = true;
     boton.textContent = 'Guardando…';
 
+    // Editando se mandan SOLO los campos que cambiaron: cada cambio queda
+    // firmado en la bitacora, y mandarlos todos llenaria el historial de
+    // «precio: 27.40 -> 27.40» cada vez que alguien abre la ficha a mirar.
+    const cambiados = editando
+      ? Object.fromEntries(Object.entries(datos).filter(([k, v]) => {
+        if (k === 'sku' || k === 'stock') return false;
+        const antes = editando[k] ?? '';
+        return String(v) !== String(antes)
+          && !(Number.isFinite(Number(antes)) && Number(v) === Number(antes));
+      }))
+      : datos;
+
+    if (editando && !Object.keys(cambiados).length) {
+      dlg.close();
+      return avisar('No cambiaste nada');
+    }
+
     try {
-      const r = await fetch('/api/productos', {
-        method: 'POST',
+      const r = await fetch(editando ? `/api/productos/${editando.id}` : '/api/productos', {
+        method: editando ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(datos),
+        body: JSON.stringify(cambiados),
       });
       if (r.status === 401) return alLogin();
       const d = await r.json();
@@ -1111,7 +1516,9 @@
         return;
       }
       dlg.close();
-      avisar(`${d.producto.nombre} dado de alta como ${d.producto.sku}`);
+      avisar(editando
+        ? `${d.producto.nombre} actualizado (${d.cambios.join(', ')})`
+        : `${d.producto.nombre} dado de alta como ${d.producto.sku}`);
       filtroProducto = d.producto.sku;
       $('buscar-producto').value = d.producto.sku;
       await cargar();
@@ -1120,14 +1527,14 @@
       error.hidden = false;
     } finally {
       boton.disabled = false;
-      boton.textContent = 'Guardar producto';
+      boton.textContent = anterior;
     }
   }
 
-  $('abrir-alta').onclick = abrirAlta;
+  $('abrir-alta').onclick = () => abrirFicha();
   $('cerrar-alta').onclick = () => dlg.close();
   $('cancelar-alta').onclick = () => dlg.close();
-  $('forma-alta').onsubmit = guardarAlta;
+  $('forma-alta').onsubmit = guardarFicha;
   $('a-precio').oninput = calcularMargen;
   $('a-costo').oninput = calcularMargen;
 

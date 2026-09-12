@@ -3,7 +3,7 @@
  *
  *   node clave.mjs <correo|usuario> <nueva-clave>          cambiar la clave
  *   node clave.mjs --nuevo <usuario> <correo> "<nombre>" <clave> [rol]  crear acceso
- *   node clave.mjs --rol <usuario> <admin|vendedor>        cambiar el papel
+ *   node clave.mjs --rol <usuario> <admin|vendedor|reparto>  cambiar el papel
  *   node clave.mjs --correo <usuario> <nuevo-correo>       cambiar el correo
  *   node clave.mjs --listar
  *
@@ -22,7 +22,8 @@
  */
 import { db } from './db.js';
 import {
-  crearUsuario, cambiarClave, cambiarCorreo, cambiarRol, correoValido, buscarUsuario, ROLES,
+  crearUsuario, cambiarClave, cambiarCorreo, cambiarRol, cambiarNombre,
+  correoValido, buscarUsuario, ROLES,
 } from './auth.js';
 
 const args = process.argv.slice(2);
@@ -38,11 +39,15 @@ if (!args.length || args[0] === '--ayuda' || args[0] === '-h') {
     'Uso:',
     '  node clave.mjs <correo|usuario> <nueva-clave>                cambiar clave',
     '  node clave.mjs --nuevo <usuario> <correo> "<nombre>" <clave> [rol]  crear acceso',
-    '  node clave.mjs --rol <usuario> <admin|vendedor>              cambiar papel',
+    '  node clave.mjs --rol <usuario> <admin|vendedor|reparto>      cambiar papel',
     '  node clave.mjs --correo <usuario> <nuevo-correo>             cambiar correo',
+    '  node clave.mjs --nombre <usuario> "<nombre visible>"         cambiar nombre',
     '  node clave.mjs --listar                                      ver accesos',
     '',
-    '  Roles: admin (el dueño, ve costos y precios) · vendedor (mostrador, no)',
+    '  Roles:',
+    '    admin     la dueña. Todo: costos, margenes, caja del dia, respaldo.',
+    '    vendedor  el mostrador. Vende y despacha, sin ver lo que costo.',
+    '    reparto   el motorizado. Solo su ruta del dia y marcar entregado.',
   ].join('\n'), 0);
 }
 
@@ -65,8 +70,12 @@ if (args[0] === '--rol') {
   if (!ROLES.includes(rol)) salir(`Rol desconocido: "${rol}". Son: ${ROLES.join(', ')}.`);
   if (!buscarUsuario(usuario)) salir(`No existe el usuario "${usuario}".`);
   if (!cambiarRol(usuario, rol)) salir(`No pude cambiar el rol de "${usuario}".`);
-  salir(`"${usuario}" ahora es ${rol}.`
-    + (rol === 'vendedor' ? ' Deja de ver costos y margenes en su siguiente clic.' : ''), 0);
+  const consecuencia = {
+    vendedor: ' Deja de ver costos y margenes en su siguiente clic.',
+    reparto: ' Desde ahora solo ve su ruta del dia y puede marcar entregado.',
+    admin: ' Pasa a ver todo el negocio, respaldo incluido.',
+  };
+  salir(`"${usuario}" ahora es ${rol}.` + (consecuencia[rol] || ''), 0);
 }
 
 if (args[0] === '--nuevo') {
@@ -81,6 +90,14 @@ if (args[0] === '--nuevo') {
 
   crearUsuario(usuario.toLowerCase(), correo, nombre, clave, rol);
   salir(`Acceso creado: ${correo} (usuario "${usuario}", rol ${rol})`, 0);
+}
+
+if (args[0] === '--nombre') {
+  const [, usuario, nombre] = args;
+  if (!usuario || !nombre) salir('Faltan datos. Usa --ayuda.');
+  if (nombre.trim().length < 2) salir('El nombre es demasiado corto.');
+  if (!cambiarNombre(usuario, nombre)) salir(`No existe el usuario "${usuario}".`);
+  salir(`"${usuario}" ahora se muestra como "${nombre.trim()}".`, 0);
 }
 
 if (args[0] === '--correo') {

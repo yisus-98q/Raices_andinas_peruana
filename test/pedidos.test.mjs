@@ -98,6 +98,83 @@ describe('Crear pedido — datos válidos', () => {
   });
 });
 
+describe('Recojo en el local', () => {
+  /**
+   * Media clientela del puesto vive a unas cuadras del mercado.
+   *
+   * Hasta ahora el checkout le exigía departamento, provincia, distrito y
+   * dirección a esa persona, y encima le sumaba el flete de su zona por algo
+   * que iba a ir a buscar. Lo que se prueba aquí es que con `entrega: 'recojo'`
+   * el pedido entra sin nada de eso y sin flete, y que el 0 del envío viene del
+   * recojo y no de que el servidor haya dejado de cobrar envíos.
+   */
+  const SIN_DIRECCION = {
+    nombre: 'Rosa Huamán',
+    telefono: '956231447',
+    tipo_doc: 'DNI',
+    num_doc: '45678912',
+  };
+
+  const recoger = (items) => cliente(srv.base).pedir('/api/pedidos', {
+    metodo: 'POST',
+    cuerpo: { cliente: SIN_DIRECCION, items, entrega: 'recojo' },
+  });
+
+  // El más barato con stock: garantiza quedar por debajo del umbral de envío
+  // gratis, que es lo único que hace comparables el recojo y el envío.
+  const masBarato = async () => {
+    const aptos = (await cliente(srv.base).pedir('/api/productos')).json
+      .filter((p) => p.stock > 2);
+    return aptos.reduce((a, b) => (b.precio < a.precio ? b : a));
+  };
+
+  test('entra sin dirección ni distrito, y no paga envío', async () => {
+    const p = await masBarato();
+    const r = await recoger([{ id: p.id, cantidad: 2 }]);
+
+    assert.equal(r.estado, 201, JSON.stringify(r.json));
+    assert.equal(r.json.pedido.modoEntrega, 'recojo');
+    assert.equal(r.json.pedido.envio, 0);
+    assert.equal(r.json.pedido.total, +(p.precio * 2).toFixed(2),
+      'el total del recojo tiene que ser el subtotal pelado');
+  });
+
+  test('el pedido queda guardado con los datos del local', async () => {
+    const p = await masBarato();
+    const r = await recoger([{ id: p.id, cantidad: 1 }]);
+    assert.equal(r.estado, 201, JSON.stringify(r.json));
+
+    const guardado = (await admin.pedir('/api/pedidos')).json
+      .find((x) => x.id === r.json.pedido.id);
+
+    assert.equal(guardado.modo_entrega, 'recojo');
+    assert.equal(guardado.costo_envio, 0);
+    // Sin ubigeo el pedido quedaría fuera de cualquier corte por zona, así que
+    // se guarda el del local: es donde va a ocurrir la entrega.
+    assert.ok(guardado.distrito, 'un recojo sin distrito se pierde en los cortes');
+    assert.ok(guardado.cliente_dir.length > 5, 'la dirección del local tiene que estar');
+  });
+
+  test('el mismo carrito, pero con envío, sí paga flete', async () => {
+    const p = await masBarato();
+    assert.ok(p.precio * 2 < 120,
+      'la prueba necesita quedar debajo del umbral de envío gratis');
+
+    const r = await comprar([{ id: p.id, cantidad: 2 }]);
+    assert.equal(r.estado, 201, JSON.stringify(r.json));
+    assert.ok(r.json.pedido.envio > 0,
+      'si el envío también sale 0, el 0 del recojo no prueba nada');
+  });
+
+  test('sin `entrega: recojo` la dirección sigue siendo obligatoria', async () => {
+    const r = await cliente(srv.base).pedir('/api/pedidos', {
+      metodo: 'POST',
+      cuerpo: { cliente: SIN_DIRECCION, items: [{ id: 1, cantidad: 1 }] },
+    });
+    assert.equal(r.estado, 400, JSON.stringify(r.json));
+  });
+});
+
 describe('Crear pedido — datos inválidos', () => {
   const CASOS = [
     ['carrito vacío', []],
@@ -257,17 +334,83 @@ describe('Edición de productos', () => {
     });
   }
 
-  test('ignora campos que no están en la lista blanca', async () => {
+  /**
+   * La lista blanca crecio: ahora se puede corregir la ficha entera —nombre,
+   * categoria, origen, textos, costo— porque antes una errata en el nombre
+   * obligaba a tocar la base a mano.
+   *
+   * Lo que sigue FUERA, y es lo que este test cuida:
+   *
+   *  - `sku`, porque es la identidad del producto en el kardex y en las lineas
+   *    de los comprobantes ya emitidos: cambiarlo dejaria una boleta apuntando
+   *    a un codigo que no existe.
+   *  - `stock`, porque se mueve por ventas, ingresos y ajustes y nunca a dedo:
+   *    es lo que permite que el kardex explique cada unidad.
+   */
+  test('el sku y el stock no se pueden tocar por la ficha', async () => {
     const antes = await producto(1);
     const r = await admin.pedir('/api/productos/1', {
       metodo: 'PATCH',
-      cuerpo: { stock: 99999, costo: 0, sku: 'HACKEADO', nombre: 'otro' },
+      cuerpo: { stock: 99999, sku: 'HACKEADO' },
     });
     assert.equal(r.estado, 200);
-    assert.equal(r.json.sin_cambios, true);
+    assert.equal(r.json.sin_cambios, true, 'no deberia haber cambiado nada');
     const despues = await producto(1);
     assert.equal(despues.stock, antes.stock);
     assert.equal(despues.sku, antes.sku);
+  });
+
+  test('la ficha si se puede corregir: nombre, origen y textos', async () => {
+    const r = await admin.pedir('/api/productos/1', {
+      metodo: 'PATCH',
+      cuerpo: {
+        nombre: 'Maca Negra molida en piedra',
+        origen: 'Junín · 4200 m',
+        beneficios: 'Energía y resistencia',
+      },
+    });
+    assert.equal(r.estado, 200, JSON.stringify(r.json));
+    const p = await producto(1);
+    assert.equal(p.nombre, 'Maca Negra molida en piedra');
+    assert.equal(p.origen, 'Junín · 4200 m');
+    // Y cada correccion queda firmada en la bitacora.
+    const cambios = (await admin.pedir('/api/admin/cambios')).json;
+    assert.ok(cambios.some((c) => c.campo === 'nombre'), 'el cambio debe quedar registrado');
+  });
+
+  test('el nombre sigue siendo unico, salvo consigo mismo', async () => {
+    const otro = await producto(2);
+    const choque = await admin.pedir('/api/productos/1', {
+      metodo: 'PATCH', cuerpo: { nombre: otro.nombre },
+    });
+    assert.equal(choque.estado, 400, 'dos productos con el mismo nombre confunden al que despacha');
+
+    // Volver a poner el nombre que ya tiene no es un choque: es el caso de
+    // corregir una tilde sin cambiar de producto.
+    const mismo = await producto(1);
+    const r = await admin.pedir('/api/productos/1', {
+      metodo: 'PATCH', cuerpo: { nombre: mismo.nombre },
+    });
+    assert.equal(r.estado, 200);
+  });
+
+  test('el costo no puede superar el precio ni por edicion', async () => {
+    const p = await producto(1);
+    const r = await admin.pedir('/api/productos/1', {
+      metodo: 'PATCH', cuerpo: { costo: p.precio + 10 },
+    });
+    assert.equal(r.estado, 400, 'seria cargar un producto que se vende a pérdida');
+  });
+
+  test('la imagen solo acepta una ruta del sitio o https', async () => {
+    for (const mala of ['javascript:alert(1)', 'http://sitio.pe/f.jpg', 'data:text/html,x']) {
+      const r = await admin.pedir('/api/productos/1', { metodo: 'PATCH', cuerpo: { imagen: mala } });
+      assert.equal(r.estado, 400, `deberia rechazar «${mala}»`);
+    }
+    const buena = await admin.pedir('/api/productos/1', {
+      metodo: 'PATCH', cuerpo: { imagen: '/img/fotos/MAC-001.jpg' },
+    });
+    assert.equal(buena.estado, 200);
   });
 
   test('dar de baja lo saca de la tienda pero el panel lo conserva', async () => {

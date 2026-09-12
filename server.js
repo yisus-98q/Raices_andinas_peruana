@@ -9,6 +9,7 @@ import { asesorar } from './asesor.js';
 import {
   iniciarSesion, cerrarSesion, sesionDe, leerCookie,
   cookieSesion, cookieBorrada, asegurarUsuarioInicial, COOKIE, esAdmin,
+  esDelPuesto, esReparto,
 } from './auth.js';
 import { TIENDA, estaAbierto } from './tienda.config.js';
 import { consumir, CUOTAS } from './limites.js';
@@ -171,16 +172,20 @@ const Q = {
     `SELECT ${CAMPOS_PUBLICOS}, demo FROM productos WHERE activo = 1
      ORDER BY categoria, nombre`),
   paraActualizar: db.prepare('SELECT * FROM productos WHERE id = ?'),
+  // Para vender hace falta el costo, que no esta en CAMPOS_PUBLICOS: es lo que
+  // congela la ganancia de la linea. Solo se usa en el servidor.
+  paraVender: db.prepare('SELECT * FROM productos WHERE id = ? AND activo = 1'),
   descontar: db.prepare('UPDATE productos SET stock = stock - ? WHERE id = ?'),
   reponer: db.prepare('UPDATE productos SET stock = stock + ? WHERE id = ?'),
   insPedido: db.prepare(`INSERT INTO pedidos
     (codigo,cliente_nombre,cliente_tel,cliente_dir,nota,total,canal,
      cliente_email,tipo_doc,num_doc,razon_social,tipo_comprobante,
-     departamento,provincia,distrito,ubigeo,referencia,costo_envio)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`),
+     departamento,provincia,distrito,ubigeo,referencia,costo_envio,
+     modo_entrega)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`),
   insItem: db.prepare(`INSERT INTO pedido_items
-    (pedido_id,producto_id,nombre,cantidad,precio_unit,subtotal)
-    VALUES (?,?,?,?,?,?)`),
+    (pedido_id,producto_id,nombre,cantidad,precio_unit,subtotal,costo_unit)
+    VALUES (?,?,?,?,?,?,?)`),
   insMov: db.prepare(`INSERT INTO movimientos_stock
     (producto_id,tipo,cantidad,stock_final,motivo) VALUES (?,?,?,?,?)`),
   pedidos: db.prepare('SELECT * FROM pedidos ORDER BY id DESC LIMIT 100'),
@@ -410,6 +415,84 @@ const EDITABLES = {
     soloDueno: true,
     validar: (v) => (v === 0 || v === 1 || v === true || v === false ? (v ? 1 : 0) : null),
   },
+
+  // --- La ficha completa ----------------------------------------------------
+  // Corregir una ficha era lo unico que obligaba a tocar la base a mano: se
+  // daba de alta con una errata en el nombre o con el origen equivocado y no
+  // habia forma de arreglarlo desde el panel.
+  //
+  // Lo que NO es editable, y por que:
+  //
+  //  - **El SKU.** Es la identidad del producto en el kardex y en las lineas de
+  //    los comprobantes ya emitidos. Cambiarlo dejaria una boleta apuntando a
+  //    un codigo que no existe. Un producto mal codificado se da de baja y se
+  //    crea de nuevo.
+  //  - **El stock.** Se mueve por ventas, ingresos y ajustes, nunca a dedo:
+  //    es lo que permite que el kardex explique cada unidad.
+  nombre: {
+    etiqueta: 'nombre',
+    soloDueno: true,
+    validar: (v, p) => {
+      const t = texto(v, 90);
+      if (t.length < 3) return null;
+      // El nombre es unico. Si el que ya lo tiene es este mismo producto, no
+      // hay choque: es el caso de corregir una tilde sin cambiar de producto.
+      const otro = Q.porNombre.get(t.toLowerCase());
+      if (otro && otro.id !== p.id) return null;
+      return t;
+    },
+  },
+  categoria: {
+    etiqueta: 'categoría',
+    soloDueno: true,
+    validar: (v) => {
+      const t = normalizarCategoria(texto(v, 40));
+      return t.length >= 3 ? t : null;
+    },
+  },
+  presentacion: {
+    etiqueta: 'presentación',
+    soloDueno: true,
+    validar: (v) => {
+      const t = texto(v, 60);
+      return t.length >= 2 ? t : null;
+    },
+  },
+  // El costo es del dueño por definicion: de el sale el margen.
+  costo: {
+    etiqueta: 'costo',
+    soloDueno: true,
+    validar: (v, p) => {
+      const n = Math.round(Number(v) * 100) / 100;
+      if (!Number.isFinite(n) || n < 0 || n > 99999) return null;
+      // Un costo por encima del precio es vender a perdida, que es justo lo
+      // que este sistema existe para evitar.
+      if (n > p.precio) return null;
+      return n;
+    },
+  },
+  origen: { etiqueta: 'origen', soloDueno: true, validar: (v) => texto(v, 80) || 'Perú' },
+  descripcion: { etiqueta: 'descripción', soloDueno: true, validar: (v) => texto(v, 400) },
+  uso_tradicional: { etiqueta: 'uso tradicional', soloDueno: true, validar: (v) => texto(v, 400) },
+  beneficios: { etiqueta: 'beneficios', soloDueno: true, validar: (v) => texto(v, 200) },
+  etiquetas: {
+    etiqueta: 'etiquetas',
+    soloDueno: true,
+    // Se guardan sin tildes y en minusculas porque asi llega la consulta del
+    // asesor ya normalizada. Editarlas es reentrenar al asesor sobre ese
+    // producto: es la palanca para que aparezca en «me duele el estomago».
+    validar: (v) => sinTildes(texto(v, 400)).toLowerCase()
+      .split(',').map((t) => t.trim()).filter(Boolean).join(','),
+  },
+  imagen: {
+    etiqueta: 'imagen',
+    soloDueno: true,
+    validar: (v) => {
+      const t = texto(v, 300);
+      if (!t) return '';
+      return /^(\/img\/[\w./-]+|https:\/\/[\w./%-]+)$/.test(t) ? t : null;
+    },
+  },
 };
 
 // `anulado` = nunca salio de la tienda. `devuelto` = el cliente lo regreso.
@@ -500,6 +583,30 @@ function requiereSesion(req, res) {
  * degradar a alguien tiene efecto en su siguiente clic sin tener que cerrarle
  * la sesion.
  */
+/**
+ * Lo que es del puesto y no del reparto.
+ *
+ * El motorizado tiene acceso al panel, pero su trabajo cabe en dos cosas: ver
+ * a quién le lleva y marcar que entregó. Todo lo demás —la caja del día, el
+ * inventario, el historial de quién compra qué, el catálogo con sus precios—
+ * es información del negocio que va en un teléfono que sale a la calle todos
+ * los días. No es desconfianza: es que un teléfono se pierde y se presta.
+ *
+ * Corta aquí y no escondiendo bloques del panel. Esconder evita el error de
+ * buena fe; el 403 es lo que detiene a quien escriba la URL a mano.
+ */
+function requierePuesto(req, res) {
+  const s = requiereSesion(req, res);
+  if (!s) return null;
+  if (!esDelPuesto(s)) {
+    json(res, 403, {
+      error: 'Tu acceso es el de reparto: la ruta del día y marcar entregado.',
+    });
+    return null;
+  }
+  return s;
+}
+
 function requiereAdmin(req, res) {
   const s = requiereSesion(req, res);
   if (!s) return null;
@@ -511,6 +618,42 @@ function requiereAdmin(req, res) {
   }
   return s;
 }
+
+/**
+ * Lo que sale a reparto: ni la venta de mostrador —que se la llevaron puesta—
+ * ni lo que el cliente pasa a recoger por el local.
+ */
+const salePorReparto = (p) => p.canal !== 'mostrador' && p.modo_entrega !== 'recojo';
+
+/**
+ * El pedido como lo ve el motorizado.
+ *
+ * Se quitan el documento, la razon social y el correo: para tocar un timbre y
+ * cobrar no hacen falta, y son justo los datos con los que se suplanta a
+ * alguien. El numero de boleta sigue llegando por `/api/admin/comprobantes`,
+ * que es donde tiene sentido si el cliente lo pide en la puerta.
+ */
+function pedidoParaReparto(p) {
+  const { num_doc, tipo_doc, razon_social, cliente_email, ...resto } = p;
+  void num_doc; void tipo_doc; void razon_social; void cliente_email;
+  return resto;
+}
+
+/**
+ * Las lineas de un pedido segun quien pregunte.
+ *
+ * `costo_unit` viaja en la tabla para poder calcular la ganancia de una venta
+ * con el costo del momento. Salia en la respuesta para todo el que tuviera
+ * sesion: el panel del mostrador no lo pinta, pero abrir `/api/pedidos` en el
+ * navegador mostraba el costo de cada cosa vendida. El panel no era el que
+ * tenia que estar tapandolo.
+ */
+const itemsSegun = (pedidoId, sesion) => (esAdmin(sesion)
+  ? Q.itemsDe.all(pedidoId)
+  : Q.itemsDe.all(pedidoId).map(({ costo_unit, ...resto }) => {
+    void costo_unit;
+    return resto;
+  }));
 
 /**
  * La ficha como la puede ver cada uno. Para el mostrador se quita el costo —y
@@ -561,6 +704,10 @@ async function api(req, res, url) {
       pais: TIENDA.pais,
       email: TIENDA.email,
       direccion: TIENDA.direccion,
+      // La referencia va junto a la direccion porque el carrito la necesita
+      // cuando el cliente elige recoger: "Jr. Ayacucho 412" no alcanza para
+      // encontrar un puesto dentro de un mercado.
+      referencia: TIENDA.referencia,
       abierto: estaAbierto(),
       horario: TIENDA.horario.texto,
       delivery: {
@@ -613,6 +760,14 @@ async function api(req, res, url) {
     }
     return json(res, 200, await asesorar(consulta.trim(), Q.paraAsesor.all(),
       (codigo) => Q.porCodigo.get(codigo)));
+  }
+
+  // Venta en el local. La hace quien atiende, asi que NO es requiereAdmin:
+  // cobrar es el trabajo del mostrador.
+  if (metodo === 'POST' && ruta === '/api/mostrador') {
+    const sesion = requierePuesto(req, res);
+    if (!sesion) return;
+    return venderEnMostrador(res, await leerCuerpo(req), sesion);
   }
 
   if (metodo === 'POST' && ruta === '/api/pedidos') {
@@ -701,7 +856,9 @@ async function api(req, res, url) {
       codigo: actual.codigo,
       estado: actual.estado,
       fecha: actual.creado_en,
-      entrega: [actual.distrito, actual.provincia].filter(Boolean).join(', '),
+      entrega: actual.modo_entrega === 'recojo'
+        ? 'Recojo en el local'
+        : [actual.distrito, actual.provincia].filter(Boolean).join(', '),
       // Dirección recortada: confirma al cliente que es la suya sin exponerla.
       direccion: String(actual.cliente_dir).slice(0, 18) + '…',
       subtotal: +(actual.total - actual.costo_envio).toFixed(2),
@@ -718,13 +875,20 @@ async function api(req, res, url) {
 
   // Datos personales de los clientes: solo con sesion.
   if (metodo === 'GET' && ruta === '/api/pedidos') {
-    if (!requiereSesion(req, res)) return;
-    const lista = Q.pedidos.all().map((p) => ({ ...p, items: Q.itemsDe.all(p.id) }));
+    const sesion = requiereSesion(req, res);
+    if (!sesion) return;
+    const lista = Q.pedidos.all()
+      .filter((p) => !esReparto(sesion) || salePorReparto(p))
+      .map((p) => {
+        const con = { ...p, items: itemsSegun(p.id, sesion) };
+        return esReparto(sesion) ? pedidoParaReparto(con) : con;
+      });
     return json(res, 200, lista);
   }
 
   if (metodo === 'PATCH' && /^\/api\/pedidos\/\d+\/estado$/.test(ruta)) {
-    if (!requiereSesion(req, res)) return;
+    const sesion = requiereSesion(req, res);
+    if (!sesion) return;
     const id = Number(ruta.split('/')[3]);
     const { estado } = await leerCuerpo(req);
     if (!ESTADOS.includes(estado)) {
@@ -732,6 +896,18 @@ async function api(req, res, url) {
     }
     const pedido = Q.pedido.get(id);
     if (!pedido) return json(res, 404, { error: 'Pedido no encontrado' });
+
+    // El motorizado cierra la entrega y nada mas. Anular y devolver reponen
+    // stock y emiten una nota de credito: son decisiones de caja, y quien las
+    // toma tiene que ser quien responde por el inventario.
+    if (esReparto(sesion)) {
+      if (estado !== 'entregado') {
+        return json(res, 403, { error: 'Desde el reparto solo se marca «entregado».' });
+      }
+      if (!salePorReparto(pedido)) {
+        return json(res, 403, { error: 'Ese pedido no sale a reparto.' });
+      }
+    }
     if (REPONEN_STOCK.has(pedido.estado)) {
       return json(res, 409, { error: `El pedido ya figura como ${pedido.estado}` });
     }
@@ -773,7 +949,7 @@ async function api(req, res, url) {
   }
 
   if (metodo === 'POST' && ruta === '/api/stock') {
-    const sesion = requiereSesion(req, res);
+    const sesion = requierePuesto(req, res);
     if (!sesion) return;
     const { producto_id, cantidad, motivo } = await leerCuerpo(req);
     const cant = Number(cantidad);
@@ -804,7 +980,7 @@ async function api(req, res, url) {
 
   // Catalogo completo, incluidos los productos dados de baja.
   if (metodo === 'GET' && ruta === '/api/admin/productos') {
-    const sesion = requiereSesion(req, res);
+    const sesion = requierePuesto(req, res);
     if (!sesion) return;
     return json(res, 200, fichasPara(sesion, Q.todosProductos.all()));
   }
@@ -812,7 +988,7 @@ async function api(req, res, url) {
   // Categorias existentes, para que el formulario de alta las sugiera y no se
   // llene el catalogo de "Hierbas", "hierbas" y "Yerbas".
   if (metodo === 'GET' && ruta === '/api/admin/categorias') {
-    if (!requiereSesion(req, res)) return;
+    if (!requierePuesto(req, res)) return;
     return json(res, 200, Q.categorias.all());
   }
 
@@ -860,13 +1036,22 @@ async function api(req, res, url) {
   }
 
   if (metodo === 'GET' && ruta === '/api/admin/comprobantes') {
-    if (!requiereSesion(req, res)) return;
-    return json(res, 200, listarComprobantes(100).map((c) => ({
-      id: c.id, numero: numeroDe(c.serie, c.correlativo), tipo_doc: c.tipo_doc,
-      fecha: c.fecha_emision, estado: c.estado, total: c.total, igv: c.igv,
-      cliente: c.cliente_nombre, doc: c.cliente_num_doc,
-      pedido_id: c.pedido_id, ref: c.ref_serie ? numeroDe(c.ref_serie, c.ref_correlativo) : '',
-    })));
+    const sesion = requiereSesion(req, res);
+    if (!sesion) return;
+    // El motorizado ve el papel de lo que el reparte, por si el cliente lo pide
+    // en la puerta. Las ventas de mostrador y los recojos no son suyos.
+    const suyos = esReparto(sesion)
+      ? new Set(Q.pedidos.all().filter(salePorReparto).map((p) => p.id))
+      : null;
+    return json(res, 200, listarComprobantes(100)
+      .filter((c) => !suyos || suyos.has(c.pedido_id))
+      .map((c) => ({
+        id: c.id, numero: numeroDe(c.serie, c.correlativo), tipo_doc: c.tipo_doc,
+        fecha: c.fecha_emision, estado: c.estado, total: c.total, igv: c.igv,
+        cliente: c.cliente_nombre, doc: c.cliente_num_doc,
+        pedido_id: c.pedido_id,
+        ref: c.ref_serie ? numeroDe(c.ref_serie, c.ref_correlativo) : '',
+      })));
   }
 
   if (metodo === 'GET' && /^\/api\/comprobantes\/\d+$/.test(ruta)) {
@@ -904,7 +1089,7 @@ async function api(req, res, url) {
 
   // Edicion de ficha: precio, minimo y alta/baja. Cada cambio queda firmado.
   if (metodo === 'PATCH' && /^\/api\/productos\/\d+$/.test(ruta)) {
-    const sesion = requiereSesion(req, res);
+    const sesion = requierePuesto(req, res);
     if (!sesion) return;
 
     const p = Q.paraActualizar.get(Number(ruta.split('/')[3]));
@@ -922,7 +1107,7 @@ async function api(req, res, url) {
           error: `Cambiar el ${regla.etiqueta} solo lo hace el dueño de la tienda.`,
         });
       }
-      const valor = regla.validar(cuerpo[campo]);
+      const valor = regla.validar(cuerpo[campo], p);
       if (valor === null) {
         return json(res, 400, { error: `Valor no válido para ${regla.etiqueta}.` });
       }
@@ -954,13 +1139,13 @@ async function api(req, res, url) {
   }
 
   if (metodo === 'GET' && ruta === '/api/admin/resumen') {
-    const sesion = requiereSesion(req, res);
+    const sesion = requierePuesto(req, res);
     if (!sesion) return;
     return json(res, 200, resumen(sesion));
   }
 
   if (metodo === 'GET' && ruta === '/api/admin/movimientos') {
-    if (!requiereSesion(req, res)) return;
+    if (!requierePuesto(req, res)) return;
     return json(res, 200, Q.movimientos.all());
   }
 
@@ -993,13 +1178,13 @@ async function api(req, res, url) {
 
   // Cuanto se vendio cada dia del mes. Sin `?mes=`, el mes en curso.
   if (metodo === 'GET' && ruta === '/api/admin/calendario') {
-    if (!requiereSesion(req, res)) return;
+    if (!requierePuesto(req, res)) return;
     return json(res, 200, calendario(url.searchParams.get('mes')));
   }
 
   // Quienes compran y que compro cada uno. Con `?doc=`, el historial de ese.
   if (metodo === 'GET' && ruta === '/api/admin/clientes') {
-    if (!requiereSesion(req, res)) return;
+    if (!requierePuesto(req, res)) return;
     const doc = url.searchParams.get('doc');
     if (doc) {
       const pedidos = Q.historialDe.all(doc).map((p) => ({
@@ -1019,12 +1204,32 @@ async function api(req, res, url) {
 function crearPedido(res, body) {
   const { cliente = {}, items = [], canal = 'web' } = body;
   const nombre = String(cliente.nombre || '').trim();
-  const dir = String(cliente.direccion || '').trim();
+
+  /**
+   * Recojo en el local: el cliente compra por la web y pasa por el puesto.
+   *
+   * Es media venta que antes se perdia. El checkout exigia departamento,
+   * provincia, distrito y direccion a alguien que vive a dos cuadras del
+   * mercado, y le cobraba S/ 6 de reparto por algo que iba a ir a buscar.
+   *
+   * Si lo ofrece o no lo dice tienda.config.js, no el navegador: de otro modo
+   * bastaria mandar `entrega: 'recojo'` para saltarse el flete de una zona.
+   */
+  const recojo = String(body.entrega || '') === 'recojo';
+  if (recojo && !TIENDA.delivery.recojoEnTienda) {
+    return json(res, 400, { error: 'Por ahora no hay recojo en el local.' });
+  }
+
+  // Con recojo la direccion del pedido es la del local: es donde esta la
+  // mercaderia y es lo que tiene que leer quien lo prepara.
+  const dir = recojo ? TIENDA.direccion : String(cliente.direccion || '').trim();
 
   if (nombre.length < 3) return json(res, 400, { error: 'Falta el nombre del cliente.' });
   if (nombre.length > 120) return json(res, 400, { error: 'El nombre es demasiado largo.' });
-  if (dir.length < 5) return json(res, 400, { error: 'Falta la direccion de entrega.' });
-  if (dir.length > 200) return json(res, 400, { error: 'La direccion es demasiado larga.' });
+  if (!recojo) {
+    if (dir.length < 5) return json(res, 400, { error: 'Falta la direccion de entrega.' });
+    if (dir.length > 200) return json(res, 400, { error: 'La direccion es demasiado larga.' });
+  }
 
   // --- Datos peruanos. Se validan en el servidor porque son los que van a
   // terminar en un comprobante: el navegador puede mandar cualquier cosa.
@@ -1042,15 +1247,19 @@ function crearPedido(res, body) {
   const correo = validarCorreo(cliente.email, doc.comprobante === 'factura');
   if (!correo.ok) return json(res, 400, { error: correo.error });
 
-  const ubi = validarUbigeo({
-    departamento: cliente.departamento,
-    provincia: cliente.provincia,
-    distrito: cliente.distrito,
-  });
+  // El que recoge no declara ubigeo: el pedido se guarda con el del local, que
+  // es donde va a ocurrir la entrega.
+  const ubi = recojo
+    ? { ok: true, valor: { ...TIENDA.local } }
+    : validarUbigeo({
+      departamento: cliente.departamento,
+      provincia: cliente.provincia,
+      distrito: cliente.distrito,
+    });
   if (!ubi.ok) return json(res, 400, { error: ubi.error });
 
-  const zona = zonaDe(ubi.valor);
-  if (!zona.disponible) {
+  const zona = recojo ? null : zonaDe(ubi.valor);
+  if (zona && !zona.disponible) {
     return json(res, 400, { error: `No repartimos a ${ubi.valor.departamento} por ahora.` });
   }
 
@@ -1072,7 +1281,7 @@ function crearPedido(res, body) {
   const lineas = [];
   const faltantes = [];
   for (const [id, cant] of pedidos) {
-    const p = Q.producto.get(id);
+    const p = Q.paraVender.get(id);
     if (!p) return json(res, 400, { error: 'Producto no disponible (id ' + id + ').' });
     if (p.stock < cant) {
       faltantes.push({ id: p.id, nombre: p.nombre, pedido: cant, disponible: p.stock });
@@ -1093,8 +1302,9 @@ function crearPedido(res, body) {
   // El envío lo calcula el servidor a partir del distrito validado, nunca lo
   // que mande el navegador. Gratis por encima del umbral; en provincia el
   // flete lo paga el cliente en la agencia, así que aquí va en cero.
+  // Lo que el cliente va a recoger no tiene flete: no sale a la calle.
   const umbral = TIENDA.delivery.gratisDesde;
-  const envio = zona.tipo === 'provincia' || (umbral && subtotal >= umbral)
+  const envio = recojo || zona.tipo === 'provincia' || (umbral && subtotal >= umbral)
     ? 0
     : (zona.costo || 0);
 
@@ -1127,7 +1337,8 @@ function crearPedido(res, body) {
           total, canal, correo.valor, doc.tipo, doc.numero, doc.razonSocial,
           doc.comprobante, ubi.valor.departamento, ubi.valor.provincia,
           ubi.valor.distrito, ubi.valor.codigo,
-          String(cliente.referencia || '').trim().slice(0, 200), envio);
+          recojo ? '' : String(cliente.referencia || '').trim().slice(0, 200),
+          envio, recojo ? 'recojo' : 'envio');
         pedidoId = Number(r.lastInsertRowid);
         break;
       } catch (e) {
@@ -1136,7 +1347,7 @@ function crearPedido(res, body) {
     }
 
     for (const l of lineas) {
-      Q.insItem.run(pedidoId, l.p.id, l.p.nombre, l.cant, l.p.precio, l.subtotal);
+      Q.insItem.run(pedidoId, l.p.id, l.p.nombre, l.cant, l.p.precio, l.subtotal, l.p.costo);
       Q.descontar.run(l.cant, l.p.id);
       const fresco = Q.paraActualizar.get(l.p.id);
       if (fresco.stock < 0) throw new Error('Stock negativo en ' + l.p.nombre);
@@ -1165,15 +1376,157 @@ function crearPedido(res, body) {
         id: pedidoId, codigo, subtotal, envio, total, estado: 'pendiente',
         comprobante: doc.comprobante,
         numeroComprobante: comprobante ? comprobante.numero : null,
-        zona: zona.nombre,
-        plazo: zona.horas,
-        entrega: `${ubi.valor.distrito}, ${ubi.valor.provincia}`,
+        modoEntrega: recojo ? 'recojo' : 'envio',
+        zona: recojo ? 'Recojo en el local' : zona.nombre,
+        plazo: recojo ? TIENDA.horario.texto : zona.horas,
+        entrega: recojo ? TIENDA.direccion : `${ubi.valor.distrito}, ${ubi.valor.provincia}`,
       },
       alertas,
     });
   } catch (e) {
     db.exec('ROLLBACK');
     return json(res, 500, { error: 'No se pudo registrar el pedido: ' + e.message });
+  }
+}
+
+/**
+ * Venta en el local: el cliente esta delante del mostrador y se lleva la
+ * mercaderia.
+ *
+ * Es la venta que el negocio hace todo el dia, y hasta ahora el sistema solo
+ * sabia registrar la que entraba por la tienda web. Se apoya en la misma
+ * maquinaria —descuento de stock, kardex, comprobante, todo en una
+ * transaccion— pero se salta lo que no existe en una venta de mostrador:
+ *
+ * - **Sin direccion ni envio.** No hay reparto: se lo llevan. El pedido queda
+ *   con la direccion del local y `costo_envio` en cero.
+ * - **Nace `entregado`.** No hay nada que preparar ni despachar; pasar por
+ *   «pendiente» dejaria la cola de por-atender llena de ventas ya cerradas.
+ * - **El documento es opcional.** Pedirle el DNI a quien compra muña de S/ 9
+ *   es perder la venta. Sin documento sale una boleta a nombre del mostrador,
+ *   que es lo que se hace en el puesto.
+ */
+function venderEnMostrador(res, body, sesion) {
+  const { items = [], cliente = {} } = body;
+
+  if (!Array.isArray(items) || items.length === 0) {
+    return json(res, 400, { error: 'No hay nada en el carrito.' });
+  }
+
+  const nombre = texto(cliente.nombre, 120) || 'Cliente de mostrador';
+
+  // El documento solo se valida si lo dieron. Con RUC sale factura y entonces
+  // si hace falta la razon social: eso lo exige SUNAT, no nosotros.
+  let doc = { tipo: 'DNI', numero: '', razonSocial: '', comprobante: 'boleta' };
+  if (String(cliente.num_doc || '').trim()) {
+    const v = validarDocumento({
+      tipo: cliente.tipo_doc, numero: cliente.num_doc, razonSocial: cliente.razon_social,
+    });
+    if (!v.ok) return json(res, 400, { error: v.error });
+    doc = v;
+  }
+
+  // El telefono es opcional, pero si lo dan tiene que servir: es con lo que el
+  // comprador consulta su comprobante despues.
+  let telefono = '';
+  if (String(cliente.telefono || '').trim()) {
+    const t = validarTelefono(cliente.telefono);
+    if (!t.ok) return json(res, 400, { error: t.error });
+    telefono = t.valor;
+  }
+
+  const pedidas = new Map();
+  for (const it of items) {
+    const id = Number(it.id);
+    const cant = Number(it.cantidad);
+    if (!Number.isInteger(id) || !Number.isInteger(cant) || cant < 1) {
+      return json(res, 400, { error: 'Item invalido en el carrito.' });
+    }
+    pedidas.set(id, (pedidas.get(id) || 0) + cant);
+  }
+
+  const lineas = [];
+  const faltantes = [];
+  for (const [id, cant] of pedidas) {
+    const p = Q.paraVender.get(id);
+    if (!p) return json(res, 400, { error: `Producto no disponible (id ${id}).` });
+    if (p.stock < cant) {
+      faltantes.push({ id: p.id, nombre: p.nombre, pedido: cant, disponible: p.stock });
+      continue;
+    }
+    lineas.push({ p, cant, subtotal: +(p.precio * cant).toFixed(2) });
+  }
+  // Se avisa ANTES de cobrar: en el mostrador el cliente esta delante y hay
+  // que poder decirle «de ese me queda uno» sin haber emitido nada.
+  if (faltantes.length) {
+    return json(res, 409, { error: 'No hay stock suficiente.', faltantes });
+  }
+
+  const total = +lineas.reduce((s, l) => s + l.subtotal, 0).toFixed(2);
+  const costo = +lineas.reduce((s, l) => s + l.p.costo * l.cant, 0).toFixed(2);
+
+  db.exec('BEGIN IMMEDIATE');
+  try {
+    let codigo, pedidoId;
+    for (let intento = 1; ; intento++) {
+      codigo = codigoPedido();
+      try {
+        const r = Q.insPedido.run(
+          codigo, nombre, telefono, TIENDA.direccion,
+          texto(body.nota, 300), total, 'mostrador', '',
+          doc.tipo, doc.numero, doc.razonSocial, doc.comprobante,
+          TIENDA.local.departamento, TIENDA.local.provincia,
+          TIENDA.local.distrito, TIENDA.local.codigo, '', 0, 'recojo');
+        pedidoId = Number(r.lastInsertRowid);
+        break;
+      } catch (e) {
+        if (intento >= 8 || !/UNIQUE.*pedidos\.codigo/i.test(e.message)) throw e;
+      }
+    }
+
+    for (const l of lineas) {
+      Q.insItem.run(pedidoId, l.p.id, l.p.nombre, l.cant, l.p.precio, l.subtotal, l.p.costo);
+      Q.descontar.run(l.cant, l.p.id);
+      const fresco = Q.paraActualizar.get(l.p.id);
+      if (fresco.stock < 0) throw new Error('Stock negativo en ' + l.p.nombre);
+      Q.insMov.run(l.p.id, 'venta', -l.cant, fresco.stock, 'Mostrador ' + codigo);
+    }
+    // Se lo llevo: no hay nada que despachar.
+    Q.estado.run('entregado', pedidoId);
+    db.exec('COMMIT');
+
+    let comprobante = null;
+    try {
+      const r2 = emitirPorPedido(Q.pedido.get(pedidoId), Q.itemsDe.all(pedidoId));
+      if (r2.ok) comprobante = r2.comprobante;
+      else console.warn('[comprobante] ' + r2.error);
+    } catch (e) {
+      console.warn('[comprobante] ' + e.message);
+    }
+
+    const alertas = Q.bajoStock.all()
+      .filter((p) => lineas.some((l) => l.p.id === p.id))
+      .map((p) => ({ nombre: p.nombre, stock: p.stock, stock_min: p.stock_min }));
+
+    return json(res, 201, {
+      ok: true,
+      venta: {
+        id: pedidoId,
+        codigo,
+        total,
+        estado: 'entregado',
+        comprobante: doc.comprobante,
+        numeroComprobante: comprobante ? comprobante.numero : null,
+        cliente: nombre,
+        // La ganancia se calcula del costo: es del dueño. El mostrador cobra
+        // igual, solo no ve cuanto se gano.
+        ...(esAdmin(sesion) ? { ganancia: +(total - costo).toFixed(2) } : {}),
+      },
+      alertas,
+    });
+  } catch (e) {
+    db.exec('ROLLBACK');
+    return json(res, 500, { error: 'No se pudo registrar la venta: ' + e.message });
   }
 }
 
@@ -1187,6 +1540,26 @@ function resumen(sesion) {
   const hoy = db.prepare(`SELECT COUNT(*) c, COALESCE(SUM(total),0) t FROM pedidos
     WHERE date(creado_en) = date('now','localtime')
       AND estado NOT IN ('anulado','devuelto')`).get();
+
+  // El negocio vende por dos canales y **descuenta del mismo stock**. Verlos
+  // separados es lo que permite al dueño comprobar que cuadra: si vendio 3 en
+  // el local y 2 por la web, el inventario tiene que haber bajado 5.
+  const porCanal = db.prepare(`SELECT canal, COUNT(*) c, COALESCE(SUM(total),0) t
+    FROM pedidos
+    WHERE date(creado_en) = date('now','localtime')
+      AND estado NOT IN ('anulado','devuelto')
+    GROUP BY canal`).all();
+  const deCanal = (nombre) => porCanal.find((x) => x.canal === nombre) || { c: 0, t: 0 };
+  const web = deCanal('web');
+  const local = deCanal('mostrador');
+
+  // La ganancia sale del costo congelado en cada linea, no del costo de hoy.
+  const gana = db.prepare(`SELECT
+      COALESCE(SUM(i.subtotal),0) venta,
+      COALESCE(SUM(i.costo_unit * i.cantidad),0) costo
+    FROM pedido_items i JOIN pedidos p ON p.id = i.pedido_id
+    WHERE date(p.creado_en) = date('now','localtime')
+      AND p.estado NOT IN ('anulado','devuelto')`).get();
   const pendientes = db.prepare(
     "SELECT COUNT(*) c FROM pedidos WHERE estado IN ('pendiente','preparando')").get();
   const inv = db.prepare(
@@ -1198,6 +1571,12 @@ function resumen(sesion) {
     ventas_hoy: +hoy.t.toFixed(2),
     pedidos_hoy: hoy.c,
     pedidos_pendientes: pendientes.c,
+    ventas_web_hoy: +web.t.toFixed(2),
+    pedidos_web_hoy: web.c,
+    ventas_local_hoy: +local.t.toFixed(2),
+    ventas_local_cuantas: local.c,
+    // La ganancia es del dueño: se calcula del costo.
+    ...(esAdmin(sesion) ? { ganancia_hoy: +(gana.venta - gana.costo).toFixed(2) } : {}),
     ...(esAdmin(sesion) ? { valor_inventario: +inv.v.toFixed(2) } : {}),
     unidades_inventario: inv.u,
     agotados: bajos.filter((p) => p.stock === 0).length,
@@ -1310,12 +1689,14 @@ async function estatico(req, res, pathname) {
     res.writeHead(404, { 'Content-Type': 'text/html; charset=utf-8' });
     res.end(`<!DOCTYPE html><html lang="es"><head><meta charset="utf-8">
       <title>Página no encontrada — Raíz Andina</title>
-      <link rel="icon" type="image/svg+xml" href="/img/marca/favicon.svg">
+      <link rel="icon" type="image/png" sizes="16x16" href="/img/marca/favicon-16.png">
+      <link rel="icon" type="image/png" sizes="32x32" href="/img/marca/favicon-32.png">
+      <link rel="icon" type="image/png" sizes="64x64" href="/img/marca/favicon.png">
       <link rel="stylesheet" href="/css/panel.css"></head>
       <body style="display:grid;place-items:center;min-height:100vh;text-align:center">
         <div>
-          <img src="/img/marca/marca.svg" alt="" width="56" height="56"
-               style="border-radius:14px;margin:0 auto 22px">
+          <img src="/img/marca/emblema.png" alt="Raíz Andina" width="56" height="56"
+               style="margin:0 auto 22px">
           <h1 style="font-size:52px;letter-spacing:-.04em">404</h1>
           <p style="color:var(--crema-suave);margin:12px 0 26px">
             Esta página no existe. Puede que el enlace esté viejo.</p>

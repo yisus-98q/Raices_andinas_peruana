@@ -68,7 +68,7 @@
     $('doc').innerHTML = `
       <header class="doc-cabeza">
         <div class="doc-emisor">
-          <img src="/img/marca/marca.svg" alt="" width="52" height="52">
+          <img src="/img/marca/emblema.png" alt="" width="52" height="52">
           <div>
             <strong>${esc(c.emisor.razonSocial)}</strong>
             <span>${esc(c.emisor.nombreComercial)}</span>

@@ -67,7 +67,9 @@ CREATE TABLE IF NOT EXISTS pedido_items (
   nombre      TEXT NOT NULL,
   cantidad    INTEGER NOT NULL CHECK (cantidad > 0),
   precio_unit REAL NOT NULL CHECK (precio_unit >= 0),
-  subtotal    REAL NOT NULL CHECK (subtotal >= 0)
+  subtotal    REAL NOT NULL CHECK (subtotal >= 0),
+  -- El costo con el que se vendio, congelado. Ver el ALTER de mas abajo.
+  costo_unit  REAL NOT NULL DEFAULT 0 CHECK (costo_unit >= 0)
 );
 
 CREATE TABLE IF NOT EXISTS movimientos_stock (
@@ -217,11 +219,26 @@ const NUEVAS_PEDIDO = [
   // del repartidor.
   ['recibido_en', "TEXT NOT NULL DEFAULT ''"],
   ['recibido_por', "TEXT NOT NULL DEFAULT ''"],
+  // Recojo en el local o envio a domicilio. Decide dos cosas distintas: si al
+  // cliente se le pide direccion al comprar, y si el pedido entra en la hoja de
+  // ruta del repartidor. Los pedidos que ya existen quedan como envio, que es
+  // lo unico que la tienda sabia hacer cuando se registraron.
+  ['modo_entrega', "TEXT NOT NULL DEFAULT 'envio'"],
 ];
 for (const [nombre, tipo] of NUEVAS_PEDIDO) {
   if (colPedidos.includes(nombre)) continue;
   db.exec(`ALTER TABLE pedidos ADD COLUMN ${nombre} ${tipo}`);
   console.log(`[db] columna \`${nombre}\` agregada a pedidos`);
+}
+
+// La ganancia de una venta se calcula con el costo DEL MOMENTO en que se
+// vendio, no con el de hoy: el costo cambia cada vez que sube el proveedor, y
+// recalcular la ganancia del mes pasado con el costo de esta semana da una
+// cifra que no ocurrio nunca. Por eso el costo viaja con la linea del pedido.
+const colItems = db.prepare('PRAGMA table_info(pedido_items)').all().map((c) => c.name);
+if (!colItems.includes('costo_unit')) {
+  db.exec('ALTER TABLE pedido_items ADD COLUMN costo_unit REAL NOT NULL DEFAULT 0');
+  console.log('[db] columna `costo_unit` agregada a pedido_items');
 }
 
 // El acceso al panel pasa de usuario a correo. Se conserva la columna `usuario`

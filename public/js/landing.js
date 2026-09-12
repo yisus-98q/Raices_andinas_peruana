@@ -1,6 +1,6 @@
 /**
  * Movimiento del landing: partículas, revelados por scroll, contadores
- * y micro-interacciones. El envase 3D del hero está en frasco.js.
+ * y micro-interacciones.
  *
  * Sin librerías a propósito. Lo que en el pedido original harían GSAP
  * ScrollTrigger y Framer Motion, acá lo hacen IntersectionObserver y
@@ -14,7 +14,6 @@
   const $$ = (s) => [...document.querySelectorAll(s)];
   const quieto = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  // El envase 3D vive en js/frasco.js: se dibuja en canvas, no en CSS.
 
   // ---------------------------------------------------------- partículas
   // Motas de polen subiendo. Se apagan si la pestaña no está visible.

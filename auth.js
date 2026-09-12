@@ -24,9 +24,28 @@ import { TIENDA } from './tienda.config.js';
  * negociacion del dueño con su proveedor, y no tiene por que estar en la
  * pantalla del mostrador donde cualquiera se asoma.
  */
-export const ROLES = ['admin', 'vendedor'];
+/**
+ * Tres papeles, tres trabajos distintos:
+ *
+ * - `admin`     la dueña. Ve todo: costos, márgenes, caja del día, respaldo.
+ * - `vendedor`  el mostrador. Vende y despacha, pero no ve lo que costó.
+ * - `reparto`   el motorizado. Solo su ruta del día: a quién, dónde, qué
+ *                lleva y cuánto cobrar. Nada del negocio.
+ */
+export const ROLES = ['admin', 'vendedor', 'reparto'];
 
 export const esAdmin = (sesion) => sesion?.rol === 'admin';
+
+/**
+ * Quien trabaja dentro del puesto: la dueña y el mostrador.
+ *
+ * Se nombra por lo que incluye y no por lo que excluye —`!esReparto` habría
+ * sido más corto— porque un rol nuevo que se agregue mañana debe quedar FUERA
+ * por omisión. Con la negación entraría solo, y entraría a todo.
+ */
+export const esDelPuesto = (sesion) => sesion?.rol === 'admin' || sesion?.rol === 'vendedor';
+
+export const esReparto = (sesion) => sesion?.rol === 'reparto';
 
 const HORAS_SESION = 8;          // una jornada del local
 const MAX_INTENTOS = 5;
@@ -75,6 +94,11 @@ export function crearUsuario(usuario, email, nombre, clave, rol = 'admin') {
 
 /** Cambia el papel de alguien. Sus sesiones abiertas siguen valiendo: el
  *  permiso se lee de la tabla en cada peticion, no de la cookie. */
+export function cambiarNombre(usuario, nombre) {
+  return db.prepare('UPDATE usuarios SET nombre = ? WHERE usuario = ?')
+    .run(String(nombre).trim(), String(usuario).toLowerCase()).changes > 0;
+}
+
 export function cambiarRol(usuario, rol) {
   if (!ROLES.includes(rol)) throw new Error(`Rol desconocido: ${rol}`);
   return db.prepare('UPDATE usuarios SET rol = ? WHERE usuario = ?')

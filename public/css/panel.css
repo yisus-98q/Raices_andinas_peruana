@@ -1,21 +1,34 @@
 /* ============================================================================
    Panel interno — mismo sistema visual que la tienda.
-   Antes usaba un tema claro aparte: en la demo se pasa de la tienda al panel en
-   un clic, y el salto de estilo hacía parecer que eran dos productos distintos.
-   Una "solución integral" tiene que verse como una sola cosa.
+
+   En la demo se pasa de la tienda al panel en un clic, y un salto de estilo
+   hace parecer que son dos productos distintos. Una "solucion integral" tiene
+   que verse como una sola cosa, asi que los dos comparten paleta: papel claro,
+   tinta verde oscura, verde de hoja como acento.
+
+   La tienda es la vitrina y el panel la mesa de trabajo, asi que el panel usa
+   mas blanco puro en las tarjetas y menos aire — pero es la misma marca, no
+   otro tema.
    ========================================================================= */
 :root {
-  --negro: #0b0a08;
-  --carbon: #131110;
-  --humo: #1d1a16;
-  --piedra: #2a2621;
-  --crema: #f7f0e2;
-  --crema-suave: #cbc0ad;
-  --ocre: #f0a52c;
-  --ocre-vivo: #ff8a1f;
-  --terra: #c2502c;
-  --verde: #5c8f65;
-  --borde: rgba(247, 240, 226, .12);
+  /* El mismo sistema que la tienda: papel y tinta, verde de hoja como acento.
+     Los nombres dicen su funcion. Ver premium.css, que es la fuente. */
+  --papel: #fbf9f3;
+  --papel-puro: #ffffff;
+  --papel-hondo: #f2efe4;
+  --humo: #f4f1e8;
+  --piedra: #e6e1d3;
+  --tinta: #1c2a22;
+  --tinta-suave: #5f6f64;
+
+  --ocre: #2a6b46;           /* el acento, ahora verde hoja */
+  --ocre-vivo: #38875a;
+  --verde: #2a6b46;
+  --verde-claro: #7cb342;
+  --terra: #b4552f;
+  --miel: #d99a2b;
+
+  --borde: rgba(28, 42, 34, .14);
   --ancho: 1320px;
   --display: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", sans-serif;
 }
@@ -23,7 +36,7 @@
 * { box-sizing: border-box; }
 
 body {
-  margin: 0; background: var(--negro); color: var(--crema);
+  margin: 0; background: var(--papel); color: var(--tinta);
   font-family: var(--display); font-size: 15px; line-height: 1.55;
   -webkit-font-smoothing: antialiased;
 }
@@ -38,7 +51,7 @@ img { max-width: 100%; display: block; }
 .marca-nombre { font-weight: 800; font-size: 16px; letter-spacing: -.02em; }
 .marca-bajada {
   font-size: 10px; letter-spacing: .2em; text-transform: uppercase;
-  color: var(--crema-suave);
+  color: var(--tinta-suave);
 }
 
 /* ------------------------------------------------------------------ botones */
@@ -47,31 +60,35 @@ img { max-width: 100%; display: block; }
   padding: 10px 18px; border-radius: 10px; font-size: 13.5px; font-weight: 600;
   transition: background .2s, border-color .2s, color .2s, transform .15s;
 }
-.btn-primario { background: var(--ocre); color: var(--negro); font-weight: 700; }
+.btn-primario { background: var(--ocre); color: var(--papel); font-weight: 700; }
 .btn-primario:hover { background: var(--ocre-vivo); }
 .btn-claro, .btn-secundario, .btn-fantasma {
-  border: 1px solid var(--borde); color: var(--crema-suave);
+  border: 1px solid var(--borde); color: var(--tinta-suave);
 }
 .btn-claro:hover, .btn-secundario:hover, .btn-fantasma:hover {
   border-color: var(--ocre); color: var(--ocre);
 }
 .btn-verde { background: var(--verde); color: #fff; font-weight: 700; }
-.btn-verde:hover { background: #6ba375; }
+.btn-verde:hover { background: #1f5136; }
 .btn-bloque { width: 100%; padding: 14px; }
 .btn:disabled { opacity: .45; cursor: not-allowed; }
 
 /* --------------------------------------------------------------- cabecera */
 .admin-cabecera {
   position: sticky; top: 0; z-index: 40;
-  background: rgba(11, 10, 8, .9); backdrop-filter: blur(14px);
-  border-bottom: 1px solid var(--borde); padding: 14px 0;
+  background: rgba(251, 249, 243, .9); backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--borde); padding: 18px 0;
 }
 .admin-cabecera .contenedor { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 .admin-cabecera h1 { font-size: 17px; }
-.marca-icono { width: 40px; height: 40px; border-radius: 11px; flex: none; }
+.marca-icono { width: 60px; height: 60px; flex: none; }
+.marca-logotipo { display: block; height: 42px; width: auto; }
+/* El h1 solo envuelve a la imagen: sin esto hereda el tamaño de fuente del
+   título y le suma un alto de línea que descuadra la cabecera. */
+.marca-titulo { font-size: 0; line-height: 0; margin: 0; }
 .admin-cabecera .acciones { margin-left: auto; display: flex; gap: 10px; align-items: center; }
 
-.pulso { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: var(--crema-suave); }
+.pulso { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: var(--tinta-suave); }
 .pulso i {
   width: 7px; height: 7px; border-radius: 999px; background: var(--verde);
   animation: latido 2.2s ease-in-out infinite;
@@ -79,7 +96,7 @@ img { max-width: 100%; display: block; }
 @keyframes latido { 0%, 100% { opacity: 1 } 50% { opacity: .25 } }
 
 .quien {
-  font-size: 12.5px; color: var(--crema); background: var(--humo);
+  font-size: 12.5px; color: var(--tinta); background: var(--humo);
   border: 1px solid var(--borde); border-radius: 999px; padding: 5px 13px;
   white-space: nowrap; font-weight: 600;
 }
@@ -90,8 +107,9 @@ img { max-width: 100%; display: block; }
   gap: 16px; margin: 28px 0;
 }
 .kpi {
-  background: linear-gradient(165deg, var(--humo), var(--carbon));
+  background: var(--papel-puro);
   border: 1px solid var(--borde); border-radius: 16px; padding: 20px 22px;
+  box-shadow: 0 1px 2px rgba(28, 42, 34, .05), 0 10px 26px rgba(28, 42, 34, .05);
   position: relative; overflow: hidden;
 }
 .kpi::after {
@@ -100,14 +118,14 @@ img { max-width: 100%; display: block; }
 }
 .kpi-etiqueta {
   font-size: 11px; letter-spacing: .16em; text-transform: uppercase;
-  color: var(--crema-suave); font-weight: 700;
+  color: var(--tinta-suave); font-weight: 700;
 }
 .kpi-valor {
   font-size: 32px; font-weight: 800; letter-spacing: -.035em;
   margin-top: 8px; line-height: 1;
 }
-.kpi-nota { font-size: 12.5px; color: var(--crema-suave); margin-top: 5px; }
-.kpi.alerta { border-color: rgba(194, 80, 44, .45); }
+.kpi-nota { font-size: 12.5px; color: var(--tinta-suave); margin-top: 5px; }
+.kpi.alerta { border-color: rgba(180, 85, 47, .45); }
 .kpi.alerta::after { background: var(--terra); opacity: 1; }
 .kpi.alerta .kpi-valor { color: var(--terra); }
 
@@ -116,9 +134,12 @@ img { max-width: 100%; display: block; }
 @media (max-width: 1000px) { .tarjetas-admin { grid-template-columns: 1fr; } }
 
 .bloque {
-  background: linear-gradient(165deg, var(--humo), var(--carbon));
+  background: var(--papel-puro);
   border: 1px solid var(--borde); border-radius: 18px;
   overflow: hidden; margin-bottom: 20px;
+  /* Dos sombras, igual que las piezas de la vitrina de la tienda: una cerca
+     que asienta la tarjeta sobre el papel y una lejana que le da el aire. */
+  box-shadow: 0 1px 2px rgba(28, 42, 34, .05), 0 10px 26px rgba(28, 42, 34, .05);
 }
 .bloque-cabeza {
   padding: 17px 22px; border-bottom: 1px solid var(--borde);
@@ -140,10 +161,10 @@ img { max-width: 100%; display: block; }
 .pedido-total {
   margin-left: auto; font-size: 18px; font-weight: 800; letter-spacing: -.03em;
 }
-.pedido-meta { font-size: 13px; color: var(--crema-suave); margin-top: 7px; line-height: 1.6; }
-.pedido-meta b { color: var(--crema); font-weight: 600; }
+.pedido-meta { font-size: 13px; color: var(--tinta-suave); margin-top: 7px; line-height: 1.6; }
+.pedido-meta b { color: var(--tinta); font-weight: 600; }
 .pedido-items {
-  font-size: 12.5px; color: var(--crema-suave); margin-top: 9px;
+  font-size: 12.5px; color: var(--tinta-suave); margin-top: 9px;
   padding-left: 13px; border-left: 2px solid var(--piedra);
 }
 
@@ -151,19 +172,115 @@ img { max-width: 100%; display: block; }
   font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .1em;
   padding: 4px 10px; border-radius: 999px; border: 1px solid transparent;
 }
-.e-pendiente  { background: rgba(240,165,44,.13); color: var(--ocre); border-color: rgba(240,165,44,.32); }
-.e-preparando { background: rgba(93,145,214,.13); color: #8fb4e8; border-color: rgba(93,145,214,.32); }
-.e-enviado    { background: rgba(146,120,214,.13); color: #b3a0e8; border-color: rgba(146,120,214,.32); }
-.e-entregado  { background: rgba(92,143,101,.15); color: #8fc199; border-color: rgba(92,143,101,.35); }
-.e-anulado    { background: rgba(247,240,226,.06); color: var(--crema-suave); text-decoration: line-through; }
+.e-pendiente  { background: rgba(42, 107, 70, .12); color: var(--ocre); border-color: rgba(42, 107, 70, .32); }
+.e-preparando { background: rgba(93,145,214, .12); color: #2f5f9e; border-color: rgba(93,145,214,.32); }
+.e-enviado    { background: rgba(146,120,214, .12); color: #5b45a8; border-color: rgba(146,120,214,.32); }
+.e-entregado  { background: rgba(42, 107, 70, .12); color: #1f5136; border-color: rgba(42, 107, 70, .35); }
+.e-anulado    { background: rgba(28, 42, 34, .06); color: var(--tinta-suave); text-decoration: line-through; }
 
-.acciones-pedido { display: flex; gap: 7px; margin-top: 12px; flex-wrap: wrap; }
+/* ---------------------------------------------------- pie del pedido
+   El estado, el comprobante y las acciones bajan al final de la tarjeta.
+   Arriba competian con el codigo y el total —las dos cosas que se buscan al
+   escanear la lista— y el estado quedaba en una pastilla de 10 px que no se
+   leia de un vistazo. Aqui tiene sitio para ser grande. */
+.pedido-pie {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  margin-top: 13px; padding-top: 12px;
+  border-top: 1px solid var(--borde);
+}
+
+.estado-grande {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: .09em;
+  padding: 8px 15px; border-radius: 999px; border: 1px solid transparent;
+}
+/* El punto: en una lista de pedidos el color se lee antes que la palabra, y
+   un punto lo concentra en vez de teñir toda la pastilla. */
+.estado-grande i {
+  width: 8px; height: 8px; border-radius: 50%; flex: none;
+  background: currentColor;
+}
+/* El pendiente late: es el unico estado que pide accion hoy. */
+.estado-grande.e-pendiente i { animation: latido 2.2s ease-in-out infinite; }
+.estado-grande.e-anulado i, .estado-grande.e-devuelto i { animation: none; }
+
+.e-devuelto { background: rgba(180, 85, 47, .12); color: #8e3d1d; border-color: rgba(180, 85, 47, .3); }
+
+/* --- El comprobante, como boton. Antes era una etiqueta con el numero y habia
+   que adivinar que se podia pulsar. Se parte en dos porque son dos cosas
+   distintas: verlo para imprimirlo, y bajar el PDF para mandarlo. */
+/* En su propia linea y con aire: el comprobante es lo que se le entrega al
+   cliente, no un adorno del estado. */
+.pedido-comprobante { margin-top: 9px; }
+
+.cmp-grupo { display: inline-flex; align-items: stretch; }
+.cmp-boton {
+  display: inline-flex; align-items: baseline; gap: 8px;
+  padding: 10px 16px;
+  background: var(--humo);
+  border: 1px solid var(--borde);
+  border-radius: 10px 0 0 10px;
+  border-right: none;
+  transition: .2s;
+}
+.cmp-boton:hover { border-color: var(--ocre); background: rgba(42, 107, 70, .08); }
+.cmp-tipo { font-size: 13.5px; font-weight: 700; color: var(--tinta); }
+.cmp-numero {
+  font-family: ui-monospace, "Consolas", monospace;
+  font-size: 12px; color: var(--ocre);
+}
+.cmp-pdf {
+  display: inline-flex; align-items: center;
+  padding: 10px 15px;
+  font-size: 12px; font-weight: 700; letter-spacing: .04em;
+  color: var(--tinta-suave);
+  background: var(--humo);
+  border: 1px solid var(--borde);
+  border-radius: 0 10px 10px 0;
+  transition: .2s;
+}
+.cmp-pdf:hover { border-color: var(--ocre); color: var(--ocre); background: rgba(42, 107, 70, .08); }
+
+.cmp-pendiente {
+  font-size: 12px; color: var(--tinta-suave);
+  padding: 8px 13px; border: 1px dashed var(--borde); border-radius: 10px;
+  opacity: .8;
+}
+
+/* Canal: solo se marca la venta del local, porque la de la web es el caso por
+   defecto y etiquetar los dos duplica ruido sin decir nada nuevo. */
+.canal {
+  font-size: 10.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--verde); background: rgba(42, 107, 70, .14);
+  border: 1px solid rgba(42, 107, 70, .3);
+  padding: 3px 9px; border-radius: 999px;
+}
+
+/* El que pasa a recoger se marca en miel, no en verde: no es un dato del
+   pedido, es una cosa pendiente —hay que tenerlo listo y apartado en el puesto—
+   y en el mismo verde del resto se perdía. */
+.canal-recojo {
+  color: #8a5c0f; background: rgba(217, 154, 43, .16);
+  border-color: rgba(217, 154, 43, .45);
+}
+
+/* Las acciones se empujan a la derecha: lo que se mira es el estado, lo que se
+   pulsa queda del lado del pulgar. */
+.acciones-pedido { display: flex; gap: 7px; flex-wrap: wrap; margin-left: auto; }
 .mini {
   font-size: 12.5px; padding: 6px 13px; border-radius: 9px;
-  border: 1px solid var(--borde); color: var(--crema-suave); transition: .2s;
+  border: 1px solid var(--borde); color: var(--tinta-suave); transition: .2s;
 }
 .mini:hover { border-color: var(--verde); color: var(--verde); }
 .mini-peligro:hover { border-color: var(--terra); color: var(--terra); }
+
+/* El botón del motorizado. Es el único de su ficha y se pulsa en la puerta del
+   cliente, con una mano: va relleno y con altura de dedo, no de ratón. */
+.mini-entregar {
+  background: var(--verde); color: var(--papel); border-color: var(--verde);
+  font-weight: 700; padding: 11px 20px; font-size: 14px;
+}
+.mini-entregar:hover { background: var(--ocre-vivo); border-color: var(--ocre-vivo); color: var(--papel); }
 .mini:disabled { opacity: .4; }
 
 /* ------------------------------------------------------------------ stock */
@@ -179,10 +296,10 @@ img { max-width: 100%; display: block; }
 .fila-stock .emoji img { width: 100%; height: 100%; object-fit: cover; }
 .fila-stock .info { flex: 1; min-width: 0; }
 .fila-stock .info strong { display: block; font-size: 14px; font-weight: 600; }
-.fila-stock .info span { font-size: 12px; color: var(--crema-suave); }
+.fila-stock .info span { font-size: 12px; color: var(--tinta-suave); }
 
 .barra {
-  height: 5px; background: rgba(247,240,226,.1); border-radius: 999px;
+  height: 5px; background: rgba(28, 42, 34, .1); border-radius: 999px;
   margin-top: 7px; overflow: hidden;
 }
 .barra i { display: block; height: 100%; border-radius: 999px; background: var(--terra); }
@@ -198,7 +315,7 @@ img { max-width: 100%; display: block; }
 .mov-baja { color: var(--terra); }
 .mov-alta { color: var(--verde); }
 .mov-info { flex: 1; min-width: 0; }
-.mov-info span { display: block; font-size: 11.5px; color: var(--crema-suave); margin-top: 2px; }
+.mov-info span { display: block; font-size: 11.5px; color: var(--tinta-suave); margin-top: 2px; }
 
 /* ------------------------------------------------------------ más vendidos */
 .tabla-top { width: 100%; border-collapse: collapse; font-size: 13.5px; }
@@ -206,46 +323,47 @@ img { max-width: 100%; display: block; }
 .tabla-top td:last-child { text-align: right; font-weight: 700; color: var(--ocre); white-space: nowrap; }
 .tabla-top tr:last-child td { border-bottom: none; }
 
-.vacio { text-align: center; color: var(--crema-suave); padding: 40px 20px; font-size: 14px; opacity: .75; }
+.vacio { text-align: center; color: var(--tinta-suave); padding: 40px 20px; font-size: 14px; opacity: .75; }
 
 /* ------------------------------------------------------------ formularios */
 .campo { margin-bottom: 14px; }
 .campo label {
   display: block; font-size: 11px; font-weight: 700; letter-spacing: .12em;
-  text-transform: uppercase; color: var(--crema-suave); margin-bottom: 7px;
+  text-transform: uppercase; color: var(--tinta-suave); margin-bottom: 7px;
 }
 .campo input, .campo textarea {
-  width: 100%; padding: 12px 15px; font: inherit; font-size: 14.5px; color: var(--crema);
-  background: rgba(11, 10, 8, .6); border: 1px solid var(--borde); border-radius: 11px;
+  width: 100%; padding: 12px 15px; font: inherit; font-size: 14.5px; color: var(--tinta);
+  background: rgba(251, 249, 243, .6); border: 1px solid var(--borde); border-radius: 11px;
 }
 .campo input:focus, .campo textarea:focus { outline: none; border-color: var(--ocre); }
 
 .aviso { padding: 12px 15px; border-radius: 11px; font-size: 13.5px; margin-bottom: 16px; }
 .aviso[hidden] { display: none; }
-.aviso-error { background: rgba(194,80,44,.14); border: 1px solid rgba(194,80,44,.42); color: #f0a58c; }
-.aviso-ok { background: rgba(92,143,101,.14); border: 1px solid rgba(92,143,101,.4); color: #8fc199; }
+.aviso-error { background: rgba(180, 85, 47, .14); border: 1px solid rgba(180, 85, 47, .42); color: #8e3d1d; }
+.aviso-ok { background: rgba(42, 107, 70, .14); border: 1px solid rgba(42, 107, 70, .4); color: #1f5136; }
 
 /* ---------------------------------------------------------------- ingreso */
 .caja {
   width: min(410px, calc(100vw - 36px));
-  background: linear-gradient(165deg, var(--humo), var(--carbon));
+  background: var(--papel-puro);
   border: 1px solid var(--borde); border-radius: 20px; overflow: hidden;
-  box-shadow: 0 30px 80px rgba(0, 0, 0, .6);
+  box-shadow: 0 30px 80px rgba(28, 42, 34, .6);
 }
 .caja-cabeza { padding: 34px 30px 26px; text-align: center; position: relative; overflow: hidden; }
 .caja-cabeza::before {
   content: ""; position: absolute; left: 50%; top: -140px; transform: translateX(-50%);
   width: 340px; height: 340px; border-radius: 50%;
-  background: radial-gradient(circle, rgba(240,165,44,.2), transparent 68%);
+  background: radial-gradient(circle, rgba(42, 107, 70, .2), transparent 68%);
 }
 .caja-cabeza > * { position: relative; }
-.caja-cabeza .marca-icono { margin: 0 auto 16px; width: 52px; height: 52px; }
+.caja-cabeza .marca-icono { margin: 0 auto 16px; width: 78px; height: 78px; }
+.caja-cabeza .marca-logotipo { margin: 0 auto 8px; height: 54px; }
 .caja-cabeza h1 { font-size: 21px; margin-bottom: 5px; }
-.caja-cabeza p { margin: 0; font-size: 13px; color: var(--crema-suave); }
+.caja-cabeza p { margin: 0; font-size: 13px; color: var(--tinta-suave); }
 .caja-cuerpo { padding: 6px 30px 28px; }
 .caja-pie {
-  padding: 15px 30px; border-top: 1px solid var(--borde); background: rgba(11, 10, 8, .5);
-  font-size: 12.5px; color: var(--crema-suave);
+  padding: 15px 30px; border-top: 1px solid var(--borde); background: rgba(251, 249, 243, .5);
+  font-size: 12.5px; color: var(--tinta-suave);
   display: flex; justify-content: space-between; gap: 12px;
 }
 .caja-pie a:hover { color: var(--ocre); }
@@ -253,17 +371,60 @@ img { max-width: 100%; display: block; }
 /* ------------------------------------------------------------------ toast */
 .toast {
   position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px);
-  background: var(--crema); color: var(--negro); padding: 12px 22px; border-radius: 999px;
+  background: var(--tinta); color: var(--papel); padding: 12px 22px; border-radius: 999px;
   font-size: 14px; font-weight: 600; z-index: 90; opacity: 0; pointer-events: none;
   transition: transform .3s cubic-bezier(.2,.8,.3,1), opacity .3s;
-  box-shadow: 0 12px 34px rgba(0, 0, 0, .55);
+  box-shadow: 0 12px 34px rgba(28, 42, 34, .55);
 }
 .toast.visible { transform: translateX(-50%) translateY(0); opacity: 1; }
 
+/* ------------------------------------------------- la cabecera en el celular
+   El panel se diseñó para el escritorio del puesto, pero el motorizado lo abre
+   en la calle: entra con el rol de reparto y su pantalla mide 360 o 400 px.
+   A ese ancho la cabecera se rompía de tres formas distintas, y cada regla de
+   aquí abajo arregla una. */
 @media (max-width: 640px) {
   .contenedor { padding: 0 16px; }
-  .admin-cabecera .acciones { width: 100%; margin-left: 0; }
   .kpi-valor { font-size: 26px; }
+
+  /* 1. La marca se comía la fila. Baja un escalón y suelta su bajada: el
+        nombre del puesto ya lo sabe quien acaba de iniciar sesión. */
+  /* Y deja de ir pegada arriba. Con los botones repartidos en dos filas mide
+     unos 178 px: en un teléfono de 800 px eso es la quinta parte de la pantalla
+     ocupada de forma permanente por cosas que se pulsan de vez en cuando,
+     mientras la lista de entregas —que es a lo que se vino— pelea por el resto.
+     Se va con el scroll y vuelve subiendo. */
+  .admin-cabecera { position: static; padding: 12px 0; }
+  .marca-icono { width: 44px; height: 44px; }
+  .marca-logotipo { height: 30px; }
+  .admin-cabecera .marca-bajada { display: none; }
+
+  /* 2. «Actualizado 10:15:56 a. m.» ocupaba media fila para decir algo que el
+        botón de al lado ya deja hacer. Se va; el reloj vuelve en cuanto hay
+        ancho. */
+  .admin-cabecera .pulso { display: none; }
+
+  /* 3. Los botones se apretaban hasta cortar «Imprimir ruta» por la mitad.
+        Pasan a una fila propia, y ahí se reparten el ancho SIN bajar nunca de
+        lo que mide su texto: `flex-basis: auto` más `white-space: nowrap`
+        hacen que, cuando no caben, salten a una segunda fila en vez de
+        recortarse. Repartirlos en partes iguales (`flex: 1 1 0`) fue el primer
+        intento y era peor: a 320 px les tocaban 75 px a cada uno y se cortaban
+        los cuatro. Un botón a media palabra no se pulsa: se adivina. */
+  .admin-cabecera .acciones {
+    width: 100%; margin-left: 0; flex-wrap: wrap; gap: 8px;
+  }
+  .admin-cabecera .quien { order: -1; }
+  .admin-cabecera .acciones .btn {
+    flex: 1 1 auto; padding: 11px 12px; font-size: 12.5px; white-space: nowrap;
+  }
+
+  /* Y el encabezado de cada bloque: el título y el buscador competían por la
+     misma fila, y el título terminaba partido en dos líneas de una palabra.
+     El ancho completo del buscador ya lo pone la regla que vive junto a él. */
+  .bloque-cabeza {
+    flex-direction: column; align-items: stretch; gap: 10px; padding: 14px 16px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -274,16 +435,16 @@ img { max-width: 100%; display: block; }
 .marca { display: flex; align-items: center; gap: 12px; }
 .seccion-cabeza { margin-bottom: 30px; }
 .seccion-cabeza h2 { font-size: 26px; margin-bottom: 8px; }
-.seccion-cabeza p { margin: 0; color: var(--crema-suave); font-size: 14.5px; }
+.seccion-cabeza p { margin: 0; color: var(--tinta-suave); font-size: 14.5px; }
 .seccion-cabeza code {
-  background: rgba(11,10,8,.6); color: var(--ocre);
+  background: rgba(251, 249, 243, .6); color: var(--ocre);
   padding: 2px 7px; border-radius: 5px; font-size: 12.5px;
 }
 
 /* Devuelto: la venta se deshizo. Se distingue de anulado, que nunca salió. */
 .e-devuelto {
-  background: rgba(194, 80, 44, .13); color: #e0917a;
-  border-color: rgba(194, 80, 44, .34);
+  background: rgba(180, 85, 47, .12); color: #8e3d1d;
+  border-color: rgba(180, 85, 47, .34);
 }
 
 /* --------------------------------------------------- buscador de pedidos
@@ -291,7 +452,7 @@ img { max-width: 100%; display: block; }
 .cabeza-derecha { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .buscar-panel {
   width: 250px; padding: 8px 13px; font: inherit; font-size: 13px;
-  color: var(--crema); background: rgba(11, 10, 8, .6);
+  color: var(--tinta); background: rgba(251, 249, 243, .6);
   border: 1px solid var(--borde); border-radius: 9px; transition: border-color .2s;
 }
 .buscar-panel::placeholder { color: rgba(203, 192, 173, .5); }
@@ -302,7 +463,7 @@ img { max-width: 100%; display: block; }
 .reponer { display: flex; align-items: center; gap: 7px; flex: none; }
 .reponer input {
   width: 62px; padding: 7px 9px; font: inherit; font-size: 13px; text-align: center;
-  color: var(--crema); background: rgba(11, 10, 8, .6);
+  color: var(--tinta); background: rgba(251, 249, 243, .6);
   border: 1px solid var(--borde); border-radius: 8px;
 }
 .reponer input:focus { outline: none; border-color: var(--ocre); }
@@ -328,14 +489,14 @@ img { max-width: 100%; display: block; }
   transition: background .2s;
 }
 .fila-prod:last-child { border-bottom: none; }
-.fila-prod.editando { background: rgba(240, 165, 44, .06); }
+.fila-prod.editando { background: rgba(42, 107, 70, .06); }
 .fila-prod.de-baja { opacity: .5; }
 .fila-prod.de-baja .prod-info strong { text-decoration: line-through; }
 
 .cabecera-prod {
   padding: 0 0 10px; border-bottom: 2px solid var(--borde);
   font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase;
-  color: var(--crema-suave); font-weight: 700;
+  color: var(--tinta-suave); font-weight: 700;
 }
 .cabecera-prod:hover { background: none; }
 
@@ -346,16 +507,16 @@ img { max-width: 100%; display: block; }
 .prod-foto img { width: 100%; height: 100%; object-fit: cover; }
 .prod-info { min-width: 0; }
 .prod-info strong { display: block; font-size: 14px; font-weight: 600; }
-.prod-info span { font-size: 11.5px; color: var(--crema-suave); }
+.prod-info span { font-size: 11.5px; color: var(--tinta-suave); }
 
 .prod-campo { position: relative; display: flex; align-items: center; }
 .prod-campo .prefijo {
   position: absolute; left: 10px; font-size: 12px;
-  color: var(--crema-suave); pointer-events: none;
+  color: var(--tinta-suave); pointer-events: none;
 }
 .prod-campo input {
   width: 100%; padding: 8px 10px; font: inherit; font-size: 13.5px;
-  color: var(--crema); background: rgba(11, 10, 8, .6);
+  color: var(--tinta); background: rgba(251, 249, 243, .6);
   border: 1px solid var(--borde); border-radius: 9px; transition: border-color .2s;
 }
 .prod-campo:has(.prefijo) input { padding-left: 30px; }
@@ -369,13 +530,13 @@ img { max-width: 100%; display: block; }
 
 .prod-acciones { display: flex; gap: 7px; justify-content: flex-end; }
 .guardar:not(:disabled) {
-  background: var(--ocre); border-color: var(--ocre); color: var(--negro); font-weight: 700;
+  background: var(--ocre); border-color: var(--ocre); color: var(--papel); font-weight: 700;
 }
 .guardar:not(:disabled):hover { background: var(--ocre-vivo); border-color: var(--ocre-vivo); }
 
 .interruptor {
   display: inline-flex; align-items: center; gap: 7px;
-  font-size: 12.5px; color: var(--crema-suave); cursor: pointer; user-select: none;
+  font-size: 12.5px; color: var(--tinta-suave); cursor: pointer; user-select: none;
 }
 .interruptor input { accent-color: var(--ocre); cursor: pointer; }
 
@@ -396,8 +557,8 @@ img { max-width: 100%; display: block; }
   font-size: 10.5px; font-weight: 700; letter-spacing: .08em;
   padding: 3px 9px; border-radius: 999px; border: 1px solid transparent;
 }
-.c-boleta  { background: rgba(247,240,226,.07); color: var(--crema-suave); border-color: var(--borde); }
-.c-factura { background: rgba(240,165,44,.13); color: var(--ocre); border-color: rgba(240,165,44,.3); }
+.c-boleta  { background: rgba(28, 42, 34, .07); color: var(--tinta-suave); border-color: var(--borde); }
+.c-factura { background: rgba(42, 107, 70, .12); color: var(--ocre); border-color: rgba(42, 107, 70, .3); }
 
 /* Lista de comprobantes emitidos. Cada fila abre su representación impresa. */
 .cmp {
@@ -405,13 +566,13 @@ img { max-width: 100%; display: block; }
   padding: 12px 0; border-bottom: 1px solid var(--borde); transition: .2s;
 }
 .cmp:last-child { border-bottom: none; }
-.cmp:hover { background: rgba(240, 165, 44, .05); }
+.cmp:hover { background: rgba(42, 107, 70, .05); }
 .cmp-info { flex: 1; min-width: 0; }
 .cmp-info strong {
   display: block; font-family: Consolas, monospace; font-size: 13px;
   color: var(--ocre); letter-spacing: .02em;
 }
-.cmp-info span { font-size: 12px; color: var(--crema-suave); }
+.cmp-info span { font-size: 12px; color: var(--tinta-suave); }
 .cmp-derecha { text-align: right; white-space: nowrap; }
 .cmp-total { display: block; font-weight: 700; font-size: 14px; }
 .cmp-estado {
@@ -430,9 +591,9 @@ img { max-width: 100%; display: block; }
   padding: 0;
   border: 1px solid var(--borde);
   border-radius: 18px;
-  background: var(--carbon);
-  color: var(--crema);
-  box-shadow: 0 30px 90px rgba(0, 0, 0, .6);
+  background: var(--papel-puro);
+  color: var(--tinta);
+  box-shadow: 0 30px 90px rgba(28, 42, 34, .6);
 }
 .dlg::backdrop { background: rgba(6, 5, 4, .72); }
 .dlg form { display: flex; flex-direction: column; max-height: calc(100vh - 48px); }
@@ -445,7 +606,7 @@ img { max-width: 100%; display: block; }
 .dlg-cabeza h2 { margin: 0; font-size: 18px; letter-spacing: -.02em; }
 .dlg-cerrar {
   margin-left: auto; width: 32px; height: 32px; border-radius: 9px;
-  background: none; border: 1px solid var(--borde); color: var(--crema-suave);
+  background: none; border: 1px solid var(--borde); color: var(--tinta-suave);
   font-size: 19px; line-height: 1; cursor: pointer;
 }
 .dlg-cerrar:hover { border-color: var(--terra); color: var(--terra); }
@@ -482,11 +643,11 @@ img { max-width: 100%; display: block; }
   border: 1px solid var(--borde); border-radius: 13px;
 }
 .dlg-grupo legend { padding: 0 8px; font-size: 12.5px; color: var(--ocre); font-weight: 700; }
-.dlg-ayuda { margin: 0 0 14px; font-size: 12.5px; line-height: 1.6; color: var(--crema-suave); }
+.dlg-ayuda { margin: 0 0 14px; font-size: 12.5px; line-height: 1.6; color: var(--tinta-suave); }
 
 .dlg-avanzado { margin-bottom: 14px; }
 .dlg-avanzado summary {
-  cursor: pointer; font-size: 13px; color: var(--crema-suave);
+  cursor: pointer; font-size: 13px; color: var(--tinta-suave);
   padding: 9px 0; user-select: none;
 }
 .dlg-avanzado summary:hover { color: var(--ocre); }
@@ -495,7 +656,7 @@ img { max-width: 100%; display: block; }
 /* Con 400 productos la lista no se pinta entera: se corta y se avisa. */
 .mas-productos {
   text-align: center; padding: 18px 10px 6px;
-  font-size: 13px; color: var(--crema-suave);
+  font-size: 13px; color: var(--tinta-suave);
 }
 
 /* El número del comprobante abre la boleta de ese cliente. */
@@ -516,7 +677,7 @@ img { max-width: 100%; display: block; }
   text-align: center;
   font-size: 11px;
   letter-spacing: .06em;
-  color: var(--crema-suave);
+  color: var(--tinta-suave);
   opacity: .7;
   padding-bottom: 4px;
 }
@@ -534,15 +695,17 @@ img { max-width: 100%; display: block; }
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  background: rgba(240, 165, 44, var(--fuerza, 0));
+  /* El tinte del dia vendido. Se quedo en ocre cuando el resto paso a verde:
+     el barrido buscaba rgba con alfa literal y este la lleva en una variable. */
+  background: rgba(42, 107, 70, var(--fuerza, 0));
 }
 .dia-cal.vacia { border-color: transparent; background: none; }
-.dia-num { font-size: 11.5px; color: var(--crema-suave); }
-.dia-cal.vendio .dia-num { color: var(--crema); font-weight: 600; }
+.dia-num { font-size: 11.5px; color: var(--tinta-suave); }
+.dia-cal.vendio .dia-num { color: var(--tinta); font-weight: 600; }
 .dia-monto {
   font-size: 11px;
   font-weight: 700;
-  color: var(--crema);
+  color: var(--tinta);
   line-height: 1.1;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -559,17 +722,17 @@ img { max-width: 100%; display: block; }
   gap: 4px 14px;
   justify-content: space-between;
   font-size: 12.5px;
-  color: var(--crema-suave);
+  color: var(--tinta-suave);
   border-top: 1px solid var(--borde);
   padding-top: 10px;
 }
-.cal-pie strong { color: var(--crema); }
+.cal-pie strong { color: var(--tinta); }
 .cal-mejor { color: var(--ocre); }
 
 .btn-mini {
   background: var(--humo);
   border: 1px solid var(--borde);
-  color: var(--crema);
+  color: var(--tinta);
   border-radius: 7px;
   width: 26px;
   height: 26px;
@@ -599,10 +762,10 @@ img { max-width: 100%; display: block; }
 .cliente-cabeza:hover .cliente-info strong { color: var(--ocre); }
 .cliente-info { min-width: 0; }
 .cliente-info strong { display: block; font-size: 14px; font-weight: 600; }
-.cliente-info span { font-size: 12px; color: var(--crema-suave); }
+.cliente-info span { font-size: 12px; color: var(--tinta-suave); }
 .cliente-derecha { text-align: right; flex-shrink: 0; }
-.cliente-gastado { display: block; font-size: 14px; font-weight: 700; color: var(--crema); }
-.cliente-veces { font-size: 11.5px; color: var(--crema-suave); }
+.cliente-gastado { display: block; font-size: 14px; font-weight: 700; color: var(--tinta); }
+.cliente-veces { font-size: 11.5px; color: var(--tinta-suave); }
 /* Quien vuelve es el dato que vale: se resalta para que salte a la vista. */
 .cliente-veces.repite { color: var(--verde); font-weight: 600; }
 
@@ -613,7 +776,7 @@ img { max-width: 100%; display: block; }
 }
 .cliente-resumen {
   font-size: 11.5px;
-  color: var(--crema-suave);
+  color: var(--tinta-suave);
   padding: 8px 0 10px;
 }
 .hist { padding: 8px 10px; background: var(--humo); border-radius: 8px; margin-bottom: 6px; }
@@ -625,15 +788,15 @@ img { max-width: 100%; display: block; }
   text-decoration: none;
 }
 .hist-codigo:hover { text-decoration: underline; }
-.hist-fecha { font-size: 11px; color: var(--crema-suave); flex: 1; }
+.hist-fecha { font-size: 11px; color: var(--tinta-suave); flex: 1; }
 .hist-total { font-size: 13px; font-weight: 700; }
-.hist-items { font-size: 11.5px; color: var(--crema-suave); margin-top: 3px; line-height: 1.45; }
+.hist-items { font-size: 11.5px; color: var(--tinta-suave); margin-top: 3px; line-height: 1.45; }
 /* Un anulado se tacha, no se esconde: para atender a alguien hace falta saber
    que devolvió. */
 .hist-nulo { opacity: .55; }
 .hist-nulo .hist-total { text-decoration: line-through; }
 .hist-estado { font-size: 10.5px; color: var(--terra); text-transform: uppercase; letter-spacing: .05em; margin-top: 4px; }
-.cargando { font-size: 12px; color: var(--crema-suave); }
+.cargando { font-size: 12px; color: var(--tinta-suave); }
 
 /* En pantalla estrecha la cifra no entra en 50px de celda. Se calla y queda el
    color, que es el que dice donde hubo movimiento; el importe sigue en el
@@ -646,7 +809,7 @@ img { max-width: 100%; display: block; }
 /* ------------------------------------------------------------- respaldo
    El bloque entero se tiñe cuando el respaldo del día falta. Un aviso
    pequeño dentro de un bloque igual a los demás no se ve; el borde sí. */
-.bloque-alerta { border-color: rgba(194, 80, 44, .45); }
+.bloque-alerta { border-color: rgba(180, 85, 47, .45); }
 .bloque-alerta .bloque-cabeza h2 { color: var(--terra); }
 
 .btn-ancho { width: auto; padding: 0 11px; }
@@ -658,10 +821,10 @@ img { max-width: 100%; display: block; }
   margin: 8px 0;
   line-height: 1.45;
 }
-.resp-aviso.bien { background: rgba(92, 143, 101, .14); color: var(--crema); }
-.resp-aviso.grave { background: rgba(194, 80, 44, .16); color: var(--crema); }
-.resp-aviso.tibio { background: rgba(240, 165, 44, .12); color: var(--crema); }
-.resp-nota { font-size: 11.5px; color: var(--crema-suave); margin: 6px 0; line-height: 1.5; }
+.resp-aviso.bien { background: rgba(42, 107, 70, .14); color: var(--tinta); }
+.resp-aviso.grave { background: rgba(180, 85, 47, .16); color: var(--tinta); }
+.resp-aviso.tibio { background: rgba(42, 107, 70, .12); color: var(--tinta); }
+.resp-nota { font-size: 11.5px; color: var(--tinta-suave); margin: 6px 0; line-height: 1.5; }
 .resp-nota code {
   font-family: ui-monospace, "Consolas", monospace;
   font-size: 11px;
@@ -673,9 +836,9 @@ img { max-width: 100%; display: block; }
   justify-content: space-between;
   font-size: 12px;
   padding: 4px 0;
-  color: var(--crema-suave);
+  color: var(--tinta-suave);
 }
-.resp-peso { color: var(--crema); }
+.resp-peso { color: var(--tinta); }
 
 /* ------------------------------------------------- menu de secciones
    El panel creció hasta diez bloques en dos columnas y en una laptop no
@@ -694,7 +857,7 @@ img { max-width: 100%; display: block; }
 }
 .menu-boton span {
   display: block; height: 2px; border-radius: 2px;
-  background: var(--crema);
+  background: var(--tinta);
   transition: background .15s;
 }
 .menu-boton:hover { border-color: var(--ocre); }
@@ -710,11 +873,11 @@ img { max-width: 100%; display: block; }
   width: min(340px, calc(100vw - 32px));
   max-height: min(70vh, 560px);
   overflow-y: auto;
-  background: var(--carbon);
+  background: var(--papel-puro);
   border: 1px solid var(--borde);
   border-radius: 12px;
   padding: 6px;
-  box-shadow: 0 18px 44px rgba(0, 0, 0, .55);
+  box-shadow: 0 18px 44px rgba(28, 42, 34, .55);
 }
 .menu-item {
   display: block; width: 100%;
@@ -733,7 +896,7 @@ img { max-width: 100%; display: block; }
 .menu-item strong { display: block; font-size: 13.5px; font-weight: 600; }
 .menu-item:hover strong { color: var(--ocre); }
 .menu-item span {
-  display: block; font-size: 11.5px; color: var(--crema-suave);
+  display: block; font-size: 11.5px; color: var(--tinta-suave);
   line-height: 1.4; margin-top: 2px;
 }
 
@@ -743,6 +906,73 @@ img { max-width: 100%; display: block; }
 .bloque { scroll-margin-top: 86px; }
 .recien-llegado { animation: aterrizar 1.5s ease-out; }
 @keyframes aterrizar {
-  0%, 30% { border-color: var(--ocre); box-shadow: 0 0 0 3px rgba(240, 165, 44, .16); }
+  0%, 30% { border-color: var(--ocre); box-shadow: 0 0 0 3px rgba(42, 107, 70, .16); }
   100% { border-color: var(--borde); box-shadow: none; }
 }
+
+/* ------------------------------------------------- venta en el local
+   La tienda vende por dos canales y los dos descuentan del mismo stock.
+   Esta sección es la caja del puesto: lo primero del panel, porque es lo
+   que se usa con un cliente delante y esperando. */
+/* La caja no puede tener barra de scroll: el tope de 560px de .bloque-cuerpo
+   cortaba los datos del cliente y el boton de cobrar por la mitad, y no se
+   rebusca dentro de una caja con el cliente esperando el vuelto. */
+#bloque-mostrador .bloque-cuerpo { max-height: none; }
+
+.buscar-ancho { width: 100%; margin: 8px 0 4px; }
+
+.mos-fila, .mos-linea {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 2px;
+  border-bottom: 1px solid var(--borde);
+}
+.mos-fila:last-child { border-bottom: none; }
+.mos-info { flex: 1; min-width: 0; }
+.mos-info strong {
+  display: block; font-size: 13.5px; font-weight: 600;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.mos-info span { font-size: 11.5px; color: var(--tinta-suave); }
+/* El stock va antes del precio a propósito: en el mostrador la pregunta no es
+   «cuánto cuesta», es «¿me queda?». */
+.mos-stock { font-size: 12px; color: var(--tinta-suave); flex: none; }
+.mos-fila.poco-stock .mos-stock { color: var(--ocre); }
+.mos-fila.sin-stock { opacity: .5; }
+.mos-fila.sin-stock .mos-stock { color: var(--terra); }
+.mos-precio { font-size: 13.5px; font-weight: 700; flex: none; min-width: 74px; text-align: right; }
+
+.mos-vacio { font-size: 12.5px; color: var(--tinta-suave); padding: 16px 2px; opacity: .8; }
+.mos-lineas { border-top: 1px dashed var(--borde); margin-top: 10px; }
+.mos-cant { display: flex; align-items: center; gap: 7px; flex: none; }
+.mos-cant span { min-width: 18px; text-align: center; font-weight: 600; font-size: 13px; }
+.mos-subtotal { font-size: 13.5px; font-weight: 700; flex: none; min-width: 74px; text-align: right; }
+
+.mos-total, .mos-ganancia {
+  display: flex; justify-content: space-between; align-items: baseline;
+  padding: 9px 2px;
+}
+.mos-total { border-top: 1px solid var(--borde); font-size: 13px; color: var(--tinta-suave); }
+.mos-total strong { font-size: 22px; color: var(--tinta); }
+/* La ganancia solo la ve el dueño: se calcula del costo. */
+.mos-ganancia { font-size: 12.5px; color: var(--verde); padding-top: 0; }
+.mos-ganancia strong { font-size: 15px; }
+
+.mos-cliente { border-top: 1px solid var(--borde); padding-top: 11px; margin-top: 4px; }
+.mos-campos { display: flex; gap: 8px; flex-wrap: wrap; }
+.mos-campos input, #mos-razon {
+  flex: 1 1 140px; min-width: 0;
+  background: var(--humo); border: 1px solid var(--borde);
+  color: var(--tinta); border-radius: 8px;
+  padding: 9px 11px; font: inherit; font-size: 13px;
+}
+#mos-razon { width: 100%; margin-top: 8px; }
+.mos-campos input:focus, #mos-razon:focus { outline: none; border-color: var(--ocre); }
+.mos-nota { font-size: 11px; color: var(--tinta-suave); line-height: 1.45; margin: 8px 0 2px; }
+#mos-cobrar { margin-top: 10px; }
+
+/* Campo apagado al editar: el SKU y el stock no se tocan desde la ficha. Se
+   muestran en gris en vez de esconderse, porque el dato sirve —hay que poder
+   ver el codigo mientras se corrige el nombre— y ocultarlo haria pensar que
+   se perdio. */
+.campo-apagado { opacity: .45; }
+.campo-apagado input { cursor: not-allowed; }

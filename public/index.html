@@ -12,10 +12,14 @@
 <meta property="og:url" content="{{SITIO}}/">
 <meta property="og:title" content="Raíz Andina — Lo que la tierra ya sabía">
 <meta property="og:description" content="Tónicos, cremas, hierbas, esencias y superalimentos del Perú, con origen trazado y stock real.">
-<meta property="og:image" content="{{SITIO}}/img/marca/marca.svg">
+<meta property="og:image" content="{{SITIO}}/img/marca/compartir.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
-<link rel="icon" type="image/svg+xml" href="/img/marca/favicon.svg">
-<link rel="apple-touch-icon" href="/img/marca/favicon.svg">
+<link rel="icon" type="image/png" sizes="16x16" href="/img/marca/favicon-16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/img/marca/favicon-32.png">
+<link rel="icon" type="image/png" sizes="64x64" href="/img/marca/favicon.png">
+<link rel="apple-touch-icon" href="/img/marca/apple-touch.png">
 <meta name="theme-color" content="#0b0a08">
 <link rel="stylesheet" href="/css/premium.css">
 <script type="application/ld+json">
@@ -49,9 +53,9 @@
 <header class="nav" id="nav">
   <div class="contenedor nav-fila">
     <a href="#inicio" class="marca">
-      <img class="marca-sello" src="/img/marca/marca.svg" alt="Raíz Andina" width="40" height="40">
+      <img class="marca-sello" src="/img/marca/emblema.png" alt="" width="66" height="66">
       <div>
-        <div class="marca-nombre">Raíz Andina</div>
+        <img class="marca-logotipo" src="/img/marca/logotipo.png" alt="Raíz Andina" width="105" height="48">
         <div class="marca-bajada">Naturaleza con origen</div>
       </div>
     </a>
@@ -107,23 +111,29 @@
       </div>
     </div>
 
-    <!-- Envase 3D: cilindro con mapeado de textura en canvas. Recorre la gama
-         completa (tónico, crema, hierba, esencia, superalimento). -->
-    <div class="escena">
-      <div class="halo"></div>
-      <div class="vapor"><i></i><i></i><i></i></div>
-      <canvas id="frasco3d" aria-label="Envases de Raíz Andina girando" role="img"></canvas>
-
-      <div class="frasco-pie">
-        <strong id="frasco-nombre">MACA NEGRA</strong>
-        <span id="frasco-pie">Molida en piedra · Bolsa 250 g</span>
-        <div class="puntos" id="frasco-puntos">
-          <button type="button" aria-label="Tónico"></button>
-          <button type="button" aria-label="Crema"></button>
-          <button type="button" aria-label="Hierba"></button>
-          <button type="button" aria-label="Esencia"></button>
-          <button type="button" aria-label="Superalimento"></button>
-        </div>
+    <!-- La mercadería de verdad del puesto, no un objeto dibujado. Aquí giraba
+         un envase 3D en canvas: se veía como una demo técnica, y lo que tiene
+         que ver quien entra es lo que puede comprar. Si una foto falta, el
+         `onerror` cae a la ilustración y la vitrina no se rompe. -->
+    <div class="vitrina">
+      <figure class="vitrina-pieza vitrina-alta">
+        <img src="/img/fotos/MAC-001.jpg" alt="Maca Negra en polvo, bolsa de 250 g"
+             loading="eager" onerror="this.src='/img/gen/bolsa-ocre.svg'">
+        <figcaption><strong>Maca Negra</strong><span>Junín · Bolsa 250 g</span></figcaption>
+      </figure>
+      <figure class="vitrina-pieza">
+        <img src="/img/fotos/SAN-001.webp" alt="Sangre de Grado, frasco de 30 ml"
+             loading="lazy" onerror="this.src='/img/gen/gotero-arcilla.svg'">
+        <figcaption><strong>Sangre de Grado</strong><span>Amazonía · 30 ml</span></figcaption>
+      </figure>
+      <figure class="vitrina-pieza">
+        <img src="/img/fotos/CHA-001.jpg" alt="Chanca Piedra, hierba seca en bolsa de 100 g"
+             loading="lazy" onerror="this.src='/img/gen/bolsa-verde.svg'">
+        <figcaption><strong>Chanca Piedra</strong><span>Selva alta · 100 g</span></figcaption>
+      </figure>
+      <div class="vitrina-sello">
+        <strong>Desde 1998</strong>
+        <span>Mercado Central, puesto 87</span>
       </div>
     </div>
   </div>
@@ -303,9 +313,9 @@
     <div class="pie-grilla">
       <div>
         <div class="marca" style="margin-bottom:16px">
-          <img class="marca-sello" src="/img/marca/marca.svg" alt="" width="40" height="40">
+          <img class="marca-sello" src="/img/marca/emblema.png" alt="" width="66" height="66">
           <div>
-            <div class="marca-nombre">Raíz Andina</div>
+            <img class="marca-logotipo" src="/img/marca/logotipo.png" alt="Raíz Andina" width="105" height="48">
             <div class="marca-bajada">Naturaleza con origen</div>
           </div>
         </div>
@@ -360,7 +370,6 @@
 
 <div class="toast" id="toast"></div>
 
-<script src="/js/frasco.js"></script>
 <script src="/js/landing.js"></script>
 <script src="/js/app.js"></script>
 </body>

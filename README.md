@@ -30,6 +30,52 @@ Una foto propia manda sobre cualquier otra: `traer-fotos.mjs` no la pisa ni con
 `traer-fotos.mjs` es lo unico que necesita internet, y una sola vez: las fotos
 quedan en `public/img/fotos/`. Despues la tienda funciona desconectada.
 
+## Dos canales, un solo stock
+
+El negocio vende por **dos** lados y los dos descuentan del **mismo**
+inventario:
+
+| | Cómo entra | Estado inicial |
+|---|---|---|
+| **Tienda web** | el cliente compra en <http://localhost:3000> | `pendiente`, hay que despachar |
+| **Mostrador** | la encargada cobra desde el panel | `entregado`, se lo llevó puesto |
+
+Hasta ahora el sistema solo sabía registrar la venta de la web. Lo que se
+vendía de frente —que en un puesto de mercado es casi todo— no bajaba del
+inventario, así que **el stock del panel era mentira a media mañana**.
+
+La sección **Venta en el local** es la caja del puesto, y es lo primero del
+panel porque es lo que se usa con un cliente delante. Se busca el producto, se
+agrega, se cobra:
+
+- Al buscar se muestra **el stock de cada uno**, porque la pregunta del
+  mostrador no es «cuánto cuesta» sino «¿me queda?». El agotado no se puede
+  agregar y lo dice, en vez de dejar un botón muerto.
+- El carrito **nunca promete lo que no hay**: el `+` se apaga al llegar al
+  stock, y si aun así se intenta, el servidor devuelve cuántas quedan de cada
+  producto antes de emitir nada — con el cliente delante hay que poder decirle
+  «de ese me queda uno».
+- **El documento es opcional.** Pedirle el DNI a quien compra muña de S/ 9 es
+  perder la venta: sin documento sale boleta a nombre del mostrador. Si se
+  escribe un RUC de 11 dígitos aparece sola la razón social y sale factura.
+- Si el cobro falla, **el carrito se queda ahí**. Una venta a medias no se
+  borra mientras el cliente espera el vuelto.
+
+El tablero separa los dos canales —«S/ 54.80 en el local · S/ 0.00 por la
+web»— y eso es lo que permite comprobar que cuadra: si se vendieron 3 en el
+local y 2 por la web, el inventario tuvo que bajar 5. En el kardex cada
+movimiento dice de dónde vino: `Mostrador RA-…` o `Pedido RA-…`.
+
+### La ganancia
+
+El panel muestra la **ganancia del día** y la de cada venta, y solo al dueño:
+se calcula del costo, y el costo es suyo.
+
+Se calcula con **el costo del momento en que se vendió**, no con el de hoy. El
+costo cambia cada vez que sube el proveedor, y recalcular la ganancia del mes
+pasado con el costo de esta semana da una cifra que no ocurrió nunca. Por eso
+cada línea de pedido guarda su `costo_unit` congelado.
+
 ## El catalogo real del negocio
 
 La tienda arranca con 400 productos de ejemplo, que son relleno para que el

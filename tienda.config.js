@@ -10,6 +10,14 @@ export const TIENDA = {
   nombre: 'Raíz Andina',
   direccion: 'Jr. Ayacucho 412, puesto 87, Mercado Central, Lima',
   referencia: 'a media cuadra de la puerta de Andahuaylas',
+  // Donde esta el local, en ubigeo. Un pedido que el cliente pasa a recoger no
+  // tiene distrito de entrega, pero si tiene que tener uno guardado: sin el la
+  // venta quedaria fuera de cualquier corte por zona. Es el del local.
+  local: {
+    departamento: 'Lima', provincia: 'Lima', distrito: 'Lima',
+    // Codigo de ubigeo del INEI del distrito de arriba.
+    codigo: '150101',
+  },
   telefono: '910 343 930',
   whatsapp: '910 343 930',
   // Prefijo internacional, para los enlaces tel: y wa.me
