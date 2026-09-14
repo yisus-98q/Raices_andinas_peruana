@@ -19,7 +19,9 @@ const comprar = (items, extra = {}) => cliente(srv.base).pedir('/api/pedidos', {
   cuerpo: { cliente: CLIENTE_VALIDO, items, ...extra },
 });
 
-const producto = async (id) => (await cliente(srv.base).pedir('/api/productos/' + id)).json;
+// El stock se lee del panel: la ficha pública ya no lo trae, solo `disponible`.
+const producto = async (id) => (await admin.pedir('/api/admin/productos')).json
+  .find((p) => p.id === id);
 
 describe('Código de pedido repetido', () => {
   // El código tiene tres caracteres para poder dictarlo por teléfono: 36³ =
@@ -123,8 +125,8 @@ describe('Recojo en el local', () => {
   // El más barato con stock: garantiza quedar por debajo del umbral de envío
   // gratis, que es lo único que hace comparables el recojo y el envío.
   const masBarato = async () => {
-    const aptos = (await cliente(srv.base).pedir('/api/productos')).json
-      .filter((p) => p.stock > 2);
+    const aptos = (await admin.pedir('/api/admin/productos')).json
+      .filter((p) => p.activo === 1 && p.stock > 2);
     return aptos.reduce((a, b) => (b.precio < a.precio ? b : a));
   };
 
@@ -213,7 +215,27 @@ describe('Stock', () => {
     const p = await producto(3);
     const r = await comprar([{ id: 3, cantidad: p.stock + 1 }]);
     assert.equal(r.estado, 409);
-    assert.equal(r.json.faltantes[0].disponible, p.stock);
+    assert.equal(r.json.faltantes[0].id, 3, 'no dice qué producto no alcanza');
+  });
+
+  /**
+   * Y al rechazar no cuenta cuánto hay.
+   *
+   * Con «quedan 4» en la respuesta, pedir de más una vez por producto bastaba
+   * para leer el inventario entero sin entrar al panel.
+   */
+  test('el rechazo nombra el producto pero no revela el stock', async () => {
+    const p = await producto(3);
+    const r = await comprar([{ id: 3, cantidad: p.stock + 1 }]);
+    const texto = JSON.stringify(r.json);
+    assert.ok(!('disponible' in r.json.faltantes[0]), 'faltantes trae la cifra disponible');
+    assert.ok(!texto.includes('"stock"'), 'la respuesta trae stock');
+  });
+
+  test('el pedido aceptado no trae alertas de reposición', async () => {
+    const r = await comprar([{ id: 5, cantidad: 1 }]);
+    assert.equal(r.estado, 201, JSON.stringify(r.json));
+    assert.equal(r.json.alertas, undefined, 'al comprador le llegan las alertas de stock');
   });
 
   test('el stock se descuenta exactamente', async () => {

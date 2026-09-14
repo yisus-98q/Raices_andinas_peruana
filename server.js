@@ -233,9 +233,14 @@ const codigoPedido = () => {
 // Lo que ve el publico. `SELECT *` mandaba tambien `costo`: el precio de
 // compra de cada producto, o sea el margen del negocio, a cualquiera que
 // abriera /api/productos. Con 400 productos era la lista de costos completa.
+//
+// Y por la misma razon tampoco sale el stock. Cuantas unidades quedan es
+// informacion del negocio —dice cuanto vende, cuanto compra y cuando le falta
+// capital para reponer— y la ve solo quien lo controla, en el panel. Al
+// cliente le basta saber si se puede pedir o no: `disponible`, 1 o 0.
 const CAMPOS_PUBLICOS = `id, sku, nombre, categoria, origen, presentacion,
-  descripcion, uso_tradicional, beneficios, etiquetas, precio, stock,
-  stock_min, emoji, imagen, unidad, presentaciones`;
+  descripcion, uso_tradicional, beneficios, etiquetas, precio,
+  (stock > 0) AS disponible, emoji, imagen, unidad, presentaciones`;
 
 /**
  * Granel: se cotiza por 100 g y se vende por gramo.
@@ -265,8 +270,10 @@ const Q = {
   // recomendarlo por delante de lo que el negocio si tiene. No entra en
   // CAMPOS_PUBLICOS: la tienda no tiene por que ir etiquetando productos de
   // "demo" en una respuesta que el cliente puede abrir en el navegador.
+  // El stock entra aqui porque el asesor decide con el (no ofrece lo agotado,
+  // cotiza lo que alcanza), pero no sale en su respuesta: ver fichaProducto.
   paraAsesor: db.prepare(
-    `SELECT ${CAMPOS_PUBLICOS}, demo FROM productos WHERE activo = 1
+    `SELECT ${CAMPOS_PUBLICOS}, stock, stock_min, demo FROM productos WHERE activo = 1
      ORDER BY categoria, nombre`),
   paraActualizar: db.prepare('SELECT * FROM productos WHERE id = ?'),
   // Para vender hace falta el costo, que no esta en CAMPOS_PUBLICOS: es lo que
@@ -1561,7 +1568,10 @@ function crearPedido(res, body) {
     const p = Q.paraVender.get(id);
     if (!p) return json(res, 400, { error: 'Producto no disponible (id ' + id + ').' });
     if (p.stock < cant) {
-      faltantes.push({ id: p.id, nombre: p.nombre, pedido: cant, disponible: p.stock });
+      // Qué producto y cuánto pidió, pero no cuánto hay: con «quedan 4» basta
+      // pedir de más una vez para leer el inventario entero. El mostrador sí
+      // recibe la cifra (venderEnMostrador): quien atiende es del negocio.
+      faltantes.push({ id: p.id, nombre: p.nombre, pedido: cant });
       continue;
     }
     lineas.push({ p, cant, subtotal: +(precioPorUnidadBase(p) * cant).toFixed(2) });
@@ -1569,7 +1579,7 @@ function crearPedido(res, body) {
 
   if (faltantes.length) {
     return json(res, 409, {
-      error: 'No tenemos stock suficiente de algunos productos.',
+      error: 'No tenemos esa cantidad de algunos productos.',
       faltantes,
     });
   }
@@ -1644,10 +1654,9 @@ function crearPedido(res, body) {
       console.warn('[comprobante] ' + e.message);
     }
 
-    const alertas = Q.bajoStock.all()
-      .filter((p) => lineas.some((l) => l.p.id === p.id))
-      .map((p) => ({ nombre: p.nombre, stock: p.stock, stock_min: p.stock_min }));
-
+    // Aquí no van las alertas de reposición: esta respuesta la recibe el
+    // comprador, y «quedan 2 de 10» es inventario. El panel ya las muestra en
+    // Reposición urgente, y la venta de mostrador las sigue devolviendo.
     return json(res, 201, {
       ok: true,
       pedido: {
@@ -1659,7 +1668,6 @@ function crearPedido(res, body) {
         plazo: recojo ? TIENDA.horario.texto : zona.horas,
         entrega: recojo ? TIENDA.direccion : `${ubi.valor.distrito}, ${ubi.valor.provincia}`,
       },
-      alertas,
     });
   } catch (e) {
     db.exec('ROLLBACK');

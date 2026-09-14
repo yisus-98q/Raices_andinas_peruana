@@ -76,12 +76,13 @@ const comprar = (gramos) => cliente(srv.base).pedir('/api/pedidos', {
 });
 
 describe('La tienda cobra el peso, no la unidad', () => {
-  test('la ficha pública dice que va por peso y cuántos gramos hay', async () => {
+  test('la ficha pública dice que va por peso y si hay, pero no cuántos gramos', async () => {
     const p = (await cliente(srv.base).pedir('/api/productos/' + granel.id)).json;
     assert.equal(p.unidad, 'gramo');
     assert.equal(p.presentaciones, '50,100,250,500,1000');
     assert.equal(p.precio, PRECIO_100G, 'el precio público es el de 100 g');
-    assert.equal(p.stock, STOCK_G);
+    assert.equal(p.disponible, 1);
+    assert.equal(p.stock, undefined, 'la ficha pública trae el stock');
   });
 
   const CASOS = [
@@ -120,7 +121,8 @@ describe('La tienda cobra el peso, no la unidad', () => {
       .find((p) => p.id === granel.id).stock;
     const r = await comprar(hay + 1);
     assert.equal(r.estado, 409, JSON.stringify(r.json));
-    assert.equal(r.json.faltantes[0].disponible, hay);
+    assert.equal(r.json.faltantes[0].id, granel.id);
+    assert.ok(!('disponible' in r.json.faltantes[0]), 'le dijo al comprador cuántos gramos hay');
   });
 });
 

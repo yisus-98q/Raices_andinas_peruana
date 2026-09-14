@@ -210,6 +210,11 @@ describe('Cotización al por mayor', () => {
     const d = await consultar('quiero 40 unidades de manzanilla');
     assert.ok(d.cotizacion);
     assert.ok(d.cotizacion.descuento > 0, 'no aplicó descuento por volumen');
-    assert.equal(d.cotizacion.disponible + d.cotizacion.faltan, 40);
+    assert.equal(d.cotizacion.cantidad, 40);
+    // Si se entrega todo o no, sin «disponibles / faltan»: de esas dos cifras
+    // se despeja el stock exacto.
+    assert.equal(typeof d.cotizacion.alcanza, 'boolean');
+    assert.equal(d.cotizacion.disponible, undefined);
+    assert.equal(d.cotizacion.faltan, undefined);
   });
 });

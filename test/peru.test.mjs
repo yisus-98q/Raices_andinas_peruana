@@ -108,7 +108,14 @@ describe('Datos del negocio', () => {
 });
 
 describe('Cotización mayorista', () => {
-  test('aplica el descuento y dice cuánto hay en almacén', async () => {
+  /**
+   * Dice si entrega todo hoy, pero no cuántas hay.
+   *
+   * Antes respondía «tengo 42 en almacén, faltan 8»: una cotización bastaba
+   * para leer el stock de cualquier producto. El dato que importa al mayorista
+   * —si se lo llevan todo ya o una parte llega después— se mantiene.
+   */
+  test('aplica el descuento y dice si alcanza, sin revelar el stock', async () => {
     const c = cliente(srv.base);
     const r = await c.pedir('/api/asesor', {
       metodo: 'POST', cuerpo: { consulta: 'cuanto me sale 50 bolsas de maca negra' },
@@ -118,12 +125,21 @@ describe('Cotización mayorista', () => {
     assert.equal(cot.cantidad, 50);
     assert.ok(cot.descuento > 0, 'no aplicó descuento por volumen');
 
-    // Con el catálogo grande hay varias macas negras; el stock que se promete
-    // tiene que ser el de la que efectivamente cotizó, no el de otra.
+    // Con el catálogo grande hay varias macas negras; lo que se promete tiene
+    // que ser de la que efectivamente cotizó, no de otra. Su stock se lee del
+    // panel, que es el único lugar donde existe esa cifra.
     const p = r.json.recomendaciones[0];
     assert.match(p.nombre.toLowerCase(), /maca negra/);
-    assert.equal(cot.disponible, Math.min(50, p.stock));
-    assert.equal(cot.faltan, Math.max(0, 50 - p.stock));
+    const admin = cliente(srv.base);
+    await admin.pedir('/api/login', {
+      metodo: 'POST', cuerpo: { correo: 'qa@raizandina.pe', clave: 'claveDePrueba2026' },
+    });
+    const real = (await admin.pedir('/api/admin/productos')).json.find((x) => x.id === p.id);
+    assert.equal(cot.alcanza, real.stock >= 50);
+
+    assert.equal(p.stock, undefined, 'la ficha del asesor trae el stock');
+    assert.doesNotMatch(r.json.mensaje, /\b(hay|tengo|quedan|faltan|las otras)\s+\d+|en almac[eé]n/i,
+      `el mensaje dice cuántas hay: ${r.json.mensaje}`);
   });
 
   test('no cotiza cuando el número es una medida, no una cantidad', async () => {
@@ -148,7 +164,7 @@ describe('Asesor — seguridad de la recomendación', () => {
       const r = await c.pedir('/api/asesor', { metodo: 'POST', cuerpo: { consulta } });
       for (const rec of r.json.recomendaciones || []) {
         const real = productos.find((p) => p.id === rec.id);
-        assert.ok(real && real.stock > 0, `recomendó ${rec.nombre} sin stock`);
+        assert.ok(real && real.disponible, `recomendó ${rec.nombre} sin stock`);
       }
     }
   });
