@@ -3,7 +3,7 @@ import { networkInterfaces } from 'node:os';
 import { gzipSync } from 'node:zlib';
 import { randomInt } from 'node:crypto';
 import { createServer } from 'node:http';
-import { readFile } from 'node:fs/promises';
+import { readFile, writeFile } from 'node:fs/promises';
 import { extname, join, normalize, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { db } from './db.js';
@@ -119,6 +119,59 @@ function leerCuerpo(req, limite = 1e6) {
     });
     req.on('error', reject);
   });
+}
+
+/**
+ * El cuerpo tal cual llega, sin interpretarlo. Para una foto.
+ *
+ * `leerCuerpo` concatena en un string y eso destroza los bytes de una imagen:
+ * el binario pasa por UTF-8 y vuelve distinto. Aqui se juntan buffers.
+ *
+ * El tope se comprueba mientras entra, no al final: sin eso, mandar cien
+ * megabytes ocuparia cien megabytes de memoria del servidor antes de poder
+ * rechazarlos, y eso lo puede hacer cualquiera con sesion.
+ */
+function leerBinario(req, limite) {
+  return new Promise((resolve, reject) => {
+    const trozos = [];
+    let total = 0;
+    req.on('data', (c) => {
+      total += c.length;
+      if (total > limite) {
+        // Se deja de leer, pero NO se mata el socket todavía: primero hay que
+        // poder contestar por qué. Cortando aquí, al navegador le llega «se
+        // cayó la conexión» —que no dice nada y parece un fallo del servidor—
+        // en vez de «la foto pesa más de 4 MB». El socket se cierra después de
+        // responder, en quien llamó.
+        req.pause();
+        return reject(Object.assign(new Error('demasiado grande'), { demasiado: true }));
+      }
+      trozos.push(c);
+    });
+    req.on('end', () => resolve(Buffer.concat(trozos)));
+    req.on('error', reject);
+  });
+}
+
+/**
+ * Que clase de imagen es, mirando los bytes.
+ *
+ * No se mira ni la extension ni el `Content-Type`: los dos los escribe quien
+ * sube el archivo. Un .exe renombrado a .jpg llega con extension .jpg y con el
+ * content-type que se le antoje al que lo manda; lo unico que no puede
+ * falsificar sin que deje de ser lo que es son sus primeros bytes.
+ */
+function tipoDeImagen(buf) {
+  if (buf.length < 12) return null;
+  if (buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) return { ext: 'jpg', mime: 'image/jpeg' };
+  if (buf.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) {
+    return { ext: 'png', mime: 'image/png' };
+  }
+  if (buf.subarray(0, 4).toString('ascii') === 'RIFF'
+    && buf.subarray(8, 12).toString('ascii') === 'WEBP') return { ext: 'webp', mime: 'image/webp' };
+  // GIF y SVG quedan fuera a proposito: el GIF animado no aporta a una ficha
+  // de producto, y el SVG es un documento que puede traer scripts dentro.
+  return null;
 }
 
 /**
@@ -782,6 +835,56 @@ async function api(req, res, url) {
     } catch (e) {
       return json(res, 400, { error: 'No se pudo generar el QR: ' + e.message });
     }
+  }
+
+  /**
+   * Subir la foto de un producto desde el telefono o la computadora.
+   *
+   * Antes habia que escribir a mano la ruta de un archivo que alguien tenia
+   * que haber dejado antes en el servidor. Para una tienda que se administra
+   * desde un celular en el mostrador, eso es lo mismo que no poder poner fotos.
+   *
+   * Lo que se acepta y por que:
+   *
+   *  - **Solo la dueña.** Subir archivos a un servidor es de las pocas cosas
+   *    que, mal hechas, comprometen la maquina entera.
+   *  - **Se mira el contenido, no el nombre.** Ver `tipoDeImagen`.
+   *  - **El nombre lo pone el servidor.** El del archivo original no se usa ni
+   *    para derivarlo: es la via clasica de escribir fuera de la carpeta
+   *    (`../../algo`). Aqui se arma con la fecha y bytes al azar.
+   *  - **Tope de 4 MB.** Una foto de celular ronda los 2-3 MB; mas que eso no
+   *    mejora una ficha y si llena el disco.
+   */
+  if (metodo === 'POST' && ruta === '/api/fotos') {
+    if (!requiereAdmin(req, res)) return;
+
+    let bytes;
+    try {
+      bytes = await leerBinario(req, 4 * 1024 * 1024);
+    } catch (e) {
+      json(res, 413, { error: 'La foto pesa más de 4 MB. Usa una más liviana.' });
+      // Y recién ahora se corta: lo que quedaba por subir ya no interesa, pero
+      // la respuesta salió primero.
+      if (e.demasiado) req.destroy();
+      return;
+    }
+    if (!bytes.length) return json(res, 400, { error: 'No llegó ninguna foto.' });
+
+    const tipo = tipoDeImagen(bytes);
+    if (!tipo) {
+      return json(res, 400, {
+        error: 'Ese archivo no es una foto JPG, PNG o WEBP.',
+      });
+    }
+
+    const nombre = `p${Date.now().toString(36)}${randomInt(1e6).toString(36)}.${tipo.ext}`;
+    try {
+      await writeFile(join(PUBLIC, 'img', 'fotos', nombre), bytes);
+    } catch (e) {
+      return json(res, 500, { error: 'No se pudo guardar la foto: ' + e.message });
+    }
+
+    return json(res, 201, { ruta: '/img/fotos/' + nombre, peso: bytes.length });
   }
 
   // Datos públicos de la tienda para el frontend (umbral de envío gratis,

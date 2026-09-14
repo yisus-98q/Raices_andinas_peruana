@@ -1608,6 +1608,73 @@
     }
   }
 
+  /**
+   * Elegir la foto del producto de la galería del teléfono o del disco.
+   *
+   * Antes había que escribir a mano la ruta de un archivo que alguien tenía que
+   * haber dejado antes en el servidor, por consola. Para una tienda que se
+   * administra desde el celular del mostrador eso era, en la práctica, no poder
+   * poner fotos.
+   *
+   * El campo de ruta sigue ahí debajo: sirve para reutilizar una foto que ya
+   * está subida sin volver a subirla. Lo que se elige aquí simplemente lo
+   * rellena, así que la ficha se sigue guardando de una sola manera.
+   */
+  function mostrarFoto(ruta) {
+    const vista = $('a-foto-vista');
+    $('a-imagen').value = ruta || '';
+    vista.hidden = !ruta;
+    if (ruta) $('a-foto-img').src = ruta;
+  }
+
+  $('a-foto').onchange = async (e) => {
+    const archivo = e.target.files?.[0];
+    if (!archivo) return;
+    const estado = $('a-foto-estado');
+
+    // Se avisa acá y no solo en el servidor: subir 8 MB por datos móviles para
+    // que lo rechacen al llegar es el peor sitio donde enterarse.
+    if (archivo.size > 4 * 1024 * 1024) {
+      estado.textContent = `Pesa ${(archivo.size / 1048576).toFixed(1)} MB. El máximo son 4.`;
+      estado.className = 'foto-estado foto-mal';
+      e.target.value = '';
+      return;
+    }
+
+    estado.textContent = 'Subiendo…';
+    estado.className = 'foto-estado';
+    try {
+      const r = await fetch('/api/fotos', {
+        method: 'POST',
+        headers: { 'Content-Type': archivo.type || 'application/octet-stream' },
+        body: archivo,
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || 'No se pudo subir');
+
+      mostrarFoto(d.ruta);
+      estado.textContent = `Lista · ${Math.round(d.peso / 1024)} KB`;
+      estado.className = 'foto-estado foto-bien';
+    } catch (err) {
+      estado.textContent = err.message;
+      estado.className = 'foto-estado foto-mal';
+    } finally {
+      // Se limpia para que elegir DOS VECES el mismo archivo vuelva a disparar
+      // el evento: sin esto, corregir una foto mal recortada y volver a
+      // elegirla no hacía nada.
+      e.target.value = '';
+    }
+  };
+
+  $('a-foto-quitar').onclick = () => {
+    mostrarFoto('');
+    $('a-foto-estado').textContent = 'JPG, PNG o WEBP · hasta 4 MB';
+    $('a-foto-estado').className = 'foto-estado';
+  };
+
+  // Al abrir la ficha de un producto que ya tiene foto, se ve la que tiene.
+  $('a-imagen').oninput = () => mostrarFoto($('a-imagen').value.trim());
+
   $('abrir-alta').onclick = () => abrirFicha();
   $('cerrar-alta').onclick = () => dlg.close();
   $('cancelar-alta').onclick = () => dlg.close();

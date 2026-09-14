@@ -257,8 +257,23 @@
         <div class="campo-doble">
           <div class="campo">
             <label for="a-imagen">Foto</label>
+            <!-- El archivo va primero: es lo que la dueña va a usar. La ruta
+                 queda debajo, para pegar una que ya esté en el servidor. -->
+            <div class="foto-campo">
+              <div class="foto-vista" id="a-foto-vista" hidden>
+                <img id="a-foto-img" alt="">
+                <button type="button" class="foto-quitar" id="a-foto-quitar"
+                        aria-label="Quitar la foto">×</button>
+              </div>
+              <label class="btn btn-claro btn-chico foto-elegir" for="a-foto">
+                Agregar foto
+              </label>
+              <input type="file" id="a-foto" accept="image/jpeg,image/png,image/webp"
+                     hidden aria-label="Elegir una foto de tu galería">
+              <span class="foto-estado" id="a-foto-estado">JPG, PNG o WEBP · hasta 4 MB</span>
+            </div>
             <input id="a-imagen" name="imagen" maxlength="300"
-                   placeholder="/img/fotos/mi-foto.jpg">
+                   placeholder="o pega una ruta: /img/fotos/mi-foto.jpg">
           </div>
           <div class="campo">
             <label for="a-sku">Código</label>
