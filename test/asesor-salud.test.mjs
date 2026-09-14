@@ -20,14 +20,34 @@ import test, { describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { asesorar } from '../asesor.js';
 import { DatabaseSync } from 'node:sqlite';
+import { spawnSync } from 'node:child_process';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const RAIZ = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 /**
  * El catálogo real de la demo. Se lee de la base y no se inventa: un catálogo
  * de juguete con tres productos no engancharía con casi nada, y la prueba
  * pasaría por falta de candidatos en vez de por el límite que se quiere probar.
+ *
+ * La base se siembra aparte, en una carpeta temporal. Leía `data/tienda.db`, que
+ * no está versionada: en un clon limpio el archivo entero fallaba, y en la
+ * máquina de trabajo el resultado dependía de lo que se hubiera cargado a mano.
  */
-const db = new DatabaseSync(process.env.DB_PATH || 'data/tienda.db', { readOnly: true });
+const carpeta = mkdtempSync(join(tmpdir(), 'ra-salud-'));
+const dbPath = join(carpeta, 'prueba.db');
+const semilla = spawnSync(process.execPath, ['db.js', '--reset'], {
+  cwd: RAIZ, env: { ...process.env, DB_PATH: dbPath }, stdio: 'ignore',
+});
+assert.equal(semilla.status, 0, 'la semilla de prueba debe cargar');
+
+const db = new DatabaseSync(dbPath, { readOnly: true });
 const PRODUCTOS = db.prepare('SELECT * FROM productos WHERE activo = 1').all();
+db.close();
+rmSync(carpeta, { recursive: true, force: true });
 
 const responder = (consulta) => asesorar(consulta, PRODUCTOS);
 
