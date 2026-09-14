@@ -8,56 +8,30 @@
 <link rel="icon" type="image/png" sizes="16x16" href="/img/marca/favicon-16.png">
 <link rel="icon" type="image/png" sizes="32x32" href="/img/marca/favicon-32.png">
 <link rel="icon" type="image/png" sizes="64x64" href="/img/marca/favicon.png">
+<link rel="preload" href="/fonts/fraunces-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/css/premium.css">
-<style>
-  body { padding-top: 0; }
-  .cabecera-simple {
-    border-bottom: 1px solid var(--borde); padding: 22px 0; margin-bottom: 48px;
-  }
-  .cabecera-simple .contenedor { display: flex; align-items: center; gap: 14px; }
-  .cabecera-simple .btn { margin-left: auto; }
-  .tabla-creditos { width: 100%; border-collapse: collapse; font-size: 14px; }
-  .tabla-creditos th {
-    text-align: left; font-size: 11px; letter-spacing: .16em; text-transform: uppercase;
-    color: var(--ocre); font-weight: 700; padding: 0 14px 12px 0;
-    border-bottom: 1px solid var(--borde);
-  }
-  .tabla-creditos td {
-    padding: 14px 14px 14px 0; border-bottom: 1px solid var(--borde);
-    color: var(--crema-suave); vertical-align: top;
-  }
-  .tabla-creditos td:first-child { color: var(--crema); font-weight: 600; }
-  .tabla-creditos a { color: var(--ocre); text-decoration: underline; }
-  .lic {
-    display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .06em;
-    padding: 3px 9px; border-radius: 999px; white-space: nowrap;
-  }
-  .lic-libre { background: rgba(92,143,101,.16); color: #8fc199; }
-  .lic-atrib { background: rgba(240,165,44,.14); color: var(--ocre); }
-  .nota-legal {
-    background: var(--carbon); border: 1px solid var(--borde); border-radius: 16px;
-    padding: 22px 26px; margin-bottom: 40px; font-size: 14.5px; color: var(--crema-suave);
-  }
-  .nota-legal strong { color: var(--crema); }
-</style>
+<link rel="stylesheet" href="/css/paginas.css">
 </head>
-<body>
+<body class="pagina pagina-creditos">
 
 <header class="cabecera-simple">
   <div class="contenedor">
-    <img class="marca-sello" src="/img/marca/emblema.png" alt="" width="66" height="66">
-    <div>
-      <img class="marca-logotipo" src="/img/marca/logotipo.png" alt="Raíz Andina" width="105" height="48">
-      <div class="marca-bajada">Créditos de imágenes</div>
-    </div>
+    <a class="marca" href="/">
+      <img class="marca-sello" src="/img/marca/emblema.png" alt="" width="66" height="66">
+      <div>
+        <img class="marca-logotipo" src="/img/marca/logotipo.png" alt="Raíz Andina" width="105" height="48">
+        <div class="marca-bajada">Créditos de imágenes</div>
+      </div>
+    </a>
     <a class="btn btn-fantasma btn-chico" href="/tienda">Volver a la tienda</a>
   </div>
 </header>
 
-<main class="contenedor" style="padding-bottom:80px">
+<main class="con-fondo fondo-andes">
+<div class="contenedor creditos">
   <div class="encabezado-centrado">
     <span class="kicker">Atribución</span>
-    <h1 class="grande" style="margin:20px 0 28px">Créditos<br>de imágenes</h1>
+    <h1 class="grande">Créditos de imágenes</h1>
   </div>
 
   <div class="nota-legal">
@@ -74,12 +48,15 @@
     son marcadores de posición: conviene sustituirlas por fotos del puesto.
   </div>
 
-  <table class="tabla-creditos">
-    <thead>
-      <tr><th>Producto</th><th>Imagen</th><th>Autor</th><th>Licencia</th></tr>
-    </thead>
-    <tbody id="filas"><tr><td colspan="4">Cargando…</td></tr></tbody>
-  </table>
+  <div class="tabla-desliza">
+    <table class="tabla-creditos">
+      <thead>
+        <tr><th>Producto</th><th>Imagen</th><th>Autor</th><th>Licencia</th></tr>
+      </thead>
+      <tbody id="filas"><tr><td colspan="4">Cargando…</td></tr></tbody>
+    </table>
+  </div>
+</div>
 </main>
 
 <script src="/js/creditos.js"></script>

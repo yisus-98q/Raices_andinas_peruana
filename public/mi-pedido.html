@@ -10,15 +10,11 @@
 <link rel="icon" type="image/png" sizes="32x32" href="/img/marca/favicon-32.png">
 <link rel="icon" type="image/png" sizes="64x64" href="/img/marca/favicon.png">
 <meta name="theme-color" content="#0b0a08">
+<link rel="preload" href="/fonts/fraunces-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/css/premium.css">
-<style>
-  .cabecera-simple { border-bottom: 1px solid var(--borde); padding: 20px 0; }
-  .cabecera-simple .contenedor { display: flex; align-items: center; gap: 13px; }
-  .cabecera-simple .btn { margin-left: auto; }
-  .caja-seguimiento { max-width: 640px; margin: 0 auto; }
-</style>
+<link rel="stylesheet" href="/css/paginas.css">
 </head>
-<body>
+<body class="pagina pagina-pedido">
 
 <header class="cabecera-simple">
   <div class="contenedor">
@@ -33,11 +29,12 @@
   </div>
 </header>
 
-<main class="contenedor seccion caja-seguimiento">
+<main class="con-fondo fondo-machu">
+<div class="contenedor caja-seguimiento">
   <div class="encabezado-centrado">
     <span class="kicker">Tu pedido</span>
-    <h1 class="grande" style="margin:18px 0 12px">¿Dónde<br>va lo mío?</h1>
-    <p style="color:var(--crema-suave);margin-bottom:30px">
+    <h1 class="grande">¿Dónde va lo mío?</h1>
+    <p class="bajada">
       Escribe el código que te dimos al comprar y los <strong>últimos 4 dígitos</strong>
       del teléfono que dejaste. Pedimos los dos para que nadie más pueda ver tu pedido.
     </p>
@@ -64,6 +61,7 @@
   </form>
 
   <section class="pedido-estado" id="resultado" hidden></section>
+</div>
 </main>
 
 <footer class="pie">

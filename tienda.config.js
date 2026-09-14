@@ -122,7 +122,7 @@ export const TIENDA = {
     },
     garantiaOrigen:
       'Compramos directo al productor y guardamos la guía de cada lote. ' +
-      'Si quieres, en el local te mostramos de qué lote salió tu frasco.',
+      'Si quieres, en el local te mostramos de qué lote salió cada producto.',
   },
 };
 

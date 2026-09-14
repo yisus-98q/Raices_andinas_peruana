@@ -1,0 +1,212 @@
+/* ============================================================================
+   Páginas secundarias: seguir mi pedido, créditos y entrar al panel.
+
+   Llevan el mismo diseño que la portada y la tienda —títulos en Fraunces, la
+   barra con su degradado y una foto de fondo con velo claro— sin cargar las
+   reglas de esas dos páginas. Se carga DESPUÉS de premium.css o panel.css y
+   todo va acotado a `body.pagina`, así que una regla de aquí no puede
+   alcanzar la portada ni la tienda aunque alguien la enlace por error.
+
+   Las fotos son de /img/fondos (CC0, créditos en img/fondos/creditos.json),
+   cada una con su versión de 800 px para el celular: bajar 500 KB de fondo
+   por datos móviles para ver el estado de un pedido no tiene sentido.
+   ========================================================================= */
+
+/* ------------------------------------------------------------- tipografía */
+@font-face {
+  font-family: "Fraunces";
+  src: url("/fonts/fraunces-latin.woff2") format("woff2");
+  font-weight: 500 700;
+  font-style: normal;
+  font-display: block;
+}
+
+body.pagina {
+  --titulo: "Fraunces", Georgia, "Times New Roman", serif;
+  --sombra-caja: 0 18px 40px rgba(0, 0, 0, .12);
+  min-height: 100svh;
+  display: flex; flex-direction: column;
+  overflow-x: hidden;
+}
+
+/* Minúscula y serif, como la portada: en mayúsculas y Segoe Black el título
+   de «¿Dónde va lo mío?» gritaba y ocupaba media pantalla del celular. */
+body.pagina h1,
+body.pagina h2 {
+  font-family: var(--titulo);
+  text-transform: none;
+  font-weight: 600;
+  letter-spacing: -.015em;
+  line-height: 1.08;
+  font-variation-settings: "opsz" 72;
+}
+body.pagina .grande { font-size: clamp(2rem, 4.6vw, 3.2rem); }
+
+/* -------------------------------------------------------------- cabecera */
+/* El mismo degradado que la barra de la portada: papel, verde hoja y arena,
+   con la línea de 2 px en los tres colores de la marca. Aquí no es fija: en una
+   página de una sola tarea, una barra que sigue al dedo solo quita pantalla. */
+body.pagina .cabecera-simple {
+  position: relative; z-index: 2;
+  padding: 14px 0;
+  border-bottom: none;
+  margin-bottom: 0;
+  background: linear-gradient(90deg,
+    #fbf9f3 0%, rgba(234, 243, 235, 1) 52%, rgba(247, 238, 219, 1) 100%);
+  box-shadow: 0 8px 26px rgba(28, 42, 34, .07);
+}
+body.pagina .cabecera-simple::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 2px;
+  background: linear-gradient(90deg, var(--verde), var(--miel) 55%, var(--terra));
+  opacity: .75;
+}
+body.pagina .cabecera-simple .contenedor { display: flex; align-items: center; gap: 13px; }
+body.pagina .cabecera-simple .marca { min-width: 0; }
+body.pagina .cabecera-simple .marca-sello { width: 58px; height: 58px; }
+body.pagina .cabecera-simple .marca-logotipo { height: 42px; }
+body.pagina .cabecera-simple .btn { margin-left: auto; flex: none; }
+
+/* ----------------------------------------------------- fondo con fotografía */
+/* Velo de papel: casi liso arriba, donde está el título, y la foto aparece a
+   medida que se baja. El texto sigue en tinta oscura. */
+/* `.pagina .con-fondo` es el <main> de mi-pedido y créditos; `.pagina.con-fondo`
+   es el body del login, que no tiene cabecera. */
+.pagina .con-fondo,
+.pagina.con-fondo {
+  flex: 1;
+  background:
+    linear-gradient(180deg, rgba(251, 249, 243, .95), rgba(251, 249, 243, .84) 50%, rgba(251, 249, 243, .62)),
+    var(--foto) center / cover no-repeat;
+}
+.pagina .fondo-machu, .pagina.fondo-machu { --foto: url("/img/fondos/machu-picchu.jpg"); }
+.pagina .fondo-andes, .pagina.fondo-andes { --foto: url("/img/fondos/andes.jpg"); }
+@media (max-width: 640px) {
+  .pagina .fondo-machu, .pagina.fondo-machu { --foto: url("/img/fondos/machu-picchu-m.jpg"); }
+  .pagina .fondo-andes, .pagina.fondo-andes { --foto: url("/img/fondos/andes-m.jpg"); }
+}
+/* El login ocupa la pantalla entera: la foto se queda quieta y la caja flota. */
+.pagina.pagina-login.con-fondo { background-attachment: fixed; }
+@media (max-width: 980px) {
+  /* En celulares y tabletas `fixed` sobre `cover` escala la foto al alto de
+     todo el documento y la pixela; ahí se desplaza con la página. */
+  .pagina.pagina-login.con-fondo { background-attachment: scroll; }
+}
+
+/* Las cajas quedan blancas y se despegan de la foto con una sombra suave. */
+body.pagina .asesor-caja,
+body.pagina .pedido-estado,
+body.pagina .nota-legal,
+body.pagina .tabla-desliza,
+body.pagina .caja {
+  background: var(--papel-puro);
+  border: 1px solid var(--borde);
+  box-shadow: var(--sombra-caja);
+}
+/* El brillo verde de la esquina es de la tienda, donde la caja va sobre papel
+   liso; sobre la foto compite con ella. */
+body.pagina .asesor-caja::before { display: none; }
+
+/* El pie de la portada lleva 68 px arriba y la línea legal 52 px más: aquí,
+   con solo esa línea, quedaba una franja vacía más alta que el formulario. */
+body.pagina .pie { position: relative; z-index: 1; padding: 22px 0; }
+body.pagina .pie-legal { margin-top: 0; padding-top: 0; border-top: none; }
+
+/* ----------------------------------------------------------- seguir pedido */
+body.pagina .caja-seguimiento { max-width: 640px; margin: 0 auto; padding-top: 64px; padding-bottom: 72px; }
+body.pagina .caja-seguimiento .grande { margin: 18px 0 12px; }
+body.pagina .bajada { color: var(--tinta-suave); margin-bottom: 30px; }
+body.pagina .bajada strong { color: var(--tinta); }
+
+/* El error venía en rosa claro, pensado para el tema oscuro: sobre papel no se
+   leía. Terracota oscura sobre su tinte. */
+body.pagina .aviso-error {
+  background: rgba(180, 85, 47, .1); border: 1px solid rgba(180, 85, 47, .42); color: #8e3d1d;
+}
+
+/* ---------------------------------------------------------------- créditos */
+body.pagina .creditos { padding-top: 56px; padding-bottom: 80px; }
+body.pagina .creditos .grande { margin: 20px 0 28px; }
+
+body.pagina .nota-legal {
+  border-radius: 16px; padding: 22px 26px; margin-bottom: 32px;
+  font-size: 14.5px; color: var(--tinta-suave);
+}
+body.pagina .nota-legal strong { color: var(--tinta); }
+body.pagina .nota-legal a { color: var(--ocre); text-decoration: underline; }
+body.pagina .nota-legal code {
+  font-size: 13px; background: var(--papel-hondo); padding: 1px 6px; border-radius: 6px;
+}
+
+/* La tabla desliza dentro de su caja, nunca la página: en un celular cuatro
+   columnas no entran y encogerlas deja una palabra por renglón. */
+body.pagina .tabla-desliza {
+  border-radius: 16px; padding: 8px 22px;
+  overflow-x: auto; -webkit-overflow-scrolling: touch;
+}
+body.pagina .tabla-creditos { width: 100%; min-width: 620px; border-collapse: collapse; font-size: 14px; }
+body.pagina .tabla-creditos th {
+  text-align: left; font-size: 11px; letter-spacing: .16em; text-transform: uppercase;
+  color: var(--ocre); font-weight: 700; padding: 14px 14px 12px 0;
+  border-bottom: 1px solid var(--borde);
+}
+body.pagina .tabla-creditos td {
+  padding: 14px 14px 14px 0; border-bottom: 1px solid var(--borde);
+  color: var(--tinta-suave); vertical-align: top;
+}
+body.pagina .tabla-creditos tbody tr:last-child td { border-bottom: none; }
+body.pagina .tabla-creditos td:first-child { color: var(--tinta); font-weight: 600; }
+body.pagina .tabla-creditos a { color: var(--ocre); text-decoration: underline; }
+body.pagina .lic {
+  display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .06em;
+  padding: 3px 9px; border-radius: 999px; white-space: nowrap;
+}
+body.pagina .lic-libre { background: rgba(42, 107, 70, .12); color: #1f5136; }
+body.pagina .lic-atrib { background: rgba(217, 154, 43, .16); color: #7a5410; }
+
+/* ------------------------------------------------------------------ login */
+/* El login no tiene cabecera: la caja es la página. La foto va en el body. */
+body.pagina.pagina-login {
+  display: grid; place-items: center;
+  padding: 32px 16px;
+}
+body.pagina .caja { box-shadow: var(--sombra-caja); }
+body.pagina .caja-cabeza::before { opacity: .6; }
+
+/* ------------------------------------------------------- tacto y pantallas */
+/* 44 px es el mínimo que un dedo acierta sin mirar dos veces. */
+body.pagina .btn { min-height: 44px; }
+body.pagina .caja-pie a { display: inline-flex; align-items: center; min-height: 44px; }
+/* Con el enlace a 44 px, el texto de al lado quedaba arriba y el enlace abajo. */
+body.pagina .caja-pie { align-items: center; padding-top: 6px; padding-bottom: 6px; }
+
+@media (max-width: 980px) {
+  body.pagina .caja-seguimiento { padding-top: 48px; padding-bottom: 56px; }
+  body.pagina .creditos { padding-top: 44px; }
+}
+
+@media (max-width: 640px) {
+  /* Formularios a todo el ancho con 16 px de margen. */
+  body.pagina .contenedor { padding: 0 16px; }
+  body.pagina .caja-seguimiento { padding-top: 36px; padding-bottom: 44px; }
+  body.pagina .asesor-caja { padding: 22px 18px; border-radius: 18px; }
+  body.pagina .pedido-estado { padding: 20px 16px; }
+  /* A menos de 16 px el celular hace zoom al tocar el campo, y la página queda
+     corrida hacia un lado. */
+  body.pagina .campo input { font-size: 16px; }
+  body.pagina .campo-doble { grid-template-columns: 1fr; gap: 0; }
+
+  body.pagina .cabecera-simple { padding: 10px 0; }
+  body.pagina .cabecera-simple .marca-sello { width: 44px; height: 44px; }
+  body.pagina .cabecera-simple .marca-logotipo { height: 32px; }
+  body.pagina .cabecera-simple .marca-bajada { display: none; }
+  body.pagina .cabecera-simple .btn { padding: 10px 14px; font-size: 13px; white-space: nowrap; }
+
+  body.pagina .creditos { padding-top: 32px; padding-bottom: 48px; }
+  body.pagina .nota-legal { padding: 18px 16px; font-size: 14px; }
+  body.pagina .tabla-desliza { padding: 4px 16px; }
+
+  body.pagina.pagina-login { padding: 20px 16px; }
+  body.pagina .caja { width: 100%; }
+  body.pagina .caja-cuerpo { padding: 6px 20px 24px; }
+  body.pagina .caja-pie { padding: 6px 20px; flex-wrap: wrap; align-items: center; }
+}

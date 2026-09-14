@@ -383,7 +383,6 @@ img { max-width: 100%; display: block; }
   font-size: 10px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase;
   background: var(--verde); color: #fff; padding: 4px 10px; border-radius: 6px;
 }
-.asesor-sub { font-size: 15px; color: var(--tinta-suave); margin-bottom: 24px; max-width: 60ch; position: relative; }
 .asesor-fila { display: flex; gap: 12px; position: relative; }
 .asesor-fila input {
   flex: 1; padding: 16px 20px; font: inherit; font-size: 15.5px; color: var(--tinta);
@@ -1143,7 +1142,9 @@ img { max-width: 100%; display: block; }
 
 /* El asesor en la tienda: su presentación al centro, la conversación no. */
 .asesor-cabeza { justify-content: center; }
-.asesor-sub { text-align: center; margin-left: auto; margin-right: auto; }
+/* Sin párrafo de presentación: el título y el campo bastan, así que entre los
+   dos va el aire que antes ocupaba la explicación. */
+.asesor-cabeza { margin-bottom: 20px; }
 .sugerencias { justify-content: center; }
 .filtros { justify-content: center; }
 
@@ -1253,17 +1254,6 @@ img { max-width: 100%; display: block; }
 .tierras .tierra-productos { margin-top: 16px; padding-top: 14px; }
 .paso-num { margin-bottom: 14px; }
 
-/* Las cifras del catálogo, entre el titular y las tarjetas. */
-.categorias-datos {
-  list-style: none; padding: 0; margin: -10px auto 30px;
-  display: flex; justify-content: center; gap: 12px 44px; flex-wrap: wrap;
-}
-.categorias-datos li { text-align: center; }
-.categorias-datos strong {
-  display: block; font-size: 26px; font-weight: 900; letter-spacing: -.03em;
-  color: var(--ocre); line-height: 1.1;
-}
-.categorias-datos span { font-size: 12.5px; color: var(--tinta-suave); }
 .categorias-ctas { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 30px; }
 .pregunta summary { padding-top: 17px; padding-bottom: 17px; }
 
@@ -1304,8 +1294,6 @@ img { max-width: 100%; display: block; }
   .zona h3 { font-size: 16px; }
   .zona .altura { font-size: 10px; letter-spacing: .04em; margin-bottom: 6px; }
   .zona p { font-size: 12.5px; }
-  .categorias-datos { gap: 10px 22px; margin-top: -4px; }
-  .categorias-datos strong { font-size: 21px; }
 }
 
 /* ============================================================ TIPOGRAFÍA
@@ -1389,7 +1377,7 @@ img { max-width: 100%; display: block; }
 .portada .hero { padding-bottom: 96px; }
 .portada .hero .marquesina { position: absolute; left: 0; right: 0; bottom: 0; }
 
-@media (min-width: 981px) and (min-height: 620px) {
+@media (min-width: 981px) and (min-height: 620px) and (hover: hover) and (pointer: fine) {
   html:has(body.portada) { scroll-snap-type: y mandatory; }
   .portada .hero, .portada .seccion { scroll-snap-align: start; }
   .portada .pie { scroll-snap-align: end; }
@@ -1398,6 +1386,96 @@ img { max-width: 100%; display: block; }
 @media (max-width: 640px) {
   .portada .seccion { padding-top: 92px; padding-bottom: 44px; }
   .portada .hero { padding-bottom: 76px; }
+}
+
+/* =========================================== PORTADA INFORMATIVA, SIN VENTA
+   La tienda es un ítem del menú. En el celular el menú se esconde, así que
+   queda un enlace de texto con el mismo peso que un ítem: no un botón. */
+/* ------------------------------------------------ la barra de la portada
+   Logo y menú juntos a la izquierda, separados por una raya fina: se leen como
+   una sola pieza —la marca y lo que tiene para contar— en vez de un logo solo
+   y cinco palabras chicas perdidas en medio de la barra.
+
+   El menú pasa de 13.5 px gris a 16 px en Fraunces, la letra de los títulos:
+   es navegación de una marca, no un pie de página. «Tienda» cierra la lista
+   con un contorno, para que se distinga como la otra página sin convertirse
+   en un botón que empuja a comprar. */
+:is(.portada, .tienda-pagina) .nav-enlaces {
+  margin-left: 6px; padding-left: 26px; gap: 24px; align-items: center;
+  border-left: 1px solid var(--borde);
+}
+:is(.portada, .tienda-pagina) .nav-enlaces a {
+  font-family: var(--titulo); font-size: 16px; font-weight: 500;
+  letter-spacing: -.005em; color: var(--tinta);
+  position: relative; padding: 6px 0;
+}
+/* Una raya que crece al pasar el mouse: dice «esto se pulsa» sin cambiar el
+   peso de la barra. */
+:is(.portada, .tienda-pagina) .nav-enlaces a::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 1.5px;
+  background: var(--ocre); transform: scaleX(0); transform-origin: left;
+  transition: transform .25s ease;
+}
+:is(.portada, .tienda-pagina) .nav-enlaces a:hover { color: var(--ocre); }
+:is(.portada, .tienda-pagina) .nav-enlaces a:hover::after { transform: scaleX(1); }
+:is(.portada, .tienda-pagina) .nav-enlaces #nav-tienda {
+  margin-left: 4px; padding: 7px 16px; border-radius: 999px;
+  border: 1px solid var(--ocre); color: var(--ocre); font-weight: 600;
+}
+:is(.portada, .tienda-pagina) .nav-enlaces #nav-tienda::after { display: none; }
+:is(.portada, .tienda-pagina) .nav-enlaces #nav-tienda:hover { background: rgba(42, 107, 70, .08); }
+/* El logo un punto más chico: con el menú al lado, a 66 px la barra se volvía
+   más alta que el propio menú. */
+:is(.portada, .tienda-pagina) .nav .marca-sello { width: 58px; height: 58px; }
+:is(.portada, .tienda-pagina) .nav .marca-logotipo { height: 42px; }
+/* Entre 981 y 1180 px el menú entero no entra al lado de la bajada del logo:
+   se va la bajada, que es decorativa, antes que un ítem del menú. */
+@media (max-width: 1180px) {
+  :is(.portada, .tienda-pagina) .nav .marca-bajada { display: none; }
+  :is(.portada, .tienda-pagina) .nav-enlaces { gap: 18px; padding-left: 20px; }
+  :is(.portada, .tienda-pagina) .nav-enlaces a { font-size: 15px; }
+}
+
+.nav-tienda-movil { display: none; font-size: 14px; font-weight: 600; color: var(--ocre); }
+@media (max-width: 980px) {
+  .nav-tienda-movil { display: inline-block; padding: 8px 4px; }
+}
+/* Las categorías informan, no llevan a ningún lado: sin la subida al pasar el
+   mouse, que se lee como «esto se puede pulsar». */
+.categoria { text-align: center; justify-content: center; }
+.categoria:hover { transform: none; border-color: var(--borde); }
+.categoria h3 { padding-right: 0; margin: 0; }
+@media (max-width: 640px) {
+  .categoria h3 { font-size: 15px; }
+}
+
+/* ============================================== TIENDA A PANTALLA COMPLETA
+   Dos pantallas. La primera, el título y el asesor centrados en alto: es la
+   bienvenida. La segunda, el catálogo, que arranca arriba —no centrado: una
+   grilla que empieza a media pantalla desperdicia la primera fila— y crece
+   todo lo que haga falta. Mismo encaje que la portada, solo en pantallas
+   grandes; en la grilla larga el navegador deja bajar libre dentro. */
+.tienda-pagina .tienda-inicio {
+  min-height: 100svh;
+  display: flex; flex-direction: column; justify-content: center;
+  padding-top: 112px; padding-bottom: 48px;
+}
+.tienda-pagina .tienda-inicio > .contenedor { width: 100%; }
+/* La cabecera vive dentro de la primera pantalla: sin el relleno de cuando era
+   una sección suelta bajo la barra. */
+.tienda-pagina .tienda-cabeza { padding: 0; margin-bottom: 26px; }
+.tienda-pagina .tienda-catalogo {
+  min-height: 100svh;
+  padding-top: 112px; padding-bottom: 60px;
+}
+@media (min-width: 981px) and (min-height: 620px) and (hover: hover) and (pointer: fine) {
+  html:has(body.tienda-pagina) { scroll-snap-type: y mandatory; }
+  .tienda-pagina .tienda-inicio, .tienda-pagina .tienda-catalogo { scroll-snap-align: start; }
+  .tienda-pagina .pie { scroll-snap-align: end; }
+}
+@media (max-width: 640px) {
+  .tienda-pagina .tienda-inicio { padding-top: 92px; padding-bottom: 30px; }
+  .tienda-pagina .tienda-catalogo { padding-top: 92px; }
 }
 
 /* ======================================================= SECCIONES CON FOTO
@@ -1410,9 +1488,9 @@ img { max-width: 100%; display: block; }
    justo para que el texto blanco se lea sin apagar el verde de la selva. */
 .manifiesto.con-foto {
   border: none;
-  background:
-    linear-gradient(180deg, rgba(14, 28, 20, .72), rgba(14, 28, 20, .58) 55%, rgba(14, 28, 20, .78)),
-    url("/img/fondos/guacamayo.jpg") center 35% / cover no-repeat;
+  --foto: url("/img/fondos/guacamayo.jpg");
+  --velo: linear-gradient(180deg, rgba(14, 28, 20, .72), rgba(14, 28, 20, .58) 55%, rgba(14, 28, 20, .78));
+  background: var(--velo), var(--foto) center 35% / cover no-repeat;
   color: #fff;
 }
 .manifiesto.con-foto .palabra { color: #fff; opacity: .28; }
@@ -1423,14 +1501,228 @@ img { max-width: 100%; display: block; }
 .manifiesto.con-foto .manifiesto-pie i { background: #f0c05a; }
 
 #origenes.con-foto {
-  background:
-    linear-gradient(180deg, rgba(14, 28, 20, .82), rgba(14, 28, 20, .5) 45%, rgba(14, 28, 20, .72)),
-    url("/img/fondos/selva-amazonia.jpg") center / cover no-repeat;
+  --foto: url("/img/fondos/selva-amazonia.jpg");
+  --velo: linear-gradient(180deg, rgba(14, 28, 20, .82), rgba(14, 28, 20, .5) 45%, rgba(14, 28, 20, .72));
+  background: var(--velo), var(--foto) center / cover no-repeat;
 }
-#origenes.con-foto .seccion-cabeza h2 { color: #fff; }
-#origenes.con-foto .seccion-cabeza p { color: rgba(255, 255, 255, .86); }
-#origenes.con-foto .kicker { color: #f0c05a; }
-#origenes.con-foto .kicker::before,
-#origenes.con-foto .kicker::after { background: #f0c05a; }
+/* ------------------------------------------ el resto de las secciones
+   Cada sección con su foto y un degradado que alterna oscuro y claro:
+   manifiesto y orígenes oscuros, proceso claro, qué hay oscuro, cómo comprar
+   claro, envíos oscuro, preguntas claro y el cierre oscuro. Alternar le da
+   ritmo al recorrido y deja cada texto sobre el fondo que lo hace legible:
+   blanco y dorado sobre el velo verde oscuro, la tinta de siempre sobre el
+   velo de papel.
+
+   El velo claro deja ver la foto sobre todo abajo: el título arriba queda
+   sobre papel casi liso, y la imagen aparece a medida que se baja por la
+   sección. */
+/* Todas las fotos son de la selva o de la sierra —de donde sale lo que se
+   vende— y no de mercados o tazas genéricas: el fondo sigue contando el
+   origen mientras se lee otra cosa. Cada una tiene su versión -m de 800 px,
+   que es la que baja el celular (ver OPTIMIZACIÓN MÓVIL). */
+.con-foto { --foto: none; --velo: none; background: var(--velo), var(--foto) center / cover no-repeat; }
+.foto-clara { --velo: linear-gradient(180deg, rgba(251, 249, 243, .95), rgba(251, 249, 243, .84) 55%, rgba(251, 249, 243, .62)); }
+.foto-oscura { --velo: linear-gradient(180deg, rgba(14, 28, 20, .82), rgba(14, 28, 20, .58) 50%, rgba(14, 28, 20, .8)); }
+
+#proceso.con-foto { --foto: url("/img/fondos/andenes.jpg"); }
+#categorias.con-foto { --foto: url("/img/fondos/catarata.jpg"); }
+#como-comprar.con-foto {
+  --foto: url("/img/fondos/vicuna.jpg");
+  /* La vicuña está a la derecha y el cielo es claro: el velo se abre hacia allá. */
+  --velo: linear-gradient(90deg, rgba(251, 249, 243, .96) 0%, rgba(251, 249, 243, .86) 55%, rgba(251, 249, 243, .45) 100%);
+}
+#envios.con-foto { --foto: url("/img/fondos/andes.jpg"); }
+#preguntas.con-foto {
+  --foto: url("/img/fondos/bosque-neblina.jpg");
+  --velo: linear-gradient(90deg, rgba(251, 249, 243, .97) 0%, rgba(251, 249, 243, .9) 55%, rgba(251, 249, 243, .68) 100%);
+}
+#visitanos.con-foto { --foto: url("/img/fondos/cordillera.jpg"); }
+
+/* Texto sobre foto oscura: títulos en blanco y el epígrafe en dorado miel,
+   que sobre el verde de la selva se lee donde el verde de la marca se pierde. */
+.foto-oscura .seccion-cabeza h2, .cierre.foto-oscura h2 { color: #fff; }
+.foto-oscura .seccion-cabeza p, .cierre.foto-oscura p { color: rgba(255, 255, 255, .88); }
+.foto-oscura .kicker { color: #f0c05a; }
+.foto-oscura .kicker::before, .foto-oscura .kicker::after { background: #f0c05a; }
 /* Las tarjetas se quedan blancas y ganan una sombra para despegarse de la foto. */
-#origenes.con-foto .tierra { box-shadow: 0 18px 40px rgba(0, 0, 0, .25); }
+.foto-oscura .tierra { box-shadow: 0 18px 40px rgba(0, 0, 0, .25); }
+/* El brillo verde que el cierre tenía sobre papel, sobre la foto sobra. */
+.cierre.foto-oscura::before { display: none; }
+/* Sobre fondo oscuro el botón claro de WhatsApp lleva borde de papel. */
+.cierre.foto-oscura .btn-primario { box-shadow: 0 10px 30px rgba(0, 0, 0, .3); }
+
+/* ------------------------------------------------ degradado de la barra
+   La barra de las dos páginas en un degradado suave de papel a verde hoja y a
+   arena, con una línea fina abajo en los tres colores de la marca: verde,
+   miel y terracota. Translúcida y con desenfoque, para que al pasar sobre
+   las fotos se note que el contenido sigue debajo. */
+.nav.encogida {
+  background: linear-gradient(90deg,
+    rgba(251, 249, 243, .96) 0%, rgba(234, 243, 235, .94) 52%, rgba(247, 238, 219, .94) 100%);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: none;
+  box-shadow: 0 8px 26px rgba(28, 42, 34, .07);
+}
+.nav.encogida::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 2px;
+  background: linear-gradient(90deg, var(--verde), var(--miel) 55%, var(--terra));
+  opacity: .75;
+}
+
+/* ================================================ LA TIENDA CON EL DISEÑO
+   Lo mismo que la portada: Fraunces en los títulos, la barra con logo y menú
+   a la izquierda (ver «la barra de la portada», que ya cubre las dos páginas)
+   y fotos de la selva con su velo. La primera pantalla, oscura, con el río;
+   el catálogo, claro, para que las tarjetas blancas y los precios se lean. */
+.tienda-pagina .tienda-cabeza h1,
+.tienda-pagina .asesor-cabeza h3,
+.tienda-pagina .tarjeta h3,
+.tienda-pagina .panel-cabeza h2 {
+  font-family: var(--titulo);
+  text-transform: none;
+  font-weight: 600;
+  letter-spacing: -.015em;
+}
+.tienda-pagina .tienda-cabeza h1 { font-size: clamp(2.1rem, 4.2vw, 3.4rem); line-height: 1.05; }
+.tienda-pagina .tarjeta h3 { font-size: 19px; line-height: 1.15; }
+
+.tienda-pagina .tienda-inicio {
+  --foto: url("/img/fondos/rio-selva.jpg");
+  --velo: linear-gradient(180deg, rgba(14, 28, 20, .8), rgba(14, 28, 20, .55) 50%, rgba(14, 28, 20, .78));
+  background: var(--velo), var(--foto) center / cover no-repeat;
+}
+.tienda-pagina .tienda-inicio .tienda-cabeza h1 { color: #fff; }
+.tienda-pagina .tienda-inicio .tienda-cabeza p { color: rgba(255, 255, 255, .88); }
+.tienda-pagina .tienda-inicio .kicker { color: #f0c05a; }
+.tienda-pagina .tienda-inicio .kicker::before,
+.tienda-pagina .tienda-inicio .kicker::after { background: #f0c05a; }
+.tienda-pagina .tienda-inicio .asesor-caja { box-shadow: 0 22px 50px rgba(0, 0, 0, .28); }
+
+.tienda-pagina .tienda-catalogo {
+  --foto: url("/img/fondos/selva-densa.jpg");
+  --velo: linear-gradient(180deg, rgba(251, 249, 243, .97), rgba(251, 249, 243, .9) 35%, rgba(251, 249, 243, .84));
+  background: var(--velo), var(--foto) center top / cover no-repeat;
+}
+
+/* ================================================= OPTIMIZACIÓN MÓVIL
+   Celular (≤640) y tableta (641–980).
+
+   1. El menú no desaparece: pasa a una tira de secciones que se desliza de
+      lado debajo del logo. Antes, por debajo de 980 px la portada se quedaba
+      sin forma de saltar a «Envíos» o «Preguntas», y la tienda sin «Mi
+      pedido», que es justo lo que se busca desde el teléfono.
+   2. Las fotos bajan en su versión -m de 800 px: la de escritorio pesa hasta
+      cuatro veces más y en datos móviles es la diferencia entre ver el fondo
+      o un rectángulo vacío mientras carga.
+   3. Las secciones dejan espacio para la barra, que con la tira mide más. */
+@media (max-width: 980px) {
+  .nav-fila { flex-wrap: wrap; row-gap: 6px; }
+  :is(.portada, .tienda-pagina) .nav-enlaces {
+    display: flex; order: 3; flex: 1 0 100%;
+    margin: 0; padding: 6px 0 4px; border-left: none;
+    gap: 20px; overflow-x: auto; white-space: nowrap;
+    scrollbar-width: none; -webkit-overflow-scrolling: touch;
+  }
+  :is(.portada, .tienda-pagina) .nav-enlaces::-webkit-scrollbar { display: none; }
+  :is(.portada, .tienda-pagina) .nav-enlaces a { font-size: 15px; padding: 6px 0; flex: none; }
+  :is(.portada, .tienda-pagina) .nav-enlaces #nav-tienda { padding: 5px 14px; }
+  .nav-tienda-movil { display: none; }
+  /* Un borde que se desvanece a la derecha avisa que la tira sigue. */
+  :is(.portada, .tienda-pagina) .nav-enlaces {
+    -webkit-mask-image: linear-gradient(90deg, #000 88%, transparent);
+    mask-image: linear-gradient(90deg, #000 88%, transparent);
+  }
+
+  .hero { padding-top: 150px; }
+  .portada .seccion,
+  .tienda-pagina .tienda-inicio,
+  .tienda-pagina .tienda-catalogo { padding-top: 150px; }
+}
+@media (max-width: 640px) {
+  .nav.encogida { padding: 10px 0 4px; }
+  :is(.portada, .tienda-pagina) .nav-enlaces a { font-size: 14px; }
+  .hero { padding-top: 124px; }
+  .portada .seccion,
+  .tienda-pagina .tienda-inicio,
+  .tienda-pagina .tienda-catalogo { padding-top: 124px; }
+  /* En la tienda la barra ya lleva el carrito: el buscador se va a su fila. */
+  .tienda-pagina .tienda-cabeza h1 { font-size: clamp(1.8rem, 8vw, 2.3rem); }
+  .tienda-pagina .tarjeta h3 { font-size: 16px; }
+}
+@media (max-width: 800px) {
+  .manifiesto.con-foto { --foto: url("/img/fondos/guacamayo-m.jpg"); }
+  #origenes.con-foto { --foto: url("/img/fondos/selva-amazonia-m.jpg"); }
+  #proceso.con-foto { --foto: url("/img/fondos/andenes-m.jpg"); }
+  #categorias.con-foto { --foto: url("/img/fondos/catarata-m.jpg"); }
+  #como-comprar.con-foto { --foto: url("/img/fondos/vicuna-m.jpg"); }
+  #envios.con-foto { --foto: url("/img/fondos/andes-m.jpg"); }
+  #preguntas.con-foto { --foto: url("/img/fondos/bosque-neblina-m.jpg"); }
+  #visitanos.con-foto { --foto: url("/img/fondos/cordillera-m.jpg"); }
+  .tienda-pagina .tienda-inicio { --foto: url("/img/fondos/rio-selva-m.jpg"); }
+  .tienda-pagina .tienda-catalogo { --foto: url("/img/fondos/selva-densa-m.jpg"); }
+  /* En pantalla angosta el velo de preguntas y cómo comprar cubre parejo: el
+     lado «abierto» a la derecha caía justo detrás del texto. */
+  #como-comprar.con-foto, #preguntas.con-foto {
+    --velo: linear-gradient(180deg, rgba(251, 249, 243, .95), rgba(251, 249, 243, .86) 60%, rgba(251, 249, 243, .7));
+  }
+}
+/* La tienda en el celular.
+   - Los filtros en una sola fila que se desliza: en pila eran cinco renglones
+     de botones antes de ver el primer producto.
+   - El precio a un cuerpo que entra en la tarjeta de media pantalla: a 29 px
+     «S/ 29.40» se partía en dos líneas. */
+@media (max-width: 640px) {
+  .tienda-pagina .filtros {
+    flex-wrap: nowrap; justify-content: flex-start; overflow-x: auto;
+    margin-left: -18px; margin-right: -18px; padding: 2px 18px 8px;
+    scrollbar-width: none;
+    -webkit-mask-image: linear-gradient(90deg, #000 90%, transparent);
+    mask-image: linear-gradient(90deg, #000 90%, transparent);
+  }
+  .tienda-pagina .filtros::-webkit-scrollbar { display: none; }
+  .tienda-pagina .filtro { flex: none; padding: 8px 15px; }
+  .tienda-pagina .precio { font-size: 21px; white-space: nowrap; }
+  .tienda-pagina .stock-nota { font-size: 10.5px; }
+  .hero-ctas .btn { font-size: 13px; }
+}
+
+/* ================================================================== PIE
+   Más apretado: el relleno, los huecos entre columnas y entre renglones
+   estaban pensados para una página que terminaba ahí, sin nada que leer
+   después. Ahora es un cierre de consulta rápida —dirección, teléfono,
+   horario— y se lee de un vistazo. En el celular, contacto y horario van en
+   dos columnas en vez de apilarse. */
+.pie { padding: 36px 0 16px; }
+.pie-grilla { gap: 22px 32px; align-items: start; }
+.pie h4 { margin-bottom: 8px; }
+.pie p, .pie li { margin-bottom: 3px; line-height: 1.45; }
+.pie .marca { margin-bottom: 8px !important; }
+.pie .marca-sello { width: 50px; height: 50px; }
+.pie .marca-logotipo { height: 36px; }
+.pie-legal { margin-top: 20px; padding-top: 12px; }
+@media (max-width: 640px) {
+  .pie { padding: 26px 0 14px; }
+  .pie-grilla { grid-template-columns: 1fr 1fr; gap: 16px 18px; }
+  .pie-grilla > :first-child { grid-column: 1 / -1; }
+  .pie-legal { margin-top: 14px; gap: 4px; }
+}
+
+/* Envíos en el celular: todas las tarjetas del mismo tamaño.
+   Antes el recojo y provincias iban a lo ancho y las zonas de Lima de a dos,
+   cada una con su alto: se veía desordenado. Ahora una columna, mismo ancho, y
+   todas con el alto de la más larga (grid-auto-rows: 1fr), con el texto
+   arriba y alineado. */
+@media (max-width: 640px) {
+  .zonas {
+    display: grid; grid-template-columns: 1fr; grid-auto-rows: 1fr; gap: 10px;
+  }
+  .zonas > *, .zonas > :first-child, .zonas > :last-child { flex: none; width: 100%; }
+  .zona { display: flex; flex-direction: column; justify-content: flex-start; }
+}
+
+/* Laptop chica y tableta horizontal: las tres cifras del hero en una fila. */
+@media (min-width: 981px) and (max-width: 1180px) {
+  .hero-datos { gap: 20px; flex-wrap: nowrap; }
+  .dato span { font-size: 11.5px; }
+}

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Tienda — Raíz Andina</title>
-<meta name="description" content="El catálogo de Raíz Andina con stock real: maca, uña de gato, hierbas a granel y más, con su origen. Pide en línea y recoge en el puesto 87 del Mercado Central.">
+<meta name="description" content="El catálogo de Raíz Andina: tónicos, cremas, hierbas, esencias, aceites y superalimentos del Perú, cada uno con su origen. Pide en línea y recoge en el puesto 87 del Mercado Central.">
 <link rel="canonical" href="{{SITIO}}/tienda">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Raíz Andina">
@@ -21,9 +21,10 @@
 <link rel="icon" type="image/png" sizes="64x64" href="/img/marca/favicon.png">
 <link rel="apple-touch-icon" href="/img/marca/apple-touch.png">
 <meta name="theme-color" content="#0b0a08">
+<link rel="preload" href="/fonts/fraunces-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/css/premium.css">
 </head>
-<body>
+<body class="tienda-pagina">
 
 <!-- La tienda, separada de la portada.
 
@@ -55,7 +56,7 @@
 
     <div class="nav-acciones">
       <div class="buscador">
-        <input type="search" id="buscar" placeholder="Buscar maca, muña…" aria-label="Buscar productos">
+        <input type="search" id="buscar" placeholder="Busca un producto o lo que necesitas…" aria-label="Buscar productos">
       </div>
       <button class="btn btn-primario btn-chico pastilla-carrito" id="btn-carrito"
               aria-label="Abrir carrito">
@@ -66,34 +67,26 @@
   </div>
 </header>
 
-<!-- ═════════════════════════════════════════════════════════════ cabecera -->
-<section class="tienda-cabeza">
+<!-- ══════════════════════════════════════════════ pantalla 1: título y asesor -->
+<!-- El asesor va antes que el catálogo: es la entrada de quien no sabe qué
+     producto necesita, solo qué le pasa. Sus fichas se agregan al carrito ahí
+     mismo. Título y asesor comparten la primera pantalla. -->
+<section class="seccion seccion-tienda tienda-inicio" id="asesor">
   <div class="contenedor">
-    <span class="kicker">Tienda · Puesto 87</span>
-    <h1>Lo que hay hoy en tienda</h1>
-    <p id="conteo-catalogo">Cargando productos…</p>
-  </div>
-</section>
+    <div class="tienda-cabeza encabezado-centrado">
+      <span class="kicker">Tienda · Puesto 87</span>
+      <h1>Lo que hay hoy en tienda</h1>
+      <!-- Sin conteos de productos: esa cifra es del panel, no del cliente. -->
+      <p id="conteo-catalogo">Cada producto con su lugar de origen.</p>
+    </div>
 
-<!-- ══════════════════════════════════════════════════════════════ asesor -->
-<!-- Antes que el catálogo: es la entrada de quien no sabe qué producto
-     necesita, solo qué le pasa. Sus fichas se agregan al carrito ahí mismo. -->
-<section class="seccion seccion-tienda" id="asesor">
-  <div class="contenedor">
     <div class="asesor-caja revelar">
       <div class="asesor-cabeza">
         <h3>Asesor Raíz</h3>
         <span class="etiqueta-ia">IA</span>
       </div>
-      <p class="asesor-sub">
-        Cuéntanos con tus palabras qué necesitas. Te sugerimos
-        <strong>solo lo que hay en tienda hoy</strong> — si algo se agotó, deja de
-        ofrecerlo automáticamente. También responde por delivery, horarios,
-        pagos y pedidos al por mayor.
-      </p>
-
       <form class="asesor-fila" id="forma-asesor">
-        <input id="consulta" placeholder="Ej: no puedo dormir y ando con mucho estrés" autocomplete="off" required>
+        <input id="consulta" placeholder="Cuéntanos qué necesitas o qué producto buscas" autocomplete="off" required>
         <button class="btn btn-solido" type="submit" id="btn-asesor">Consultar</button>
       </form>
 
@@ -101,8 +94,8 @@
         <button class="sugerencia" type="button">no puedo dormir</button>
         <button class="sugerencia" type="button">me duelen las rodillas</button>
         <button class="sugerencia" type="button">ando cansado todo el día</button>
-        <button class="sugerencia" type="button">cuánto me sale 50 bolsas de maca negra</button>
-        <button class="sugerencia" type="button">hacen delivery a Arequipa</button>
+        <button class="sugerencia" type="button">precio por mayor</button>
+        <button class="sugerencia" type="button">hacen envíos a provincias</button>
       </div>
 
       <div class="asesor-respuesta" id="respuesta-asesor" hidden>
@@ -114,8 +107,8 @@
   </div>
 </section>
 
-<!-- ════════════════════════════════════════════════════════════ catálogo -->
-<section class="seccion seccion-tienda" id="catalogo">
+<!-- ═══════════════════════════════════════════════ pantalla 2: el catálogo -->
+<section class="seccion seccion-tienda tienda-catalogo" id="catalogo">
   <div class="contenedor">
     <div class="filtros" id="filtros"></div>
     <div class="grilla" id="grilla"></div>

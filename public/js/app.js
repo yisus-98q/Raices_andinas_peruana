@@ -47,9 +47,8 @@
    * Este script lo cargan la portada y la tienda.
    *
    * La tienda tiene la grilla, el asesor y el carrito. La portada no vende:
-   * usa el catálogo solo para contar productos en el hero y nombrar las
-   * categorías de la marquesina, y el globo del carrito para avisar que hay algo
-   * esperando. Cada pieza se pinta si su sitio existe en la página.
+   * usa el catálogo solo para nombrar las categorías (marquesina y tarjetas).
+   * Cada pieza se pinta si su sitio existe en la página.
    */
   const ES_TIENDA = !!$('grilla');
 
@@ -87,13 +86,6 @@
     try {
       const r = await fetch('/api/productos');
       catalogo = await r.json();
-      // El contador del hero lee `data-contar` en cada cuadro; si ya terminó,
-      // le escribimos el número directamente.
-      const contador = $('dato-productos');
-      if (contador) {
-        contador.dataset.contar = catalogo.length;
-        if (contador.dataset.contado) contador.textContent = catalogo.length;
-      }
       pintarFiltros();
       pintarGrilla();
       pintarCategorias();
@@ -152,9 +144,8 @@
   function pintarGrilla(resaltar = []) {
     if (!ES_TIENDA) return;
     const lista = visibles();
-    $('conteo-catalogo').textContent = lista.length === catalogo.length
-      ? `${catalogo.length} productos, cada uno con su origen y su historia`
-      : `${lista.length} de ${catalogo.length} productos`;
+    // Sin conteos: cuántos productos hay —o cuántos quedan tras filtrar— es
+    // información del negocio, no del comprador.
 
     if (!lista.length) {
       $('grilla').innerHTML =
@@ -170,14 +161,12 @@
     }
 
     $('grilla').innerHTML = lista.slice(0, mostrando).map((p) => {
-      const agotado = p.stock <= 0;
-      const bajo = !agotado && p.stock <= p.stock_min;
+      // Solo si se puede pedir. «Últimas 3» o «Quedan 300 g» le contaban al
+      // cliente el inventario; la API ya ni siquiera manda la cifra.
+      const agotado = !p.disponible;
       const nota = agotado
         ? '<span class="stock-nota stock-cero">Agotado</span>'
-        : bajo
-          // «Últimas 3» no se puede decir de algo que se pesa: quedan 300 g.
-          ? `<span class="stock-nota stock-bajo">${esGranel(p) ? 'Quedan ' + enPeso(p.stock) : 'Últimas ' + p.stock}</span>`
-          : '<span class="stock-nota stock-ok">Disponible</span>';
+        : '<span class="stock-nota stock-ok">Disponible</span>';
       return `
       <article class="tarjeta${resaltar.includes(p.id) ? ' resaltada' : ''}" data-id="${p.id}">
         <div class="tarjeta-figura">
@@ -197,13 +186,12 @@
             ${nota}
           </div>
           <button class="btn btn-primario btn-bloque agregar" data-id="${p.id}" ${agotado ? 'disabled' : ''}>
-            ${agotado ? 'Sin stock' : 'Agregar'}
+            ${agotado ? 'Agotado' : 'Agregar'}
           </button>
         </div>
       </article>`;
     }).join('') + (lista.length > mostrando ? `
       <div class="ver-mas">
-        <p>Mostrando ${mostrando} de ${lista.length} productos</p>
         <button class="btn btn-claro" id="btn-ver-mas">Ver más productos</button>
       </div>` : '');
 
@@ -231,11 +219,23 @@
   const pesosDe = (p) => {
     const suyos = String(p.presentaciones || '').split(',')
       .map((n) => Number(n.trim())).filter((n) => Number.isInteger(n) && n > 0);
-    return (suyos.length ? suyos : PESOS_POR_DEFECTO).filter((g) => g <= p.stock);
+    return (suyos.length ? suyos : PESOS_POR_DEFECTO).filter((g) => g <= MAXIMO.gramo);
   };
 
-  /** El peso con el que entra al carrito: el primero que quepa en el stock. */
-  const pesoInicial = (p) => pesosDe(p)[0] || Math.min(BASE_GRANEL, p.stock);
+  /** El peso con el que entra al carrito: la primera presentación. */
+  const pesoInicial = (p) => pesosDe(p)[0] || BASE_GRANEL;
+
+  /**
+   * Tope por línea del carrito.
+   *
+   * Antes el tope era el stock, y por eso el navegador tenía que conocerlo. Ahora
+   * es un límite fijo, igual para todos los productos: evita el «9999» por un
+   * dedo apoyado, sin decir nada del inventario. Si se pide más de lo que hay,
+   * lo dice el servidor al confirmar, nombrando el producto pero no la cifra.
+   * Por encima de esto ya es una compra mayorista, que se coordina por WhatsApp.
+   */
+  const MAXIMO = { unidad: 99, gramo: 5000 };
+  const maximoDe = (p) => (esGranel(p) ? MAXIMO.gramo : MAXIMO.unidad);
 
   /** «1 kg», «250 g» — el kilo se dice kilo, no «1000 g». */
   const enPeso = (g) => (g >= 1000 && g % 1000 === 0 ? `${g / 1000} kg` : `${g} g`);
@@ -248,8 +248,10 @@
     ? `${soles(p.precio)} por ${enPeso(BASE_GRANEL)}`
     : `${soles(p.precio)} c/u`);
 
-  /** Y cuánto queda, en su unidad. */
-  const existencia = (p) => (esGranel(p) ? enPeso(p.stock) : `${p.stock}`);
+  /** El tope de la línea dicho en su unidad: «99 unidades», «5 kg». */
+  const topeDicho = (p) => (esGranel(p) ? enPeso(MAXIMO.gramo) : `${MAXIMO.unidad} unidades`);
+  const avisarTope = (p) => avisar(`Por la web se piden hasta ${topeDicho(p)} de ${p.nombre}. ` +
+    'Para más, escríbenos por WhatsApp.');
 
   // -------------------------------------------------------------------- carrito
   function agregar(id, boton) {
@@ -269,8 +271,8 @@
      * Se avisa y además se corrige el botón, que es lo que la ficha vieja no
      * puede hacer sola.
      */
-    if (p.stock <= 0) {
-      if (boton) { boton.disabled = true; boton.textContent = 'Sin stock'; }
+    if (!p.disponible) {
+      if (boton) { boton.disabled = true; boton.textContent = 'Agotado'; }
       return avisar(`${p.nombre} se acabó. Lo reponemos pronto.`);
     }
     // Lo que se pesa entra con su primera presentación, no con «1»: nadie
@@ -279,9 +281,7 @@
     const paso = esGranel(p) ? pesoInicial(p) : 1;
     const linea = carrito.find((l) => l.id === id);
     const actual = linea ? linea.cantidad : 0;
-    if (actual + paso > p.stock) {
-      return avisar(`Solo quedan ${existencia(p)} de ${p.nombre}`);
-    }
+    if (actual + paso > maximoDe(p)) return avisarTope(p);
     if (linea) linea.cantidad += paso;
     else carrito.push({ id, cantidad: paso });
     guardarCarrito();
@@ -305,7 +305,7 @@
   const ATAJOS = [1, 2, 3, 4, 5, 10];
 
   /**
-   * Los atajos que caben en el stock, mas la cantidad actual si no esta.
+   * Los atajos, mas la cantidad actual si no esta.
    *
    * Para lo que se pesa no son cantidades sino presentaciones —100 g, un
    * cuarto, medio kilo— y salen de la ficha del producto. Es lo mismo que hace
@@ -315,8 +315,8 @@
   function atajosDe(l) {
     const nums = esGranel(l.prod)
       ? pesosDe(l.prod)
-      : ATAJOS.filter((n) => n <= l.prod.stock);
-    if (!nums.includes(l.cantidad) && l.cantidad <= l.prod.stock) nums.push(l.cantidad);
+      : [...ATAJOS];
+    if (!nums.includes(l.cantidad) && l.cantidad <= maximoDe(l.prod)) nums.push(l.cantidad);
     return [...new Set(nums)].sort((a, b) => a - b);
   }
 
@@ -325,7 +325,7 @@
     if (!linea || linea.cantidad === n) return;
     const p = catalogo.find((x) => x.id === id);
     if (!Number.isInteger(n) || n < 1) return;
-    if (p && n > p.stock) return avisar(`Solo quedan ${existencia(p)}`);
+    if (p && n > maximoDe(p)) return avisarTope(p);
     linea.cantidad = n;
     guardarCarrito();
     refrescarCuenta();
@@ -341,7 +341,7 @@
     const paso = esGranel(p) ? 50 : 1;
     const nueva = linea.cantidad + delta * paso;
     if (nueva < 1) return quitar(id);
-    if (p && nueva > p.stock) return avisar(`Solo quedan ${existencia(p)}`);
+    if (p && nueva > maximoDe(p)) return avisarTope(p);
     linea.cantidad = nueva;
     guardarCarrito();
     refrescarCuenta();
@@ -439,55 +439,22 @@
   /**
    * Qué encontrarás: una tarjeta por categoría, sacada del catálogo real.
    *
-   * Con cuántos productos tiene, de cuántos lugares salen y tres ejemplos. La
-   * más surtida va primero: es la que mejor dice qué clase de puesto es. Cada
-   * tarjeta abre la tienda con esa categoría ya elegida.
+   * Solo el nombre. Nada de cuántos productos tiene cada una ni cuántos hay en
+   * total: es inventario, y al cliente no le sirve para decidir. Van en orden
+   * alfabético y no por tamaño, que también delataría cuál es la más surtida.
+   * Tampoco son enlaces: la portada informa, y a la tienda se llega por su
+   * sección del menú.
    */
   function pintarCategorias() {
     const caja = $('lista-categorias');
     if (!caja || !catalogo.length) return;
 
-    const grupos = new Map();
-    for (const p of catalogo) {
-      if (!grupos.has(p.categoria)) grupos.set(p.categoria, []);
-      grupos.get(p.categoria).push(p);
-    }
-    const orden = [...grupos].sort((a, b) => b[1].length - a[1].length);
+    const categorias = [...new Set(catalogo.map((p) => p.categoria))]
+      .sort((a, b) => a.localeCompare(b, 'es'));
 
-    caja.innerHTML = orden.map(([cat, prods]) => {
-      const origenes = new Set(prods.map((p) => p.origen).filter(Boolean)).size;
-      const ejemplos = prods.slice(0, 3).map((p) => escapar(p.nombre)).join(' · ');
-      return `
-      <a class="tierra puerta categoria" href="/tienda?cat=${encodeURIComponent(cat)}#catalogo">
-        <span class="tierra-num">${prods.length}</span>
-        <h3>${escapar(cat)}</h3>
-        <div class="altura">${prods.length} producto${prods.length === 1 ? '' : 's'}${
-          origenes > 1 ? ` · ${origenes} orígenes` : ''}</div>
-        <p>${ejemplos}</p>
-        <div class="tierra-productos"><b>Ver ${escapar(cat.toLowerCase())} →</b></div>
-      </a>`;
-    }).join('');
+    caja.innerHTML = categorias.map((cat) => `
+      <div class="tierra categoria"><h3>${escapar(cat)}</h3></div>`).join('');
 
-    // El titular y las tres cifras de abajo salen del catálogo de hoy: cuánto
-    // hay, cuánto se puede pedir ya, de cuántos lugares viene y desde cuánto.
-    if ($('categorias-titulo')) {
-      $('categorias-titulo').innerHTML =
-        `${catalogo.length} productos en ${orden.length} categorías`;
-    }
-    const datos = $('categorias-datos');
-    if (datos) {
-      const disponibles = catalogo.filter((p) => p.stock > 0).length;
-      const lugares = new Set(catalogo.map((p) => p.origen).filter(Boolean)).size;
-      // Lo que se pesa se cotiza por 100 g: su precio no compite con el de un frasco.
-      const precios = catalogo.filter((p) => p.stock > 0 && !esGranel(p)).map((p) => p.precio);
-      datos.innerHTML = [
-        [disponibles, 'disponibles hoy'],
-        [lugares, 'lugares de origen'],
-        precios.length ? [soles(Math.min(...precios)), 'precio desde'] : null,
-      ].filter(Boolean).map(([cifra, rotulo]) =>
-        `<li><strong>${cifra}</strong><span>${rotulo}</span></li>`).join('');
-      datos.hidden = false;
-    }
     if (window.revelarNuevos) window.revelarNuevos([...caja.children]);
   }
 
@@ -669,7 +636,7 @@
     if (etapa === 'carrito') {
       cuerpo.innerHTML = barraEnvio(total()) + lineas.map((l) => {
         const img = imagenDe(l.prod);
-        const tope = l.cantidad >= l.prod.stock;
+        const tope = l.cantidad >= maximoDe(l.prod);
         return `
         <div class="linea" data-linea="${l.id}">
           <div class="linea-icono">
@@ -693,12 +660,12 @@
                 // las presentaciones, no su reemplazo.
                 ? `<span class="cant-libre">
                      <input type="number" data-gramos="${l.id}" value="${l.cantidad}"
-                            min="1" max="${l.prod.stock}" step="10"
+                            min="1" max="${maximoDe(l.prod)}" step="10"
                             aria-label="Gramos de ${escapar(l.prod.nombre)}"><i>g</i>
                    </span>`
                 : `<span data-cant="${l.id}">${l.cantidad}</span>`}
               <button data-mas="${l.id}" aria-label="Agregar" ${tope ? 'disabled' : ''}>+</button>
-              ${tope ? '<em class="tope">máximo en stock</em>' : ''}
+              ${tope ? '<em class="tope">máximo por la web</em>' : ''}
             </div>
           </div>
           <div class="linea-derecha">
@@ -1026,9 +993,10 @@
       if (!r.ok) {
         let mensaje = datos.error || 'No pudimos registrar el pedido.';
         if (datos.faltantes) {
-          mensaje += ' ' + datos.faltantes
-            .map((f) => `${f.nombre}: pediste ${f.pedido}, quedan ${f.disponible}`)
-            .join('. ');
+          // El producto sí, la cifra no: el servidor ya no dice cuánto hay.
+          mensaje += ' No alcanza lo que pediste de: '
+            + datos.faltantes.map((f) => f.nombre).join(', ')
+            + '. Baja la cantidad o escríbenos por WhatsApp y lo coordinamos.';
           await cargarCatalogo();
         }
         err.textContent = mensaje;
@@ -1083,7 +1051,7 @@
       $('fichas-asesor').innerHTML = recomendados.map((p) => {
         const img = imagenDe(p);
         const completo = catalogo.find((x) => x.id === p.id) || p;
-        const agotado = completo.stock <= 0;
+        const agotado = !completo.disponible;
         return `
         <article class="ficha-asesor">
           <img src="${escapar(img.src)}" data-respaldos="${img.respaldos}" alt="${escapar(p.nombre)}">
@@ -1093,16 +1061,14 @@
             <div class="ficha-pie">
               <span class="ficha-precio">${soles(p.precio)}</span>
               <button class="btn btn-primario btn-chico agregar" data-id="${p.id}" ${agotado ? 'disabled' : ''}>
-                ${agotado ? 'Sin stock' : 'Agregar'}
+                ${agotado ? 'Agotado' : 'Agregar'}
               </button>
             </div>
           </div>
         </article>`;
       }).join('');
 
-      $('fuente-asesor').textContent = ids.length
-        ? `Verificado contra el stock de hoy · ${ids.length} disponible(s)`
-        : 'Verificado contra el stock de hoy';
+      $('fuente-asesor').textContent = 'Solo te sugerimos lo que hay disponible hoy';
 
       pintarGrilla(ids);
     } catch {

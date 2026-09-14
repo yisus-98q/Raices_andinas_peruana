@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Raíz Andina — Lo que la tierra ya sabía</title>
-<meta name="description" content="Maca negra de Junín, uña de gato de Tarapoto, camu camu del Ucayali. Productos naturales peruanos con origen trazado, stock real y asesoría inteligente.">
+<meta name="description" content="Productos naturales del Perú con su origen: raíces y granos de la sierra, mieles y semillas de la selva alta, cortezas y frutos de la Amazonía. Tónicos, cremas, hierbas, esencias y superalimentos del Mercado Central de Lima.">
 <link rel="canonical" href="{{SITIO}}/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Raíz Andina">
@@ -63,20 +63,20 @@
       </div>
     </a>
 
-    <!-- La portada informa; comprar es de /tienda. Por eso aquí no hay
-         buscador, carrito ni «Mi pedido»: los enlaces recorren la historia y las
-         dudas, y el botón es la única puerta a la tienda — en el celular, donde
-         los enlaces se esconden, es lo que queda. -->
+    <!-- La portada es informativa: ningún botón empuja a comprar. La tienda
+         es una sección más del menú, con el mismo peso que las otras. En el
+         celular, donde el menú se esconde, queda como enlace de texto. -->
     <nav class="nav-enlaces">
       <a href="#origenes">Orígenes</a>
       <a href="#categorias">Qué hay</a>
       <a href="#como-comprar">Cómo comprar</a>
       <a href="#envios">Envíos</a>
       <a href="#preguntas">Preguntas</a>
+      <a href="/tienda" id="nav-tienda">Tienda</a>
     </nav>
 
     <div class="nav-acciones">
-      <a class="btn btn-primario btn-chico" href="/tienda" id="btn-tienda">Ir a la tienda →</a>
+      <a class="nav-tienda-movil" href="/tienda">Tienda</a>
     </div>
   </div>
 </header>
@@ -99,12 +99,12 @@
         antes que nosotros.</strong>
       </p>
       <div class="hero-ctas">
-        <a class="btn btn-primario" href="/tienda" id="cta-magnetico">Ir a la tienda →</a>
-        <a class="btn btn-fantasma" href="/tienda#asesor">Consultar al asesor</a>
+        <a class="btn btn-primario" href="#origenes" id="cta-magnetico">Conoce de dónde viene</a>
+        <a class="btn btn-fantasma" href="#como-comprar">Cómo comprar</a>
       </div>
 
       <div class="hero-datos">
-        <div class="dato"><strong data-contar="24" id="dato-productos">24</strong><span>Productos con origen trazado</span></div>
+        <div class="dato"><strong data-contar="3">3</strong><span>Pisos ecológicos de origen</span></div>
         <div class="dato"><strong data-contar="27">27</strong><span>Años en el mismo puesto</span></div>
         <div class="dato"><strong data-contar="4000" data-sufijo=" m">4000 m</strong><span>Altura de nuestros cultivos</span></div>
       </div>
@@ -116,19 +116,19 @@
          `onerror` cae a la ilustración y la vitrina no se rompe. -->
     <div class="vitrina">
       <figure class="vitrina-pieza vitrina-alta">
-        <img src="/img/fotos/MAC-001.jpg" alt="Maca Negra en polvo, bolsa de 250 g"
+        <img src="/img/fotos/MAC-001.jpg" alt="Raíces andinas recién cosechadas"
              loading="eager" onerror="this.src='/img/gen/bolsa-ocre.svg'">
-        <figcaption><strong>Maca Negra</strong><span>Junín · Bolsa 250 g</span></figcaption>
+        <figcaption><strong>Raíces y superalimentos</strong><span>De la sierra alta</span></figcaption>
       </figure>
       <figure class="vitrina-pieza">
-        <img src="/img/fotos/SAN-001.webp" alt="Sangre de Grado, frasco de 30 ml"
+        <img src="/img/fotos/SAN-001.webp" alt="Frasco gotero de un extracto natural"
              loading="lazy" onerror="this.src='/img/gen/gotero-arcilla.svg'">
-        <figcaption><strong>Sangre de Grado</strong><span>Amazonía · 30 ml</span></figcaption>
+        <figcaption><strong>Aceites y esencias</strong><span>De la Amazonía</span></figcaption>
       </figure>
       <figure class="vitrina-pieza">
-        <img src="/img/fotos/CHA-001.jpg" alt="Chanca Piedra, hierba seca en bolsa de 100 g"
+        <img src="/img/fotos/CHA-001.jpg" alt="Hierba medicinal fresca"
              loading="lazy" onerror="this.src='/img/gen/bolsa-verde.svg'">
-        <figcaption><strong>Chanca Piedra</strong><span>Selva alta · 100 g</span></figcaption>
+        <figcaption><strong>Hierbas e infusiones</strong><span>De la selva alta</span></figcaption>
       </figure>
       <div class="vitrina-sello">
         <strong>Desde 1998</strong>
@@ -168,7 +168,7 @@
 
 <!-- ════════════════════════════════════════════════════════════ orígenes -->
 <!-- De fondo, la Amazonía desde el aire (CC0, ver img/fondos/creditos.json). -->
-<section class="seccion con-foto" id="origenes">
+<section class="seccion con-foto foto-oscura" id="origenes">
   <div class="contenedor">
     <div class="seccion-cabeza revelar">
       <span class="kicker">De dónde viene</span>
@@ -183,18 +183,19 @@
         <h3>Sierra alta</h3>
         <div class="altura">3 800 – 4 300 m s. n. m.</div>
         <p>Donde el frío obliga a la planta a concentrarse para sobrevivir.
-           La maca crece en suelos que ningún otro cultivo aguanta, y esa dureza
-           es exactamente lo que se busca en la raíz.</p>
-        <div class="tierra-productos"><b>Maca negra</b> · Hercampuri · Quinua de Puno</div>
+           De estos suelos, que casi ningún cultivo aguanta, salen las raíces,
+           los granos andinos y las hierbas de altura.</p>
+        <div class="tierra-productos"><b>Raíces</b> · Granos andinos · Hierbas de altura</div>
       </article>
 
       <article class="tierra revelar" data-retraso="2">
         <span class="tierra-num">02</span>
         <h3>Selva alta</h3>
         <div class="altura">800 – 1 800 m s. n. m.</div>
-        <p>Neblina permanente y floración todo el año. De acá salen las mieles
-           y el propóleo, que dependen de que haya flor distinta cada mes.</p>
-        <div class="tierra-productos"><b>Miel multifloral</b> · Propóleo · Sacha inchi</div>
+        <p>Neblina permanente y floración todo el año. De acá salen los
+           productos de la colmena y las semillas oleaginosas, que dependen de
+           que haya flor distinta cada mes.</p>
+        <div class="tierra-productos"><b>Apícolas</b> · Semillas y aceites · Infusiones</div>
       </article>
 
       <article class="tierra revelar" data-retraso="3">
@@ -202,16 +203,15 @@
         <h3>Amazonía</h3>
         <div class="altura">100 – 300 m s. n. m.</div>
         <p>Cortezas, resinas y frutos de creciente. Se recolecta sin talar:
-           la uña de gato y la sangre de grado se sacan del árbol vivo,
-           que sigue produciendo por años.</p>
-        <div class="tierra-productos"><b>Uña de gato</b> · Sangre de grado · Camu camu</div>
+           se toman del árbol vivo, que sigue produciendo por años.</p>
+        <div class="tierra-productos"><b>Cortezas y resinas</b> · Frutos amazónicos · Aceites</div>
       </article>
     </div>
   </div>
 </section>
 
 <!-- ═════════════════════════════════════════════════════════════ proceso -->
-<section class="seccion proceso" id="proceso">
+<section class="seccion proceso con-foto foto-clara" id="proceso">
   <div class="contenedor">
     <div class="seccion-cabeza revelar">
       <span class="kicker">Cómo trabajamos</span>
@@ -223,7 +223,7 @@
         <div class="paso-num">01</div>
         <h3>Compra directa</h3>
         <p>Vamos a la zona y compramos al productor. Guardamos la guía de cada
-           lote: si preguntas de dónde salió tu frasco, te lo mostramos.</p>
+           lote: si preguntas de dónde salió lo que te llevas, te lo mostramos.</p>
       </div>
       <div class="paso revelar" data-retraso="2">
         <div class="paso-num">02</div>
@@ -245,30 +245,21 @@
 <!-- Las categorías salen del catálogo de verdad, con cuántos productos tiene
      cada una y tres ejemplos: si el dueño crea una categoría en el panel,
      aparece aquí sin tocar el HTML. Cada tarjeta abre la tienda ya filtrada. -->
-<section class="seccion" id="categorias">
+<section class="seccion con-foto foto-oscura" id="categorias">
   <div class="contenedor">
     <div class="seccion-cabeza revelar">
       <span class="kicker">Qué encontrarás</span>
-      <!-- El titular dice cuánto hay, no un eslogan. Las cifras las pone
-           app.js desde el catálogo; esto es el respaldo sin JavaScript. -->
-      <h2 class="grande" id="categorias-titulo">Nuestros productos</h2>
-      <p id="categorias-bajada">Tónicos, cremas, hierbas, esencias, aceites y
-         superalimentos, cada uno con su lugar de origen. Toca una categoría para
-         ver sus productos, precios y stock en la tienda.</p>
+      <!-- Breve y sin cifras: cuántos productos hay o cuánto stock queda es
+           información del negocio y solo se ve en el panel. -->
+      <h2 class="grande">Nuestras categorías</h2>
+      <p>Lo que trabajamos en el puesto, cada producto con su lugar de origen.</p>
     </div>
-    <ul class="categorias-datos revelar" id="categorias-datos" hidden></ul>
     <div class="categorias" id="lista-categorias"></div>
-
-    <!-- Las dos puertas a la tienda, que antes eran una sección aparte. -->
-    <div class="categorias-ctas revelar">
-      <a class="btn btn-primario" href="/tienda#catalogo">Ver todo el catálogo →</a>
-      <a class="btn btn-fantasma" href="/tienda#asesor">Pregúntale al asesor IA</a>
-    </div>
   </div>
 </section>
 
 <!-- ═══════════════════════════════════════════════════════ cómo comprar -->
-<section class="seccion proceso" id="como-comprar">
+<section class="seccion proceso con-foto foto-clara" id="como-comprar">
   <div class="contenedor">
     <div class="seccion-cabeza revelar">
       <span class="kicker">Cómo comprar</span>
@@ -310,7 +301,7 @@
 <!-- Zonas, costos y plazos pintados desde /api/tienda: son las mismas cifras
      con las que cobra el carrito y responde el asesor. Lo escrito aquí es solo
      el respaldo para quien llegue sin JavaScript. -->
-<section class="seccion" id="envios">
+<section class="seccion con-foto foto-oscura" id="envios">
   <div class="contenedor">
     <div class="seccion-cabeza revelar">
       <span class="kicker">Envíos y recojo</span>
@@ -331,7 +322,7 @@
 <!-- ═════════════════════════════════════════════════ preguntas frecuentes -->
 <!-- Las preguntas que más llegan por WhatsApp antes de comprar. Las respuestas
      con cifras se completan desde /api/tienda al cargar. -->
-<section class="seccion proceso" id="preguntas">
+<section class="seccion proceso con-foto foto-clara" id="preguntas">
   <div class="contenedor">
     <div class="seccion-cabeza revelar">
       <span class="kicker">Preguntas frecuentes</span>
@@ -351,7 +342,7 @@
         <summary>¿De dónde vienen los productos?</summary>
         <p data-info="garantia">Compramos directo al productor y guardamos la guía
            de cada lote. Si quieres, en el local te mostramos de qué lote salió
-           tu frasco.</p>
+           cada producto.</p>
       </details>
       <details class="pregunta">
         <summary>¿Cómo pago?</summary>
@@ -391,7 +382,7 @@
 </section>
 
 <!-- ══════════════════════════════════════════════════════════════ cierre -->
-<section class="seccion cierre" id="visitanos">
+<section class="seccion cierre con-foto foto-oscura" id="visitanos">
   <div class="contenedor">
     <span class="kicker revelar">Ven al puesto 87</span>
     <h2 class="enorme revelar" data-retraso="1">Te esperamos</h2>
@@ -401,8 +392,7 @@
       necesites: si no lo tenemos, te lo decimos.
     </p>
     <div class="cierre-ctas revelar" data-retraso="3">
-      <a class="btn btn-primario" href="/tienda">Empezar mi pedido →</a>
-      <a class="btn btn-fantasma" id="cierre-whatsapp" href="#" target="_blank" rel="noopener">Escríbenos por WhatsApp</a>
+      <a class="btn btn-primario" id="cierre-whatsapp" href="#" target="_blank" rel="noopener">Escríbenos por WhatsApp</a>
     </div>
   </div>
 </section>
@@ -429,7 +419,6 @@
           <li><a href="#como-comprar">Cómo comprar</a></li>
           <li><a href="#envios">Envíos y recojo</a></li>
           <li><a href="#preguntas">Preguntas frecuentes</a></li>
-          <li><a href="/tienda">Ir a la tienda →</a></li>
         </ul>
       </div>
       <div>

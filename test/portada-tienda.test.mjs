@@ -65,7 +65,7 @@ describe('/tienda es la página para comprar', () => {
   });
 });
 
-describe('La portada cuenta y lleva a la tienda', () => {
+describe('La portada informa y la tienda es una sección del menú', () => {
   test('sigue siendo la raíz', () => {
     assert.equal(portada.estado, 200);
   });
@@ -88,14 +88,29 @@ describe('La portada cuenta y lleva a la tienda', () => {
     assert.doesNotMatch(portada.html, /href="#(catalogo|asesor)"/);
   });
 
-  test('el llamado principal del hero lleva a la tienda', () => {
-    assert.match(portada.html, /<a class="btn btn-primario" href="\/tienda" id="cta-magnetico">/);
+  /**
+   * La portada es informativa: ningún botón empuja a comprar.
+   *
+   * A la tienda se llega por su ítem del menú (y, en el celular, por el mismo
+   * enlace de texto), no por llamados repartidos en el hero, las categorías o
+   * el cierre.
+   */
+  test('ningún botón ni enlace del contenido lleva a la tienda', () => {
+    const aTienda = [...portada.html.matchAll(/<a\b[^>]*href="\/tienda[^"]*"[^>]*>/g)].map((m) => m[0]);
+    assert.equal(aTienda.length, 2, `enlaces a la tienda: ${aTienda.join(' | ')}`);
+    assert.ok(aTienda.some((a) => /id="nav-tienda"/.test(a)), 'falta la tienda en el menú');
+    assert.ok(aTienda.some((a) => /class="nav-tienda-movil"/.test(a)), 'falta el enlace del celular');
+    assert.ok(!aTienda.some((a) => /class="btn/.test(a)), 'hay un botón que empuja a la tienda');
   });
 
-  test('la barra tiene una puerta a la tienda visible también en el celular', () => {
-    // Los enlaces de la barra se esconden por debajo de 980 px: el botón de la
-    // derecha es lo único que queda.
-    assert.match(portada.html, /<a class="btn[^"]*" href="\/tienda" id="btn-tienda">/);
+  test('el hero recorre la propia página', () => {
+    assert.match(portada.html, /<a class="btn btn-primario" href="#origenes" id="cta-magnetico">/);
+  });
+
+  test('las categorías de la portada no son enlaces', () => {
+    const js = readFileSync(join(RAIZ, 'public/js/app.js'), 'utf8');
+    const fn = js.slice(js.indexOf('function pintarCategorias'), js.indexOf('const enLista'));
+    assert.doesNotMatch(fn, /<a\b|href=/, 'las tarjetas de categoría llevan a otra página');
   });
 
   test('comprar es de la tienda: sin buscador, carrito ni «Mi pedido» en la portada', () => {
@@ -119,14 +134,6 @@ describe('La portada cuenta y lleva a la tienda', () => {
   test('cada respuesta con cifras tiene dónde recibir el dato vigente', () => {
     for (const clave of ['medios', 'pagos', 'gratis', 'garantia', 'devolucion', 'provincias', 'mayor']) {
       assert.match(portada.html, new RegExp(`data-info="${clave}"`), `falta data-info="${clave}"`);
-    }
-  });
-
-  test('las anclas a las que lleva existen en la tienda', () => {
-    const destinos = [...portada.html.matchAll(/href="\/tienda#([\w-]+)"/g)].map((m) => m[1]);
-    assert.ok(destinos.length >= 2, 'la portada no enlaza al asesor ni al catálogo');
-    for (const ancla of new Set(destinos)) {
-      assert.ok(tieneId(tienda.html, ancla), `la portada lleva a /tienda#${ancla}, que no existe`);
     }
   });
 });
@@ -159,10 +166,57 @@ describe('La portada informa con las cifras de la configuración', () => {
     }
   });
 
-  test('la tienda abre filtrada por la categoría que se eligió en la portada', () => {
+  test('la tienda sigue aceptando ?cat= para abrir filtrada', () => {
+    // La portada ya no lo usa, pero es el enlace que se comparte por WhatsApp
+    // («mira las hierbas»): /tienda?cat=Hierbas.
     const js = readFileSync(join(RAIZ, 'public/js/app.js'), 'utf8');
-    assert.match(js, /href="\/tienda\?cat=\$\{encodeURIComponent\(cat\)\}#catalogo"/);
     assert.match(js, /params\.get\('cat'\)/);
+  });
+});
+
+/**
+ * El stock y los conteos son del panel, no del cliente.
+ *
+ * Cuántas unidades quedan o cuántos productos tiene la tienda es información
+ * del negocio. Al cliente le basta saber si algo se puede pedir. Se prueba
+ * contra lo que de verdad le llega: la API pública, el asesor y el código que
+ * pinta las páginas.
+ */
+describe('El cliente no ve stock ni conteos', () => {
+  test('/api/productos no manda stock ni mínimo, solo si está disponible', async () => {
+    const lista = await (await fetch(srv.base + '/api/productos')).json();
+    assert.ok(lista.length > 0);
+    for (const p of lista.slice(0, 50)) {
+      assert.equal(p.stock, undefined, `${p.sku} trae stock`);
+      assert.equal(p.stock_min, undefined, `${p.sku} trae stock_min`);
+      assert.ok(p.disponible === 0 || p.disponible === 1, `${p.sku} sin disponible`);
+    }
+  });
+
+  test('el asesor no manda stock en sus fichas ni cuenta productos', async () => {
+    for (const consulta of ['no puedo dormir', 'que productos tienen']) {
+      const r = await fetch(srv.base + '/api/asesor', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ consulta }),
+      });
+      const d = await r.json();
+      assert.ok(!JSON.stringify(d).includes('"stock"'), `«${consulta}» devolvió stock`);
+      assert.doesNotMatch(d.mensaje, /\d+\s+productos/i, `«${consulta}» cuenta productos: ${d.mensaje}`);
+    }
+  });
+
+  test('la tienda no pinta «Últimas N», «Quedan» ni conteos de productos', () => {
+    const js = readFileSync(join(RAIZ, 'public/js/app.js'), 'utf8');
+    assert.doesNotMatch(js, /Últimas ['$]|'Quedan '|Solo quedan|disponibles hoy/,
+      'app.js todavía muestra cantidades de stock');
+    assert.doesNotMatch(js, /\$\{catalogo\.length\} productos|de \$\{lista\.length\} productos/,
+      'app.js todavía cuenta productos para el cliente');
+    assert.doesNotMatch(js, /\.stock\b/, 'app.js todavía lee p.stock');
+  });
+
+  test('la portada no cuenta productos', () => {
+    assert.doesNotMatch(portada.html, /data-contar="\d+" id="dato-productos"|productos con origen trazado/i);
+    assert.ok(!tieneId(portada.html, 'categorias-datos'), 'siguen las cifras bajo las categorías');
   });
 });
 
