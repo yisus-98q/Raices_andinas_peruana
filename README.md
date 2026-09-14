@@ -14,7 +14,7 @@ node gen-imagenes.mjs    # dibuja las ilustraciones (por SKU y de respaldo)
 node importar-fotos.mjs  # importa las fotos propias de la carpeta img/
 node traer-fotos.mjs     # rellena las que falten desde bancos libres (internet)
 node db.js --reset       # carga la tienda con 400 productos
-npm start                # http://localhost:3000
+npm start                # http://localhost:4000
 ```
 
 **Para poner las fotos del negocio:** se dejan en la carpeta `img/` de la raíz,
@@ -37,7 +37,7 @@ inventario:
 
 | | Cómo entra | Estado inicial |
 |---|---|---|
-| **Tienda web** | el cliente compra en <http://localhost:3000> | `pendiente`, hay que despachar |
+| **Tienda web** | el cliente compra en <http://localhost:4000> | `pendiente`, hay que despachar |
 | **Mostrador** | la encargada cobra desde el panel | `entregado`, se lo llevó puesto |
 
 Hasta ahora el sistema solo sabía registrar la venta de la web. Lo que se
@@ -170,8 +170,8 @@ que es exactamente lo que hace falta para demostrar en la laptop, en el local de
 
 | Ruta | Quién entra |
 |---|---|
-| <http://localhost:3000> | Pública — la tienda |
-| <http://localhost:3000/creditos.html> | Pública — atribución de las fotos |
+| <http://localhost:4000> | Pública — la tienda |
+| <http://localhost:4000/creditos.html> | Pública — atribución de las fotos |
 | `/panel` (o `/admin.html`) | **Personal.** Pide login |
 | `/imagenes.html` | **Personal.** Hoja de contactos de las ilustraciones |
 | `/comprobante.html` | Las dos cosas: la tienda entra con `?id=` y sesión; el comprador con `?codigo=` y los últimos 4 del teléfono |

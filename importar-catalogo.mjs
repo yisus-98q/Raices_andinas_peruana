@@ -29,7 +29,7 @@ const probar = args.includes('--probar');
 const soloBajarDemo = args.includes('--bajar-demo');
 const archivo = args.find((a) => !a.startsWith('--'));
 
-const BASE = process.env.URL_TIENDA || 'http://localhost:3000';
+const BASE = process.env.URL_TIENDA || 'http://localhost:4000';
 const CORREO = process.env.ADMIN_EMAIL || 'hola@raizandina.pe';
 const CLAVE = process.env.ADMIN_PASSWORD || 'raiz2026';
 

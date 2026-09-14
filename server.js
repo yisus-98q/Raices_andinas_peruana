@@ -1,3 +1,4 @@
+import { networkInterfaces } from 'node:os';
 import { gzipSync } from 'node:zlib';
 import { randomInt } from 'node:crypto';
 import { createServer } from 'node:http';
@@ -29,7 +30,19 @@ import {
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PUBLIC = join(__dirname, 'public');
-const PORT = process.env.PORT || 3000;
+/**
+ * Puerto y dirección.
+ *
+ * El 3000 lo ocupa el otro proyecto del mismo cliente, así que teniendo los dos
+ * en el 3000 solo podía estar levantado uno. Con el 4000 conviven.
+ *
+ * `HOST` por defecto es `::`, que en Node significa «todas las interfaces»:
+ * la tienda se abre desde esta máquina Y desde el celular de la misma Wi-Fi,
+ * que es lo que hace falta para enseñársela a alguien. Poniendo
+ * `HOST=127.0.0.1` deja de salir de esta computadora.
+ */
+const PORT = process.env.PORT || 4000;
+const HOST = process.env.HOST || '::';
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -1715,7 +1728,7 @@ createServer(async (req, res) => {
   } catch (e) {
     if (!res.headersSent) json(res, 400, { error: e.message });
   }
-}).listen(PORT, function () {
+}).listen(PORT, HOST, function () {
   // Con PORT=0 el sistema asigna uno libre; se informa el real para que los
   // tests puedan levantar varios servidores a la vez sin chocar de puerto.
   const puerto = this.address().port;
@@ -1723,6 +1736,22 @@ createServer(async (req, res) => {
   console.log('ESCUCHANDO ' + puerto);
   console.log('\n  Raiz Andina  ->  http://localhost:' + puerto);
   console.log('  Panel admin  ->  http://localhost:' + puerto + '/admin.html');
+
+  /**
+   * La direccion de la red local, para abrirlo en el telefono.
+   *
+   * Escuchar en todas las interfaces no sirve de nada si hay que ir a buscar
+   * la IP a la configuracion de Windows cada vez. Se imprime la que de verdad
+   * se usa: IPv4, sin la interna del sistema ni las virtuales.
+   */
+  if (HOST === '::' || HOST === '0.0.0.0') {
+    const enRed = Object.values(networkInterfaces()).flat()
+      .filter((d) => d && d.family === 'IPv4' && !d.internal)
+      .map((d) => d.address);
+    for (const ip of enRed) {
+      console.log('  En la red    ->  http://' + ip + ':' + puerto + '   (celular, misma Wi-Fi)');
+    }
+  }
   if (inicial) {
     console.log('\n  Acceso al panel creado:');
     console.log('    correo:      ' + inicial.email);
