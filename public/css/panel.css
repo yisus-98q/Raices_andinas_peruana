@@ -951,6 +951,17 @@ button.paso-reparto:active { transform: scale(.98); }
     min-height: 0; margin-bottom: 0;
     display: flex; flex-direction: column;
   }
+  /* El mismo tropiezo que con las áreas, ahora con los bloques: el `display:
+     flex` de arriba le ganaba al atributo `hidden`, y el mostrador veía
+     «Comprobantes» aunque su tabla de roles lo esconde. Esconder no protege
+     datos —eso lo hace el servidor—, pero un bloque que el rol no debería ver
+     tiene que no verse. */
+  body.panel-fijo .bloque[hidden] { display: none; }
+  /* Y la columna que queda sin bloques visibles no ocupa media pantalla vacía.
+     La marca admin.js al aplicar el rol: con CSS solo haría falta un :has()
+     dentro de otro, y el navegador descarta esa regla entera. */
+  body.panel-fijo .tarjetas-admin > div[hidden] { display: none; }
+  body.panel-fijo .tarjetas-admin.una-columna { grid-template-columns: 1fr; }
   body.panel-fijo .bloque-cabeza { flex: none; }
   /* Y el desplazamiento se muda aquí: el título de la sección se queda fijo
      arriba mientras la lista corre debajo. */
@@ -1002,6 +1013,63 @@ button.paso-reparto:active { transform: scale(.98); }
 #bloque-resumen .bloque-cabeza { border-bottom: none; padding: 4px 0 14px; }
 #bloque-resumen .bloque-cuerpo { padding: 0; }
 #bloque-resumen .kpis { margin-bottom: 0; }
+/* En el área que reparte su alto, los indicadores miden lo que miden y el
+   equipo se queda con el resto. */
+body.panel-fijo #bloque-resumen { flex: none; }
+
+/* ------------------------------------------------------ tu equipo hoy
+   Una tarjeta por persona: quién es, qué hizo hoy y a qué hora fue lo último.
+   El color de la franja superior dice el rol de un vistazo: verde la dueña,
+   miel el mostrador, terracota el reparto, gris azulado la tienda web. */
+.equipo {
+  /* 210 px: las tres personas y la web entran en una fila en una laptop. */
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 14px;
+}
+.eq-tarjeta {
+  --rol: var(--verde);
+  position: relative; display: flex; flex-direction: column; gap: 12px;
+  background: var(--papel-puro); border: 1px solid var(--borde); border-radius: 14px;
+  padding: 16px 16px 12px; overflow: hidden;
+  box-shadow: 0 1px 2px rgba(28, 42, 34, .05), 0 8px 20px rgba(28, 42, 34, .05);
+}
+.eq-tarjeta::before {
+  content: ""; position: absolute; left: 0; right: 0; top: 0; height: 3px; background: var(--rol);
+}
+.eq-vendedor { --rol: var(--miel); }
+.eq-reparto { --rol: var(--terra); }
+.eq-web { --rol: #5f7f8f; }
+/* Quien no hizo nada hoy se ve igual, pero en segundo plano. */
+.eq-quieto { opacity: .72; }
+
+.eq-cabeza { display: flex; align-items: center; gap: 11px; }
+.eq-cabeza strong { display: block; font-size: 15px; line-height: 1.2; }
+.eq-avatar {
+  flex: none; width: 40px; height: 40px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: color-mix(in srgb, var(--rol) 14%, white); color: var(--rol);
+  font-size: 13px; font-weight: 800; letter-spacing: .02em;
+}
+.eq-web .eq-avatar { font-size: 10px; }
+.eq-rol {
+  display: inline-block; margin-top: 3px; font-size: 11px; font-weight: 700;
+  letter-spacing: .08em; text-transform: uppercase; color: var(--rol);
+}
+
+.eq-datos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.eq-dato {
+  background: var(--humo); border-radius: 10px; padding: 8px 10px; min-width: 0;
+}
+.eq-dato strong { display: block; font-size: 17px; font-weight: 800; line-height: 1.15; letter-spacing: -.01em; white-space: nowrap; }
+.eq-dato span { display: block; font-size: 11.5px; color: var(--tinta-suave); line-height: 1.3; }
+.eq-destacado { background: color-mix(in srgb, var(--rol) 11%, white); }
+.eq-destacado strong { color: var(--rol); }
+
+.eq-pie { font-size: 11.5px; color: var(--tinta-suave); border-top: 1px solid var(--borde); padding-top: 9px; }
+
+@media (max-width: 640px) {
+  .equipo { grid-template-columns: 1fr; }
+}
 
 @media (max-width: 640px) {
   /* En el celular la barra se acuesta: una tira de secciones que se arrastra

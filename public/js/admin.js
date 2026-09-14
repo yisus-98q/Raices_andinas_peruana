@@ -102,7 +102,7 @@
    */
   const AREAS = [
     { id: 'area-resumen', nombre: 'Resumen', hace: 'Cómo va el día',
-      bloques: ['bloque-resumen'] },
+      bloques: ['bloque-resumen', 'bloque-equipo'] },
     { id: 'area-vender', nombre: 'Vender hoy', hace: 'Cobrar y despachar',
       bloques: ['bloque-mostrador', 'bloque-pedidos', 'bloque-comprobantes'] },
     { id: 'area-inventario', nombre: 'Inventario', hace: 'Qué hay y qué falta',
@@ -311,6 +311,7 @@
         if (esDueno) {
           pintarKpis(resumen);
           pintarStock(resumen.bajo_stock);
+          pintarEquipo(resumen.equipo);
         }
       }
       pintarPedidos();
@@ -358,6 +359,16 @@
         }
       }
 
+      // Una columna sin ningún bloque del rol se esconde, y su fila pasa a una
+      // sola columna: al mostrador le quedaba media pantalla en blanco donde
+      // estaba «Comprobantes», y al reparto su ruta ocupaba solo la mitad.
+      for (const columna of document.querySelectorAll('.tarjetas-admin > div')) {
+        columna.hidden = ![...columna.querySelectorAll(':scope > .bloque')].some((b) => !b.hidden);
+      }
+      for (const fila of document.querySelectorAll('.tarjetas-admin')) {
+        fila.classList.toggle('una-columna', [...fila.children].filter((c) => !c.hidden).length < 2);
+      }
+
       if (esReparto) {
         // Los indicadores de arriba son la caja del día, la ganancia y el valor
         // del inventario: las tres cifras que resumen el negocio. El reparto
@@ -376,6 +387,74 @@
   }
 
   // --------------------------------------------------------------------- KPI
+  /**
+   * «Tu equipo hoy»: una tarjeta por persona y otra por la tienda web.
+   *
+   * Cada rol cuenta lo suyo: al mostrador, lo que cobró en el local; al
+   * reparto, lo que entregó y lo que lleva en camino; a la dueña, las dos
+   * cosas, porque ella también atiende. Quien no hizo nada hoy aparece igual,
+   * atenuado: saber que el motorizado no marcó ninguna entrega también es
+   * información.
+   */
+  const NOMBRE_ROL = { admin: 'Dueña', vendedor: 'Mostrador', reparto: 'Reparto' };
+  const iniciales = (n) => String(n || '?').split(/\s+/).filter(Boolean).slice(0, 2)
+    .map((p) => p[0].toUpperCase()).join('');
+  const horaDe = (fecha) => (fecha ? String(fecha).slice(11, 16) : null);
+
+  function pintarEquipo(equipo) {
+    if (!equipo || !$('lista-equipo')) return;
+
+    const dato = (valor, rotulo, destacado = false) =>
+      `<div class="eq-dato${destacado ? ' eq-destacado' : ''}"><strong>${valor}</strong><span>${rotulo}</span></div>`;
+
+    const tarjetas = equipo.personas.map((p) => {
+      const datos = [];
+      if (p.rol !== 'reparto') {
+        datos.push(dato(soles(p.ventas_local_monto), `${p.ventas_local} venta(s) en el local`, p.ventas_local > 0));
+      }
+      if (p.rol !== 'vendedor') {
+        datos.push(dato(p.entregados, 'entregado(s)', p.entregados > 0));
+        if (p.rol === 'reparto') datos.push(dato(p.en_camino, 'en camino ahora', p.en_camino > 0));
+      }
+      const avanzados = p.preparados + p.enviados;
+      if (avanzados) datos.push(dato(avanzados, 'pedido(s) avanzados'));
+      if (p.anulados) datos.push(dato(p.anulados, 'anulación(es) o devolución(es)'));
+
+      const hora = horaDe(p.ultima_actividad);
+      return `
+        <article class="eq-tarjeta eq-${escapar(p.rol)}${hora ? '' : ' eq-quieto'}">
+          <header class="eq-cabeza">
+            <span class="eq-avatar" aria-hidden="true">${escapar(iniciales(p.nombre))}</span>
+            <div>
+              <strong>${escapar(p.nombre)}</strong>
+              <span class="eq-rol">${NOMBRE_ROL[p.rol] || escapar(p.rol)}</span>
+            </div>
+          </header>
+          <div class="eq-datos">${datos.join('')}</div>
+          <footer class="eq-pie">${hora ? `Última actividad a las ${hora}` : 'Sin actividad hoy'}</footer>
+        </article>`;
+    });
+
+    const w = equipo.web;
+    tarjetas.push(`
+      <article class="eq-tarjeta eq-web${w.pedidos ? '' : ' eq-quieto'}">
+        <header class="eq-cabeza">
+          <span class="eq-avatar" aria-hidden="true">WEB</span>
+          <div>
+            <strong>Tienda web</strong>
+            <span class="eq-rol">Pedidos en línea</span>
+          </div>
+        </header>
+        <div class="eq-datos">
+          ${dato(soles(w.monto), `${w.pedidos} pedido(s) hoy`, w.pedidos > 0)}
+          ${dato(w.por_repartir, 'por repartir', w.por_repartir > 0)}
+        </div>
+        <footer class="eq-pie">Entran solos, a cualquier hora</footer>
+      </article>`);
+
+    pintar('lista-equipo', tarjetas.join(''));
+  }
+
   function pintarKpis(r) {
     const tarjetas = [
       {

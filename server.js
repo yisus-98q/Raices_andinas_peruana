@@ -259,7 +259,33 @@ const esGranel = (p) => p.unidad === 'gramo';
 const precioPorUnidadBase = (p) => (esGranel(p) ? p.precio / BASE_GRANEL : p.precio);
 const costoPorUnidadBase = (p) => (esGranel(p) ? (p.costo || 0) / BASE_GRANEL : (p.costo || 0));
 
+/**
+ * Quién hizo qué, para el resumen de la dueña.
+ *
+ * Hasta ahora el sistema sabía cuánto se vendió en el local y cuántos pedidos
+ * se entregaron, pero no quién: una venta de mostrador no guardaba quién la
+ * cobró y marcar «entregado» no guardaba quién lo marcó. Con dos o tres
+ * personas en el puesto, «hoy se entregaron 5» no le dice a la dueña si el
+ * motorizado salió o si los entregó ella.
+ *
+ * Una fila por acción: la venta en el local y cada cambio de estado de un
+ * pedido. Vive aquí y no en db.js porque solo el servidor la escribe y la lee.
+ */
+db.exec(`CREATE TABLE IF NOT EXISTS actividad_equipo (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  usuario    TEXT NOT NULL,
+  rol        TEXT NOT NULL,
+  accion     TEXT NOT NULL,
+  pedido_id  INTEGER,
+  codigo     TEXT NOT NULL DEFAULT '',
+  monto      REAL NOT NULL DEFAULT 0,
+  creado_en  TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+)`);
+db.exec('CREATE INDEX IF NOT EXISTS idx_actividad_fecha ON actividad_equipo(creado_en)');
+
 const Q = {
+  insActividad: db.prepare(`INSERT INTO actividad_equipo
+    (usuario, rol, accion, pedido_id, codigo, monto) VALUES (?,?,?,?,?,?)`),
   productos: db.prepare(
     `SELECT ${CAMPOS_PUBLICOS} FROM productos WHERE activo = 1
      ORDER BY categoria, nombre`
@@ -1209,6 +1235,7 @@ async function api(req, res, url) {
     } else {
       Q.estado.run(estado, id);
     }
+    Q.insActividad.run(sesion.usuario, sesion.rol, estado, id, pedido.codigo, pedido.total);
     return json(res, 200, Q.pedido.get(id));
   }
 
@@ -1780,6 +1807,9 @@ function venderEnMostrador(res, body, sesion) {
     }
     // Se lo llevo: no hay nada que despachar.
     Q.estado.run('entregado', pedidoId);
+    // Quién cobró: dentro de la misma transacción, para que no quede una venta
+    // sin firma si algo falla después.
+    Q.insActividad.run(sesion.usuario, sesion.rol, 'venta_local', pedidoId, codigo, total);
     db.exec('COMMIT');
 
     let comprobante = null;
@@ -1891,6 +1921,58 @@ function resumen(sesion) {
       sugerido: Math.max(p.stock_min * 2 - p.stock, p.stock_min),
     })),
     top_productos: top,
+    equipo: equipoHoy(web),
+  };
+}
+
+/**
+ * Lo que hizo hoy cada persona del puesto, más la tienda web como un
+ * integrante más: es por donde entran los pedidos que nadie cobró de frente.
+ *
+ * Solo para la dueña (se arma dentro de la rama admin de `resumen`): lo que
+ * cobró cada quien es plata del negocio.
+ */
+function equipoHoy(web) {
+  // En el orden del puesto: la dueña, quien atiende, quien reparte.
+  const usuarios = db.prepare(`SELECT usuario, nombre, rol FROM usuarios
+    ORDER BY CASE rol WHEN 'admin' THEN 0 WHEN 'vendedor' THEN 1 WHEN 'reparto' THEN 2 ELSE 3 END, nombre`).all();
+  const hechos = db.prepare(`SELECT usuario, accion, COUNT(*) c, COALESCE(SUM(monto),0) t,
+      MAX(creado_en) ultima
+    FROM actividad_equipo
+    WHERE date(creado_en) = date('now','localtime')
+    GROUP BY usuario, accion`).all();
+  // Lo que el motorizado tiene «en camino» ahora: pedidos que siguen en
+  // `enviado` y cuyo último movimiento lo hizo él.
+  const enCamino = db.prepare(`SELECT a.usuario, COUNT(*) c FROM actividad_equipo a
+    JOIN pedidos p ON p.id = a.pedido_id
+    WHERE p.estado = 'enviado' AND a.accion = 'enviado'
+      AND a.id = (SELECT MAX(id) FROM actividad_equipo WHERE pedido_id = a.pedido_id)
+    GROUP BY a.usuario`).all();
+  const porRepartir = db.prepare(`SELECT COUNT(*) c FROM pedidos
+    WHERE canal = 'web' AND modo_entrega != 'recojo'
+      AND estado IN ('pendiente','preparando','enviado')`).get().c;
+
+  const de = (usuario, accion) => hechos.find((h) => h.usuario === usuario && h.accion === accion) || { c: 0, t: 0 };
+  const personas = usuarios.map((u) => {
+    const suyos = hechos.filter((h) => h.usuario === u.usuario);
+    const venta = de(u.usuario, 'venta_local');
+    return {
+      usuario: u.usuario,
+      nombre: u.nombre,
+      rol: u.rol,
+      ventas_local: venta.c,
+      ventas_local_monto: +venta.t.toFixed(2),
+      preparados: de(u.usuario, 'preparando').c,
+      enviados: de(u.usuario, 'enviado').c,
+      entregados: de(u.usuario, 'entregado').c,
+      anulados: de(u.usuario, 'anulado').c + de(u.usuario, 'devuelto').c,
+      en_camino: enCamino.find((x) => x.usuario === u.usuario)?.c || 0,
+      ultima_actividad: suyos.reduce((m, h) => (h.ultima > m ? h.ultima : m), '') || null,
+    };
+  });
+  return {
+    personas,
+    web: { pedidos: web.c, monto: +web.t.toFixed(2), por_repartir: porRepartir },
   };
 }
 
