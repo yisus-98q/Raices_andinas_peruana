@@ -68,7 +68,11 @@ img { max-width: 100%; display: block; }
 
 .contenedor { width: 100%; max-width: var(--ancho); margin: 0 auto; padding: 0 28px; }
 
-.enorme { font-size: clamp(3rem, 11vw, 9.5rem); text-transform: uppercase; }
+/* El titular medido, no a ojo. A 11vw daba 150 px en una laptop de 1366, y
+   «LA TIERRA» a ese cuerpo no cabe en su columna: las tres líneas del h1 se
+   partían en cinco y el titular solo ya ocupaba 691 px. A 5.9vw cada línea
+   entra entera y el hero completo cabe en una pantalla. */
+.enorme { font-size: clamp(2.4rem, 5.9vw, 6rem); text-transform: uppercase; }
 .grande { font-size: clamp(2.2rem, 5.6vw, 4.6rem); text-transform: uppercase; }
 .medio  { font-size: clamp(1.5rem, 2.8vw, 2.4rem); }
 .ocre { color: var(--ocre); }
@@ -163,9 +167,11 @@ img { max-width: 100%; display: block; }
 }
 
 /* --------------------------------------------------------------------- hero */
+/* El relleno de arriba es lo que despeja la barra fija (122 px en escritorio),
+   así que baja hasta donde no la toca y no más. */
 .hero {
   position: relative; min-height: 100svh; display: flex; align-items: center;
-  padding: 130px 0 70px; overflow: hidden; z-index: 1;
+  padding: 126px 0 44px; overflow: hidden; z-index: 1;
 }
 .hero-luz {
   position: absolute; width: 900px; height: 900px; border-radius: 50%;
@@ -183,23 +189,23 @@ img { max-width: 100%; display: block; }
   -webkit-mask-image: radial-gradient(circle at 50% 45%, #000 10%, transparent 72%);
 }
 .hero-inner {
-  position: relative; z-index: 2; display: grid; gap: 40px;
+  position: relative; z-index: 2; display: grid; gap: 34px;
   grid-template-columns: 1.05fr .95fr; align-items: center;
 }
-.hero-texto h1 { margin: 22px 0 0; }
+.hero-texto h1 { margin: 14px 0 0; }
 .hero-texto h1 span { display: block; }
 .hero-sub {
-  max-width: 46ch; margin-top: 26px; font-size: 17.5px; color: var(--tinta-suave);
+  max-width: 44ch; margin-top: 16px; font-size: 16.5px; color: var(--tinta-suave);
 }
 .hero-sub strong { color: var(--tinta); font-weight: 600; }
-.hero-ctas { display: flex; gap: 13px; flex-wrap: wrap; margin-top: 34px; }
+.hero-ctas { display: flex; gap: 13px; flex-wrap: wrap; margin-top: 22px; }
 
 .hero-datos {
-  display: flex; gap: 38px; flex-wrap: wrap; margin-top: 52px;
-  padding-top: 28px; border-top: 1px solid var(--borde);
+  display: flex; gap: 30px; flex-wrap: wrap; margin-top: 26px;
+  padding-top: 18px; border-top: 1px solid var(--borde);
 }
 .dato strong {
-  display: block; font-size: 34px; font-weight: 900; letter-spacing: -.03em;
+  display: block; font-size: 26px; font-weight: 900; letter-spacing: -.03em;
   color: var(--ocre); line-height: 1;
 }
 .dato span { font-size: 12.5px; color: var(--tinta-suave); letter-spacing: .04em; }
@@ -212,9 +218,22 @@ img { max-width: 100%; display: block; }
   position: relative;
   display: grid;
   grid-template-columns: 1.15fr .85fr;
-  grid-template-rows: repeat(2, 1fr);
+  grid-template-rows: repeat(2, minmax(0, 1fr));
   gap: 16px;
-  min-height: 520px;
+  /*
+   * El alto va dicho, no deducido.
+   *
+   * Con el alto en `auto` las dos filas `1fr` se resuelven contra lo que cada
+   * foto pide por su proporción: la vitrina medía 617 px y era ella —no el
+   * texto— la que sacaba el hero de la pantalla. Ni `min-height` ni
+   * `minmax(0, 1fr)` la bajan, porque el problema no es el mínimo sino el
+   * máximo.
+   *
+   * Atado a `svh` el hero entra en una pantalla en cualquier monitor, y deja de
+   * depender de la proporción de las fotos que suba el cliente. El techo de
+   * 560 px es para que en un monitor grande no se vuelva un cartel.
+   */
+  height: clamp(330px, 66svh, 560px);
 }
 .vitrina-pieza {
   margin: 0;
@@ -253,9 +272,10 @@ img { max-width: 100%; display: block; }
   background: var(--humo);
 }
 .vitrina-pieza figcaption {
-  padding: 13px 16px 15px;
+  padding: 10px 15px 12px;
   border-top: 1px solid var(--borde);
 }
+.vitrina-pieza figcaption span { line-height: 1.35; }
 .vitrina-pieza figcaption strong {
   display: block; font-size: 15px; font-weight: 700; letter-spacing: -.01em;
 }
@@ -584,10 +604,12 @@ img { max-width: 100%; display: block; }
 /* ------------------------------------------------------------- responsive */
 @media (max-width: 980px) {
   .hero-inner { grid-template-columns: 1fr; }
-  /* La vitrina sube al primer lugar: en el móvil lo que vende es el producto,
-     no el titular. Y pasa a tres en fila para no comerse la pantalla. */
+  /* La vitrina iba primero —«en el móvil lo que vende es el producto»— y se
+     revisó: quien entra por el celular cae en una foto sin saber de qué tienda
+     es. El titular y la bajada quedan arriba, como en escritorio, y la vitrina
+     abajo en tres en fila. */
   .vitrina {
-    order: -1; min-height: 300px;
+    height: auto; min-height: 250px;
     grid-template-columns: repeat(3, 1fr); grid-template-rows: 1fr;
   }
   .vitrina-alta { grid-row: span 1; }
@@ -613,13 +635,62 @@ img { max-width: 100%; display: block; }
   .asesor-caja { padding: 24px; }
   .asesor-fila { flex-direction: column; }
   .pie-grilla { grid-template-columns: 1fr; }
-  .hero-datos { gap: 24px; }
+  /*
+   * El hero en un celular.
+   *
+   * Los espacios van en `svh` y no en píxeles fijos: entre un celular de 844 px
+   * de alto y uno de 740 hay una pantalla de diferencia, y el navegador se come
+   * otro tanto con la barra de direcciones. Atados a la pantalla, los huecos se
+   * encogen solos en el aparato chico en vez de empujar la foto fuera.
+   *
+   * La barra mide 86 px aquí, no 122: el relleno de arriba la sigue.
+   */
+  .hero { padding: 90px 0 clamp(8px, 1.6svh, 18px); }
+  .hero-inner { gap: clamp(10px, 2svh, 16px); }
+  /* El titular también baja de suelo: a 2.4rem, «YA SABÍA» en 360 px queda al
+     borde de partirse. */
+  .hero-texto h1 {
+    margin-top: clamp(6px, 1.4svh, 10px);
+    font-size: clamp(1.95rem, 8.8vw, 2.4rem);
+  }
+  .hero-sub { font-size: 15.5px; line-height: 1.45; margin-top: clamp(9px, 1.6svh, 13px); }
+  /* El epígrafe en una línea: «MERCADO CENTRAL · DESDE 1998» con el
+     interletrado de escritorio se partía en dos a 360 px. */
+  .kicker { font-size: 10.5px; letter-spacing: .16em; }
+  .kicker::before { width: 24px; }
+  /* Los dos botones en una fila. Apilados eran 117 px: el ancho de un celular
+     alcanza para los dos, y esos 60 px son lo que hace que la foto entre. Con
+     el cuerpo de escritorio cada uno se partía igual en dos líneas, así que
+     baja el texto, no el botón: el área de toque se mantiene. */
+  .hero-ctas { gap: 10px; margin-top: clamp(12px, 2.2svh, 18px); flex-wrap: nowrap; }
+  .hero-ctas .btn {
+    flex: 1 1 0; min-width: 0; justify-content: center; text-align: center;
+    padding: 14px 12px; font-size: 13.5px; gap: 6px;
+  }
+  /* Las tres cifras en una fila: apiladas en dos eran 172 px, medio titular. Y
+     el rótulo con el interlineado de párrafo (1.6) abría un hueco entre sus dos
+     líneas más grande que la cifra. */
+  .hero-datos {
+    gap: 12px; flex-wrap: nowrap;
+    margin-top: clamp(11px, 2svh, 16px); padding-top: clamp(8px, 1.5svh, 12px);
+  }
+  .dato { flex: 1 1 0; min-width: 0; }
+  .dato strong { font-size: 21px; }
+  .dato span { font-size: 10.5px; letter-spacing: 0; line-height: 1.2; }
   /* Por debajo de 640 px tres tarjetas dan unos 100 px de ancho cada una: la
      foto deja de leerse. Se queda la pieza que manda. */
   .vitrina { grid-template-columns: 1fr; min-height: 0; }
   .vitrina-pieza:not(.vitrina-alta) { display: none; }
-  .vitrina-alta img { aspect-ratio: 4 / 3; flex: none; }
-  .vitrina-sello { left: auto; right: -6px; top: -10px; padding: 10px 14px; }
+  /* La foto por alto y no por proporción: a 4/3 medía 265 px en un celular y
+     por esos 50 px el hero no entraba. Con el alto atado a la pantalla, en el
+     aparato chico se recorta ella antes que empujar nada fuera. */
+  .vitrina-alta img { height: clamp(150px, 22svh, 215px); aspect-ratio: auto; flex: none; }
+  .vitrina-pieza figcaption { padding: 8px 13px 10px; }
+  .vitrina-pieza figcaption strong { font-size: 14px; }
+  .vitrina-pieza figcaption span { line-height: 1.3; margin-top: 2px; }
+  .vitrina-sello { left: auto; right: -6px; top: -10px; padding: 8px 13px; }
+  .vitrina-sello strong { font-size: 15px; }
+  .vitrina-sello span { font-size: 10.5px; }
 }
 
 /* Quien pidió menos movimiento, recibe menos movimiento. */
