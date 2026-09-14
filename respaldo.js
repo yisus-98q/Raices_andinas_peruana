@@ -1,3 +1,5 @@
+// RESPALDO_DIR se lee al importar: el .env tiene que estar cargado antes.
+import './entorno.js';
 import { DatabaseSync } from 'node:sqlite';
 import {
   mkdirSync, readdirSync, statSync, unlinkSync, renameSync, copyFileSync, existsSync,

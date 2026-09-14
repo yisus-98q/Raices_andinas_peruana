@@ -215,11 +215,34 @@ export const cookieBorrada = () =>
   `${COOKIE}=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0`;
 
 // ------------------------------------------------------- usuario inicial
-/** Crea el usuario del dueño la primera vez. Devuelve la clave si la genero. */
+/**
+ * Clave legible para dictarla o copiarla de la consola: sin 0/O ni 1/l/I, que
+ * al anotarla a mano se confunden.
+ */
+const LETRAS_CLAVE = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+export function claveAlAzar(largo = 12) {
+  const bytes = randomBytes(largo);
+  return [...bytes].map((b) => LETRAS_CLAVE[b % LETRAS_CLAVE.length]).join('');
+}
+
+/** El valor de `.env.example`: copiarlo sin editar no puede dejar esa clave. */
+const CLAVE_DE_EJEMPLO = 'cambia-esta-clave';
+
+/**
+ * Crea el usuario del dueño la primera vez (tabla de usuarios vacía).
+ *
+ * Antes, sin ADMIN_PASSWORD la clave era «raiz2026», la misma en todas las
+ * instalaciones y escrita en el README: cualquiera que lo hubiera leído entraba
+ * al panel de una tienda recién instalada. Ahora, si no hay una clave propia
+ * —falta, o es la de ejemplo—, se genera una al azar y se muestra UNA vez en la
+ * consola. Solo se guarda su hash. Si se pierde: `node clave.mjs`.
+ */
 export function asegurarUsuarioInicial() {
   if (Q.contar.get().c > 0) return null;
-  const clave = process.env.ADMIN_PASSWORD || 'raiz2026';
+  const propia = process.env.ADMIN_PASSWORD;
+  const generada = !propia || propia === CLAVE_DE_EJEMPLO;
+  const clave = generada ? claveAlAzar() : propia;
   const email = (process.env.ADMIN_EMAIL || TIENDA.email).trim().toLowerCase();
   crearUsuario('admin', email, 'Encargado de tienda', clave);
-  return { usuario: 'admin', email, clave, generada: !process.env.ADMIN_PASSWORD };
+  return { usuario: 'admin', email, clave, generada };
 }

@@ -1,3 +1,5 @@
+// Primero: el .env tiene que estar en process.env antes que otro módulo lo lea.
+import './entorno.js';
 import QR from 'qrcode';
 import { networkInterfaces } from 'node:os';
 import { gzipSync } from 'node:zlib';
@@ -620,9 +622,20 @@ const REPONEN_STOCK = new Set(['anulado', 'devuelto']);
 
 // ------------------------------------------------------------------- sesion
 const sesionDe_ = (req) => sesionDe(leerCookie(req, COOKIE));
-const ipDe = (req) =>
-  (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '')
-    .toString().split(',')[0].trim();
+/**
+ * La IP de quien pide, que es la llave de las cuotas.
+ *
+ * `X-Forwarded-For` la escribe el cliente: sin un proxy delante que la pise,
+ * cualquiera la rota en cada peticion y cada peticion estrena cuota — login,
+ * asesor y seguimiento quedaban sin limite. Solo se cree cuando `CONFIAR_PROXY=1`
+ * dice que hay un proxy propio (nginx, Caddy) que la reescribe.
+ */
+const ipDe = (req) => {
+  if (process.env.CONFIAR_PROXY === '1' && req.headers['x-forwarded-for']) {
+    return String(req.headers['x-forwarded-for']).split(',')[0].trim();
+  }
+  return req.socket.remoteAddress || '';
+};
 
 /**
  * Aplica una cuota. Devuelve true si la peticion ya fue respondida con 429.
@@ -1444,11 +1457,15 @@ async function api(req, res, url) {
 
   // Quienes compran y que compro cada uno. Con `?doc=`, el historial de ese.
   if (metodo === 'GET' && ruta === '/api/admin/clientes') {
-    if (!requierePuesto(req, res)) return;
+    const sesion = requierePuesto(req, res);
+    if (!sesion) return;
     const doc = url.searchParams.get('doc');
     if (doc) {
+      // Las lineas pasan por el mismo filtro que `/api/pedidos`. Salian crudas,
+      // con `costo_unit`: el mostrador veia el costo de todo lo que compro un
+      // cliente con solo abrir su historial.
       const pedidos = Q.historialDe.all(doc).map((p) => ({
-        ...p, items: Q.itemsDe.all(p.id),
+        ...p, items: itemsSegun(p.id, sesion),
       }));
       if (pedidos.length === 0) return json(res, 404, { error: 'Sin historial' });
       return json(res, 200, pedidos);
@@ -2029,7 +2046,10 @@ createServer(async (req, res) => {
     console.log('    correo:      ' + inicial.email);
     console.log('    contrasena:  ' + inicial.clave);
     if (inicial.generada) {
-      console.log('\n  ATENCION: esa es la contrasena por defecto. Cambiala:');
+      // Generada al azar: no hay otra copia en ningún lado, solo el hash.
+      console.log('\n  ATENCION: esta contrasena se genero al azar y NO se vuelve a mostrar.');
+      console.log('  Anotala ahora. Para poner una propia, define ADMIN_PASSWORD en .env');
+      console.log('  antes del primer arranque, o cambiala cuando quieras con:');
       console.log('    node clave.mjs ' + inicial.email + ' <nueva-clave>');
     }
   }

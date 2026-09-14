@@ -1,3 +1,6 @@
+// Antes de leer DB_PATH: los scripts de consola (db.js --reset, clave.mjs,
+// importar-fotos.mjs…) entran por aquí y también tienen que ver el .env.
+import './entorno.js';
 import { DatabaseSync } from 'node:sqlite';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';

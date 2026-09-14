@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import './entorno.js';
 import { readFileSync } from 'node:fs';
 import { leerCsv, aNumero } from './csv.js';
 import { respaldar } from './respaldo.js';
@@ -31,7 +32,9 @@ const archivo = args.find((a) => !a.startsWith('--'));
 
 const BASE = process.env.URL_TIENDA || 'http://localhost:4000';
 const CORREO = process.env.ADMIN_EMAIL || 'hola@raizandina.pe';
-const CLAVE = process.env.ADMIN_PASSWORD || 'raiz2026';
+// Sin clave por defecto: ya no existe una de fábrica que sirva en todas las
+// instalaciones. Se toma de .env (o del entorno) y, si falta, se pide.
+const CLAVE = process.env.ADMIN_PASSWORD;
 
 /** Columnas que tienen que venir en el CSV. El resto son opcionales. */
 const OBLIGATORIAS = ['nombre', 'categoria', 'presentacion', 'precio'];
@@ -67,6 +70,10 @@ async function pedir(ruta, opciones = {}) {
 }
 
 async function entrar() {
+  if (!CLAVE) {
+    salir('Falta la clave del panel. Ponla en .env como ADMIN_PASSWORD=… '
+      + '(la misma con la que entras al panel) y vuelve a intentar.');
+  }
   let r;
   try {
     r = await pedir('/api/login', {

@@ -150,3 +150,29 @@ describe('Abuso de endpoints públicos', () => {
     assert.ok(bloqueado, 'cualquiera puede llenar el panel de pedidos falsos');
   });
 });
+
+/**
+ * Va última a propósito: agota la cuota de login de 127.0.0.1, y la prueba de
+ * arriba que entra al panel dejaría de poder hacerlo.
+ */
+describe('La cuota no se esquiva con una cabecera', () => {
+  /**
+   * `X-Forwarded-For` la escribe quien pide. Si el servidor la usara como IP,
+   * rotarla en cada intento estrenaría cuota cada vez y el login quedaría sin
+   * límite. Se prueba con correos distintos para que lo que corte sea la cuota
+   * por IP y no el bloqueo por cuenta.
+   */
+  test('rotar X-Forwarded-For no evita el bloqueo del login', async () => {
+    let bloqueado = false;
+    for (let i = 0; i < 30; i++) {
+      const c = cliente(srv.base);
+      const r = await c.pedir('/api/login', {
+        metodo: 'POST',
+        headers: { 'X-Forwarded-For': `203.0.113.${i + 1}` },
+        cuerpo: { correo: `intruso${i}@ejemplo.com`, clave: 'no-es-la-clave' },
+      });
+      if (r.estado === 429) { bloqueado = true; break; }
+    }
+    assert.ok(bloqueado, 'con una IP inventada por intento, el login no se bloquea nunca');
+  });
+});

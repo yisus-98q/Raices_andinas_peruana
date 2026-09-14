@@ -14,7 +14,7 @@ import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { levantarServidor, cliente } from './ayuda.mjs';
+import { levantarServidor, cliente, CLIENTE_VALIDO } from './ayuda.mjs';
 
 const RAIZ = join(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -104,6 +104,42 @@ describe('El costo no sale para el mostrador', () => {
     for (const p of r.json.bajo_stock) {
       assert.ok(!('costo' in p), `${p.sku} llego con costo en bajo_stock`);
     }
+  });
+
+  /**
+   * El historial de un cliente trae las lineas de cada pedido, y las lineas
+   * guardan el costo congelado de la venta. Salian crudas por esta ruta aunque
+   * `/api/pedidos` ya las filtraba: el costo estaba a un `?doc=` de distancia.
+   */
+  test('el historial de un cliente no trae el costo de lo que compro', async () => {
+    // Uno con stock y por unidad: un agotado o uno a granel fallarian por otra razon.
+    const catalogo = (await dueno.pedir('/api/admin/productos')).json;
+    const vendible = catalogo.find((p) => p.activo && p.stock > 5 && (p.unidad || 'unidad') === 'unidad');
+    const venta = await mostrador.pedir('/api/pedidos', {
+      metodo: 'POST',
+      cuerpo: { cliente: CLIENTE_VALIDO, items: [{ id: vendible.id, cantidad: 1 }] },
+    });
+    assert.equal(venta.estado, 201, venta.json?.error);
+
+    const lista = await mostrador.pedir('/api/admin/clientes');
+    assert.equal(lista.estado, 200, 'el mostrador SI consulta clientes');
+    const historial = await mostrador.pedir(`/api/admin/clientes?doc=${CLIENTE_VALIDO.num_doc}`);
+    assert.equal(historial.estado, 200);
+    assert.ok(historial.json[0].items.length > 0, 'el historial llego sin lineas: la prueba no probaria nada');
+
+    // Ni la clave ni ninguna cifra de costo o ganancia, en ningun nivel.
+    for (const r of [lista, historial]) {
+      assert.doesNotMatch(r.texto, /"(costo\w*|ganancia\w*|margen\w*)"/,
+        'la respuesta al mostrador trae una cifra de costo');
+    }
+    // Lo que si necesita para atender sigue llegando.
+    assert.ok('precio_unit' in historial.json[0].items[0]);
+  });
+
+  test('al dueño el historial si le trae el costo', async () => {
+    const r = await dueno.pedir(`/api/admin/clientes?doc=${CLIENTE_VALIDO.num_doc}`);
+    assert.equal(r.estado, 200);
+    assert.ok('costo_unit' in r.json[0].items[0]);
   });
 
   test('la bitacora de fichas es del dueño: lleva el historial de precios', async () => {
