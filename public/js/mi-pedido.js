@@ -116,11 +116,8 @@
         const nombre = d.tipoComprobante === 'factura' ? 'factura' : 'boleta';
         return `
         <div class="p-acciones">
-          <a class="btn btn-primario" href="/api/seguimiento/comprobante/pdf?${llave}">
-            Descargar mi ${nombre} en PDF
-          </a>
-          <a class="btn btn-claro" href="/comprobante.html?${llave}">
-            Verla en pantalla
+          <a class="btn btn-primario" href="/comprobante.html?${llave}">
+            Ver mi ${nombre}
           </a>
         </div>`;
       })() : ''}

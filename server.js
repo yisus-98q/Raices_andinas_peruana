@@ -1,3 +1,4 @@
+import QR from 'qrcode';
 import { networkInterfaces } from 'node:os';
 import { gzipSync } from 'node:zlib';
 import { randomInt } from 'node:crypto';
@@ -704,6 +705,44 @@ async function api(req, res, url) {
   if (metodo === 'GET' && ruta === '/api/sesion') {
     const s = sesionDe_(req);
     return s ? json(res, 200, s) : json(res, 401, { error: 'Sin sesión.' });
+  }
+
+  /**
+   * El QR, dibujado en el servidor y servido como SVG.
+   *
+   * Codificar un QR bien —Reed-Solomon, enmascarado, patrones de alineación—
+   * es un modulo entero, y uno mal generado es peor que ninguno: se imprime,
+   * parece correcto y no escanea. Hasta ahora el hueco estaba tapado con un
+   * cuadrado que decia «pendiente de libreria», y asi se imprimia en cada
+   * comprobante. Se resuelve con `qrcode`, que es la primera y unica
+   * dependencia del proyecto.
+   *
+   * Va en el servidor y no en el navegador para que la tienda siga sin cargar
+   * una sola libreria de terceros, y para que el SVG se pueda imprimir tal cual
+   * sin depender de que un script haya corrido.
+   *
+   * Es publica a proposito: la usa la pagina del comprobante del comprador, que
+   * se abre con su codigo y su telefono y no tiene sesion. Lo unico que hace es
+   * dibujar el texto que se le pasa, acotado en largo.
+   */
+  if (metodo === 'GET' && ruta === '/api/qr') {
+    const dato = String(url.searchParams.get('d') || '');
+    if (!dato) return json(res, 400, { error: 'Falta que codificar.' });
+    if (dato.length > 512) return json(res, 400, { error: 'El contenido es demasiado largo.' });
+
+    try {
+      const svg = await QR.toString(dato, {
+        type: 'svg', margin: 1, errorCorrectionLevel: 'M',
+        color: { dark: '#1c2a22', light: '#ffffff' },
+      });
+      return enviar(res, 200, {
+        'Content-Type': 'image/svg+xml; charset=utf-8',
+        // El QR de un texto dado no cambia nunca: se puede guardar.
+        'Cache-Control': 'public, max-age=86400',
+      }, svg);
+    } catch (e) {
+      return json(res, 400, { error: 'No se pudo generar el QR: ' + e.message });
+    }
   }
 
   // Datos públicos de la tienda para el frontend (umbral de envío gratis,

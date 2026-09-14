@@ -136,35 +136,37 @@
     $('acciones').hidden = false;
     pintarQr(c.qr);
 
-    // El XML es del emisor y de SUNAT; al comprador le corresponde la
-    // representación impresa. Tampoco tiene por qué existir un enlace al panel
-    // en la pantalla de un cliente.
+    // Un enlace al panel no tiene por qué existir en la pantalla de un
+    // cliente: desde ahí se vuelve a su pedido.
     if (esComprador) {
-      $('btn-xml').remove();
-      $('btn-pdf').href = '/api/seguimiento/comprobante/pdf'
-        + `?codigo=${encodeURIComponent(codigo)}&tel=${encodeURIComponent(tel)}`;
       const volver = $('btn-volver');
       volver.href = '/mi-pedido.html?codigo=' + encodeURIComponent(codigo);
       volver.textContent = '← Volver a mi pedido';
-    } else {
-      $('btn-xml').href = `/api/comprobantes/${encodeURIComponent(c.id)}/xml`;
-      $('btn-pdf').href = `/api/comprobantes/${encodeURIComponent(c.id)}/pdf`;
     }
   }
 
   /**
-   * El código QR de la representación impresa no se dibuja aquí.
+   * El código QR de la representación impresa.
    *
-   * Codificar un QR bien (corrección Reed-Solomon, enmascarado, patrones de
-   * alineación) es un módulo entero, y uno mal generado es peor que ninguno:
-   * se imprime, parece correcto y no escanea. Se muestra el contenido exacto
-   * que SUNAT exige, y queda anotado en el README que para el QR gráfico hay
-   * que añadir una librería.
+   * Lo dibuja el servidor y llega como SVG: así la página del comprobante no
+   * carga ninguna librería y el código se imprime tal cual, sin depender de que
+   * un script haya corrido en el navegador de quien imprime.
+   *
+   * Hasta ahora aquí había un cuadrado que decía «pendiente de librería», y eso
+   * es lo que salía impreso en cada boleta. Un QR que no escanea en un
+   * comprobante no es un detalle estético: es el dato que permite verificarlo.
    */
   function pintarQr(contenido) {
-    $('qr').innerHTML =
-      `<span>QR</span><small>pendiente de librería</small>`;
-    $('qr').title = contenido;
+    const caja = $('qr');
+    caja.title = contenido;
+    caja.innerHTML = '';
+    const img = new Image();
+    img.alt = 'Código QR del comprobante';
+    img.src = '/api/qr?d=' + encodeURIComponent(contenido);
+    // Si el servidor no pudiera dibujarlo, se dice. Un hueco mudo en un
+    // comprobante impreso no se nota hasta que alguien intenta escanearlo.
+    img.onerror = () => { caja.textContent = 'QR no disponible'; };
+    caja.appendChild(img);
   }
 
   function fallar(mensaje) {

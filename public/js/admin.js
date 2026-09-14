@@ -303,12 +303,12 @@
    *
    * Antes era un chip con el numero y nada mas: habia que saber que se podia
    * hacer clic. Lo que el mostrador necesita de un pedido es **entregarle el
-   * papel al cliente**, asi que ahora dice que documento es, su numero, y
-   * separa las dos cosas que se hacen con el: verlo para imprimir, o bajar el
-   * PDF para mandarlo por WhatsApp.
+   * papel al cliente**, asi que dice que documento es y su numero, y lleva a
+   * verlo para imprimirlo.
    *
-   * El PDF pesa unos 4 KB porque no incrusta tipografias: en datos moviles,
-   * eso es la diferencia entre que llegue y que no.
+   * Una sola cosa, no dos. Tenia al lado un boton de PDF, y entre «ver» y
+   * «descargar» hay que pararse a elegir cada vez para acabar en el mismo
+   * papel. La pagina del comprobante ya imprime.
    */
   function comprobanteDe(p) {
     const tipo = p.tipo_comprobante === 'factura' ? 'Factura' : 'Boleta';
@@ -327,8 +327,6 @@
           <span class="cmp-tipo">${tipo}</span>
           <span class="cmp-numero">${escapar(cmp.numero)}</span>
         </a>
-        <a class="cmp-pdf" href="/api/comprobantes/${cmp.id}/pdf" download
-           title="Descargar el PDF para mandarlo por WhatsApp">PDF</a>
       </span>`;
   }
 
@@ -1133,6 +1131,60 @@
     return cargar();
   }
 
+  // --------------------------------------------------------- QR de la tienda
+  /**
+   * La hoja para el stand de la feria.
+   *
+   * En una feria nadie teclea una dirección web mirando un cartel: o hay algo
+   * que apuntar con la cámara, o la visita se pierde ahí mismo. Es el puente
+   * entre el puesto físico —donde está la conversación que vende— y el catálogo
+   * que sigue abierto cuando la feria cierra.
+   *
+   * Sale a página completa y en blanco y negro a propósito: se imprime en
+   * cualquier impresora y se pega en el stand.
+   */
+  function imprimirQr() {
+    const url = location.origin;
+    const v = window.open('', '_blank');
+    if (!v) return avisar('El navegador bloqueó la ventana de impresión');
+
+    v.document.write(`<!DOCTYPE html><html lang="es"><head><meta charset="utf-8">
+      <title>QR de la tienda — Raíz Andina</title>
+      <style>
+        @page { size: A4; margin: 18mm; }
+        body {
+          font: 16px/1.5 "Segoe UI", system-ui, sans-serif; color: #1c2a22;
+          margin: 0; text-align: center;
+          display: flex; flex-direction: column; align-items: center; justify-content: center;
+          min-height: 90vh;
+        }
+        img.marca { width: 120px; height: auto; margin-bottom: 10px; }
+        h1 { font-size: 34px; margin: 0 0 6px; letter-spacing: -.02em; }
+        .bajada { font-size: 17px; color: #5f6f64; margin: 0 0 30px; }
+        .qr { width: 320px; height: 320px; }
+        .qr img { width: 100%; height: 100%; }
+        .url {
+          margin-top: 24px; font-family: ui-monospace, Consolas, monospace;
+          font-size: 18px; color: #2a6b46; word-break: break-all;
+        }
+        .pie { margin-top: 28px; font-size: 14px; color: #5f6f64; }
+        @media print { .noprint { display: none } }
+      </style></head><body>
+      <img class="marca" src="${url}/img/marca/logotipo.png" alt="Raíz Andina">
+      <h1>Mira todo el catálogo</h1>
+      <p class="bajada">Apunta con la cámara de tu celular</p>
+      <div class="qr"><img src="${url}/api/qr?d=${encodeURIComponent(url)}" alt="Código QR de la tienda"></div>
+      <div class="url">${url.replace(/^https?:\/\//, '')}</div>
+      <p class="pie">Pide por aquí a cualquier hora y recógelo en el puesto.</p>
+      </body></html>`);
+    v.document.close();
+    v.focus();
+    // Se espera a que el QR y la marca hayan bajado: imprimir antes deja la
+    // hoja con los huecos en blanco, que es el único fallo que no se ve en
+    // pantalla y sí en el papel.
+    setTimeout(() => v.print(), 900);
+  }
+
   // ------------------------------------------------------------ ruta del día
   /**
    * Hoja para el repartidor: los pedidos que hay que salir a entregar.
@@ -1386,6 +1438,7 @@
   $('mes-despues').onclick = () => moverMes(1);
 
   $('btn-refrescar').onclick = cargar;
+  $('btn-qr').onclick = imprimirQr;
   $('btn-ruta').onclick = imprimirRuta;
   $('btn-salir').onclick = async () => {
     await fetch('/api/logout', { method: 'POST' });
