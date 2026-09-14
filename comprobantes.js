@@ -161,7 +161,12 @@ export function emitirPorPedido(pedido, items) {
     codigo: i.sku || String(i.producto_id),
     descripcion: i.nombre,
     cantidad: i.cantidad,
+    // Ya viene por unidad base: para el granel es el precio de UN gramo, no el
+    // de los cien que se cotizan en el mostrador. La conversion se hizo al
+    // vender, para que una boleta emitida no dependa de como este configurado
+    // el producto hoy.
     precioUnitario: i.precio_unit,
+    unidad: i.unidad === 'gramo' ? UNIDAD.GRAMO : UNIDAD.UNIDAD,
   }));
 
   // El envío es una operación gravada más: va como línea, no como descuento.

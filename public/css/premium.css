@@ -522,6 +522,24 @@ img { max-width: 100%; display: block; }
 }
 .contador button:hover { border-color: var(--ocre); color: var(--ocre); }
 .contador span { min-width: 24px; text-align: center; font-weight: 700; font-size: 14px; }
+
+/* La cantidad escrita a mano, para lo que se vende por peso. El campo y su
+   unidad van juntos en una sola pastilla: «250» sin la g al lado se lee como
+   doscientos cincuenta bolsas. */
+.cant-libre {
+  display: inline-flex; align-items: center; gap: 3px;
+  border: 1px solid var(--borde); border-radius: 9px; padding: 0 8px 0 4px;
+  background: rgba(251, 249, 243, .5);
+}
+.cant-libre input {
+  width: 52px; padding: 5px 2px; font: inherit; font-size: 14px; font-weight: 700;
+  color: var(--tinta); text-align: right; background: none; border: none;
+}
+.cant-libre input:focus { outline: none; }
+.cant-libre input::-webkit-outer-spin-button,
+.cant-libre input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.cant-libre input[type=number] { -moz-appearance: textfield; appearance: textfield; }
+.cant-libre i { font-style: normal; font-size: 12px; color: var(--tinta-suave); }
 .linea-total { font-weight: 800; white-space: nowrap; font-size: 15px; }
 .quitar { font-size: 12px; color: var(--tinta-suave); text-decoration: underline; padding: 0; margin-top: 7px; }
 .quitar:hover { color: var(--terra); }

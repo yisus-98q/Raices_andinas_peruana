@@ -15,6 +15,22 @@
   const escapar = (t) => String(t).replace(/[&<>"']/g,
     (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
+  /**
+   * Venta a granel, igual que en la tienda.
+   *
+   * El precio de ficha es por 100 g y el stock cuenta gramos. Las fórmulas
+   * viven aquí y no repartidas por cada plantilla: un precio calculado de dos
+   * maneras distintas en dos pantallas es cómo se termina cobrando mal.
+   */
+  const BASE_GRANEL = 100;
+  const esGranel = (p) => p?.unidad === 'gramo';
+  const importe = (p, cant) => (esGranel(p) ? p.precio * cant / BASE_GRANEL : p.precio * cant);
+  const costoDe = (p, cant) => (esGranel(p) ? (p.costo || 0) * cant / BASE_GRANEL : (p.costo || 0) * cant);
+  const enPeso = (g) => (g >= 1000 && g % 1000 === 0 ? `${g / 1000} kg` : `${g} g`);
+  /** Cuánto hay, dicho en su unidad. */
+  const existencia = (p) => (esGranel(p) ? enPeso(p.stock) : String(p.stock));
+  /** Y cómo se dice su precio. */
+  const precioPor = (p) => (esGranel(p) ? `${soles(p.precio)} / ${enPeso(BASE_GRANEL)}` : soles(p.precio));
   const SIGUIENTE = {
     pendiente: 'preparando',
     preparando: 'enviado',
@@ -432,13 +448,16 @@
         </div>
         <div class="info">
           <strong>${escapar(p.nombre)}</strong>
-          <span>${p.stock} en stock · mínimo ${p.stock_min}</span>
+          <span>${existencia(p)} en stock · mínimo ${
+            esGranel(p) ? enPeso(p.stock_min) : p.stock_min}</span>
           <div class="barra"><i class="${clase}" style="width:${Math.round(ratio * 100)}%"></i></div>
         </div>
         <div class="reponer">
-          <input type="number" value="${p.sugerido}" min="1" max="9999"
-                 data-cantidad="${p.id}" aria-label="Cantidad a ingresar">
-          <button class="mini" data-reponer="${p.id}">Ingresar</button>
+          <input type="number" value="${p.sugerido}" min="1" max="99999"
+                 step="${esGranel(p) ? 50 : 1}"
+                 data-cantidad="${p.id}" aria-label="${
+                   esGranel(p) ? 'Gramos a ingresar' : 'Cantidad a ingresar'}">
+          <button class="mini" data-reponer="${p.id}">Ingresar${esGranel(p) ? ' g' : ''}</button>
         </div>
       </div>`;
     }).join(''));
@@ -521,22 +540,27 @@
         </div>
         <div class="prod-info">
           <strong>${escapar(p.nombre)}</strong>
-          <span>${escapar(p.sku)} · ${escapar(p.categoria)}${margen === null ? ''
-            : ` · costo ${soles(p.costo)} · margen ${margen}%`}</span>
+          <span>${escapar(p.sku)} · ${escapar(p.categoria)}${
+            // Lo que se vende por peso se marca: sin esto, «9.40» y «30» se
+            // leen como nueve soles la bolsa y treinta bolsas, cuando son
+            // nueve soles los cien gramos y treinta gramos en el estante.
+            esGranel(p) ? ' · <b class="etq-granel">a granel</b>' : ''}${
+            margen === null ? '' : ` · costo ${soles(p.costo)} · margen ${margen}%`}</span>
         </div>
         <div class="prod-campo">
           <span class="prefijo">S/</span>
           <input type="number" step="0.10" min="0.1" max="99999"
                  value="${p.precio.toFixed(2)}"
                  ${esDueno ? `data-campo="precio" data-id="${p.id}"` : 'readonly'}
-                 aria-label="Precio de ${escapar(p.nombre)}">
+                 aria-label="Precio de ${escapar(p.nombre)}${esGranel(p) ? ', por 100 gramos' : ''}">
+          ${esGranel(p) ? '<span class="sufijo">/100 g</span>' : ''}
         </div>
         <div class="prod-campo">
           <input type="number" step="1" min="0" max="9999"
                  value="${p.stock_min}" data-campo="stock_min" data-id="${p.id}"
                  aria-label="Stock mínimo de ${escapar(p.nombre)}">
         </div>
-        <div class="prod-stock ${p.stock <= p.stock_min ? 'bajo' : ''}">${p.stock}</div>
+        <div class="prod-stock ${p.stock <= p.stock_min ? 'bajo' : ''}">${existencia(p)}</div>
         <div class="prod-acciones">
           <button class="mini guardar" data-guardar="${p.id}" disabled>Guardar</button>
           ${esDueno ? `<button class="mini" data-editar="${p.id}">Editar</button>` : ''}
@@ -630,7 +654,7 @@
 
     const lineas = [...carrito].map(([id, cant]) => {
       const p = ultimosProductos.find((x) => x.id === id);
-      return p && { p, cant, subtotal: +(p.precio * cant).toFixed(2) };
+      return p && { p, cant, subtotal: +(importe(p, cant)).toFixed(2) };
     }).filter(Boolean);
 
     const total = +lineas.reduce((t, l) => t + l.subtotal, 0).toFixed(2);
@@ -638,7 +662,7 @@
     // el. El mostrador cobra igual: simplemente no ve cuanto se gano.
     const conCosto = esDueno && lineas.every((l) => Number.isFinite(l.p.costo));
     const ganancia = conCosto
-      ? +lineas.reduce((g, l) => g + (l.p.precio - l.p.costo) * l.cant, 0).toFixed(2)
+      ? +lineas.reduce((g, l) => g + importe(l.p, l.cant) - costoDe(l.p, l.cant), 0).toFixed(2)
       : null;
 
     pintar('mos-carrito', `

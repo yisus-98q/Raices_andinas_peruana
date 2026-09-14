@@ -270,6 +270,14 @@ img { max-width: 100%; display: block; }
 .mini-entregar:hover { background: var(--ocre-vivo); border-color: var(--ocre-vivo); color: var(--papel); }
 .mini:disabled { opacity: .4; }
 
+/* Lo que se vende por peso, marcado en la fila del catálogo: el precio y el
+   stock de esa fila se leen en otra unidad que los de al lado. */
+.etq-granel {
+  font-weight: 700; color: #8a5c0f; background: rgba(217, 154, 43, .16);
+  border-radius: 5px; padding: 1px 6px; font-size: 11px;
+}
+.prod-campo .sufijo { font-size: 11px; color: var(--tinta-suave); white-space: nowrap; }
+
 /* ------------------------------------------------------------------ stock */
 .fila-stock {
   display: flex; align-items: center; gap: 13px;

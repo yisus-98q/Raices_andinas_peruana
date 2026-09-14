@@ -188,6 +188,34 @@ if (!columnas.includes('demo')) {
   db.exec("UPDATE productos SET demo = 1 WHERE imagen LIKE '/img/gen/%'");
   console.log('[db] columna `demo` agregada a productos');
 }
+/**
+ * Venta a granel.
+ *
+ * Lo que mas vende una tienda naturista son hierbas sueltas por peso, y eso no
+ * entra en una ficha con una sola presentacion y stock en unidades enteras. Se
+ * pide «100 g», «un cuarto» o «para el mes», no «una bolsa».
+ *
+ *  - `unidad`: 'unidad' (lo de siempre) o 'gramo'.
+ *  - Para 'gramo': `precio` es POR 100 g —que es como se cotiza en el puesto—,
+ *    y `stock` y `stock_min` cuentan gramos.
+ *  - `presentaciones`: los pesos que se ofrecen de un toque, en gramos y
+ *    separados por comas ("100,250,500"). Vacio => se usan los de por defecto.
+ *    Ademas siempre se puede escribir una cantidad libre: el cliente que pide
+ *    170 g existe y hoy no tenia como pedirlo.
+ *
+ * Lo que ya estaba sigue en 'unidad', que es lo unico que el sistema sabia
+ * hacer cuando se cargo.
+ */
+const colProd = db.prepare('PRAGMA table_info(productos)').all().map((c) => c.name);
+for (const [nombre, tipo] of [
+  ['unidad', "TEXT NOT NULL DEFAULT 'unidad'"],
+  ['presentaciones', "TEXT NOT NULL DEFAULT ''"],
+]) {
+  if (colProd.includes(nombre)) continue;
+  db.exec(`ALTER TABLE productos ADD COLUMN ${nombre} ${tipo}`);
+  console.log(`[db] columna \`${nombre}\` agregada a productos`);
+}
+
 if (!columnas.includes('beneficios')) {
   db.exec("ALTER TABLE productos ADD COLUMN beneficios TEXT NOT NULL DEFAULT ''");
   // Relleno de arranque: la primera frase de la descripcion es lo mas parecido
@@ -236,6 +264,11 @@ for (const [nombre, tipo] of NUEVAS_PEDIDO) {
 // recalcular la ganancia del mes pasado con el costo de esta semana da una
 // cifra que no ocurrio nunca. Por eso el costo viaja con la linea del pedido.
 const colItems = db.prepare('PRAGMA table_info(pedido_items)').all().map((c) => c.name);
+if (!colItems.includes('unidad')) {
+  db.exec("ALTER TABLE pedido_items ADD COLUMN unidad TEXT NOT NULL DEFAULT 'unidad'");
+  console.log('[db] columna \`unidad\` agregada a pedido_items');
+}
+
 if (!colItems.includes('costo_unit')) {
   db.exec('ALTER TABLE pedido_items ADD COLUMN costo_unit REAL NOT NULL DEFAULT 0');
   console.log('[db] columna `costo_unit` agregada a pedido_items');

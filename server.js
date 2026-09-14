@@ -169,7 +169,24 @@ const codigoPedido = () => {
 // abriera /api/productos. Con 400 productos era la lista de costos completa.
 const CAMPOS_PUBLICOS = `id, sku, nombre, categoria, origen, presentacion,
   descripcion, uso_tradicional, beneficios, etiquetas, precio, stock,
-  stock_min, emoji, imagen`;
+  stock_min, emoji, imagen, unidad, presentaciones`;
+
+/**
+ * Granel: se cotiza por 100 g y se vende por gramo.
+ *
+ * Los 100 g son la unidad del mostrador —«la muña esta a nueve soles los cien
+ * gramos»— y es el numero que la dueña mantiene. El sistema, en cambio, cuenta
+ * de a un gramo: en el stock, en el carrito y en la linea del pedido.
+ *
+ * La conversion ocurre UNA sola vez, al vender: en `pedido_items.precio_unit`
+ * se guarda ya el precio por gramo. Asi el comprobante, el kardex y los totales
+ * siguen haciendo `precio x cantidad` sin saber nada de granel, y una boleta
+ * vieja no cambia de importe si mañana el producto deja de venderse por peso.
+ */
+const BASE_GRANEL = 100;
+const esGranel = (p) => p.unidad === 'gramo';
+const precioPorUnidadBase = (p) => (esGranel(p) ? p.precio / BASE_GRANEL : p.precio);
+const costoPorUnidadBase = (p) => (esGranel(p) ? (p.costo || 0) / BASE_GRANEL : (p.costo || 0));
 
 const Q = {
   productos: db.prepare(
@@ -198,8 +215,8 @@ const Q = {
      modo_entrega)
     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`),
   insItem: db.prepare(`INSERT INTO pedido_items
-    (pedido_id,producto_id,nombre,cantidad,precio_unit,subtotal,costo_unit)
-    VALUES (?,?,?,?,?,?,?)`),
+    (pedido_id,producto_id,nombre,cantidad,precio_unit,subtotal,costo_unit,unidad)
+    VALUES (?,?,?,?,?,?,?,?)`),
   insMov: db.prepare(`INSERT INTO movimientos_stock
     (producto_id,tipo,cantidad,stock_final,motivo) VALUES (?,?,?,?,?)`),
   pedidos: db.prepare('SELECT * FROM pedidos ORDER BY id DESC LIMIT 100'),
@@ -497,6 +514,28 @@ const EDITABLES = {
     // producto: es la palanca para que aparezca en «me duele el estomago».
     validar: (v) => sinTildes(texto(v, 400)).toLowerCase()
       .split(',').map((t) => t.trim()).filter(Boolean).join(','),
+  },
+  /**
+   * Pasar un producto a granel cambia como se lee TODO lo suyo: el precio pasa
+   * a ser por 100 g y el stock a contar gramos. Es del dueño por eso, no por
+   * desconfianza: quien lo cambie tiene que entender que «30» deja de querer
+   * decir treinta bolsas.
+   */
+  unidad: {
+    etiqueta: 'unidad de venta',
+    soloDueno: true,
+    validar: (v) => (v === 'gramo' || v === 'unidad' ? v : null),
+  },
+  presentaciones: {
+    etiqueta: 'presentaciones',
+    soloDueno: true,
+    // "100,250,500" — gramos, en orden y sin repetidos. Vacio es valido: el
+    // producto usa entonces las presentaciones por defecto.
+    validar: (v) => {
+      const g = String(v ?? '').split(',').map((x) => Number(String(x).trim()))
+        .filter((n) => Number.isInteger(n) && n > 0 && n <= 10000);
+      return [...new Set(g)].sort((a, b) => a - b).join(',');
+    },
   },
   imagen: {
     etiqueta: 'imagen',
@@ -1339,7 +1378,7 @@ function crearPedido(res, body) {
       faltantes.push({ id: p.id, nombre: p.nombre, pedido: cant, disponible: p.stock });
       continue;
     }
-    lineas.push({ p, cant, subtotal: +(p.precio * cant).toFixed(2) });
+    lineas.push({ p, cant, subtotal: +(precioPorUnidadBase(p) * cant).toFixed(2) });
   }
 
   if (faltantes.length) {
@@ -1399,7 +1438,8 @@ function crearPedido(res, body) {
     }
 
     for (const l of lineas) {
-      Q.insItem.run(pedidoId, l.p.id, l.p.nombre, l.cant, l.p.precio, l.subtotal, l.p.costo);
+      Q.insItem.run(pedidoId, l.p.id, l.p.nombre, l.cant,
+        precioPorUnidadBase(l.p), l.subtotal, costoPorUnidadBase(l.p), l.p.unidad);
       Q.descontar.run(l.cant, l.p.id);
       const fresco = Q.paraActualizar.get(l.p.id);
       if (fresco.stock < 0) throw new Error('Stock negativo en ' + l.p.nombre);
@@ -1506,7 +1546,7 @@ function venderEnMostrador(res, body, sesion) {
       faltantes.push({ id: p.id, nombre: p.nombre, pedido: cant, disponible: p.stock });
       continue;
     }
-    lineas.push({ p, cant, subtotal: +(p.precio * cant).toFixed(2) });
+    lineas.push({ p, cant, subtotal: +(precioPorUnidadBase(p) * cant).toFixed(2) });
   }
   // Se avisa ANTES de cobrar: en el mostrador el cliente esta delante y hay
   // que poder decirle «de ese me queda uno» sin haber emitido nada.
@@ -1515,7 +1555,7 @@ function venderEnMostrador(res, body, sesion) {
   }
 
   const total = +lineas.reduce((s, l) => s + l.subtotal, 0).toFixed(2);
-  const costo = +lineas.reduce((s, l) => s + l.p.costo * l.cant, 0).toFixed(2);
+  const costo = +lineas.reduce((s, l) => s + costoPorUnidadBase(l.p) * l.cant, 0).toFixed(2);
 
   db.exec('BEGIN IMMEDIATE');
   try {
@@ -1537,7 +1577,8 @@ function venderEnMostrador(res, body, sesion) {
     }
 
     for (const l of lineas) {
-      Q.insItem.run(pedidoId, l.p.id, l.p.nombre, l.cant, l.p.precio, l.subtotal, l.p.costo);
+      Q.insItem.run(pedidoId, l.p.id, l.p.nombre, l.cant,
+        precioPorUnidadBase(l.p), l.subtotal, costoPorUnidadBase(l.p), l.p.unidad);
       Q.descontar.run(l.cant, l.p.id);
       const fresco = Q.paraActualizar.get(l.p.id);
       if (fresco.stock < 0) throw new Error('Stock negativo en ' + l.p.nombre);

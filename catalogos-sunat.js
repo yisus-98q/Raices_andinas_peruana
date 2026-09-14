@@ -51,6 +51,7 @@ export const TRIBUTO = {
 /** Catálogo 03 — Unidad de medida (subconjunto que usa la tienda) */
 export const UNIDAD = {
   UNIDAD: 'NIU',
+  GRAMO: 'GRM',
   KILOGRAMO: 'KGM',
   LITRO: 'LTR',
   SERVICIO: 'ZZ',

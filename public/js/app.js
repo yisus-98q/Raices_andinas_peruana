@@ -153,7 +153,8 @@
       const nota = agotado
         ? '<span class="stock-nota stock-cero">Agotado</span>'
         : bajo
-          ? `<span class="stock-nota stock-bajo">Últimas ${p.stock}</span>`
+          // «Últimas 3» no se puede decir de algo que se pesa: quedan 300 g.
+          ? `<span class="stock-nota stock-bajo">${esGranel(p) ? 'Quedan ' + enPeso(p.stock) : 'Últimas ' + p.stock}</span>`
           : '<span class="stock-nota stock-ok">Disponible</span>';
       return `
       <article class="tarjeta${resaltar.includes(p.id) ? ' resaltada' : ''}" data-id="${p.id}">
@@ -169,7 +170,8 @@
           <p class="tarjeta-desc">${escapar(p.descripcion)}</p>
           <p class="tarjeta-tradicion">${escapar(p.uso_tradicional)}</p>
           <div class="tarjeta-pie">
-            <div class="precio">${soles(p.precio)}<small>${escapar(p.presentacion)}</small></div>
+            <div class="precio">${soles(p.precio)}<small>${
+              esGranel(p) ? 'por ' + enPeso(BASE_GRANEL) : escapar(p.presentacion)}</small></div>
             ${nota}
           </div>
           <button class="btn btn-primario btn-bloque agregar" data-id="${p.id}" ${agotado ? 'disabled' : ''}>
@@ -190,15 +192,76 @@
     }
   }
 
+  // ---------------------------------------------------------------- granel
+  /**
+   * Lo que se vende por peso.
+   *
+   * En el mostrador se cotiza por 100 g —«la muña está a nueve soles los cien
+   * gramos»— pero se despacha por gramo: la clienta pide 100, un cuarto, o
+   * «para el mes». El sistema cuenta gramos en todos lados; los 100 g son solo
+   * la forma de decir el precio.
+   */
+  const BASE_GRANEL = 100;
+  const esGranel = (p) => p?.unidad === 'gramo';
+
+  /** Los pesos que se ofrecen de un toque. Los fija la ficha del producto. */
+  const PESOS_POR_DEFECTO = [50, 100, 250, 500, 1000];
+  const pesosDe = (p) => {
+    const suyos = String(p.presentaciones || '').split(',')
+      .map((n) => Number(n.trim())).filter((n) => Number.isInteger(n) && n > 0);
+    return (suyos.length ? suyos : PESOS_POR_DEFECTO).filter((g) => g <= p.stock);
+  };
+
+  /** El peso con el que entra al carrito: el primero que quepa en el stock. */
+  const pesoInicial = (p) => pesosDe(p)[0] || Math.min(BASE_GRANEL, p.stock);
+
+  /** «1 kg», «250 g» — el kilo se dice kilo, no «1000 g». */
+  const enPeso = (g) => (g >= 1000 && g % 1000 === 0 ? `${g / 1000} kg` : `${g} g`);
+
+  /** Lo que cuesta esa cantidad. Es la única fórmula del precio en la tienda. */
+  const importe = (p, cant) => (esGranel(p) ? p.precio * cant / BASE_GRANEL : p.precio * cant);
+
+  /** Cómo se dice el precio en la ficha y en el carrito. */
+  const precioPor = (p) => (esGranel(p)
+    ? `${soles(p.precio)} por ${enPeso(BASE_GRANEL)}`
+    : `${soles(p.precio)} c/u`);
+
+  /** Y cuánto queda, en su unidad. */
+  const existencia = (p) => (esGranel(p) ? enPeso(p.stock) : `${p.stock}`);
+
   // -------------------------------------------------------------------- carrito
   function agregar(id, boton) {
     const p = catalogo.find((x) => x.id === id);
-    if (!p || p.stock <= 0) return;
+    if (!p) return;
+
+    /**
+     * Agotado entre medias.
+     *
+     * La grilla se repinta cada vez que el catálogo se refresca, así que ahí el
+     * botón ya sale deshabilitado y este caso no llega. Las fichas del asesor,
+     * en cambio, se pintan una sola vez con la respuesta y nadie las vuelve a
+     * tocar: su «Agregar» puede seguir ofreciendo algo que se acabó mientras el
+     * cliente leía. El clic no hacía nada y sin explicación — la lectura obvia
+     * desde el otro lado es que la página está trabada, y se vuelve a pulsar.
+     *
+     * Se avisa y además se corrige el botón, que es lo que la ficha vieja no
+     * puede hacer sola.
+     */
+    if (p.stock <= 0) {
+      if (boton) { boton.disabled = true; boton.textContent = 'Sin stock'; }
+      return avisar(`${p.nombre} se acabó. Lo reponemos pronto.`);
+    }
+    // Lo que se pesa entra con su primera presentación, no con «1»: nadie
+    // compra un gramo de muña, y obligar a subir de a uno hasta 100 sería
+    // ridículo. Lo que se cuenta por unidades sigue entrando de a uno.
+    const paso = esGranel(p) ? pesoInicial(p) : 1;
     const linea = carrito.find((l) => l.id === id);
     const actual = linea ? linea.cantidad : 0;
-    if (actual + 1 > p.stock) return avisar(`Solo quedan ${p.stock} de ${p.nombre}`);
-    if (linea) linea.cantidad++;
-    else carrito.push({ id, cantidad: 1 });
+    if (actual + paso > p.stock) {
+      return avisar(`Solo quedan ${existencia(p)} de ${p.nombre}`);
+    }
+    if (linea) linea.cantidad += paso;
+    else carrito.push({ id, cantidad: paso });
     guardarCarrito();
     refrescarCuenta(true);
     if (boton) volarAlCarrito(boton);
@@ -219,18 +282,28 @@
    */
   const ATAJOS = [1, 2, 3, 4, 5, 10];
 
-  /** Los atajos que caben en el stock, mas la cantidad actual si no esta. */
+  /**
+   * Los atajos que caben en el stock, mas la cantidad actual si no esta.
+   *
+   * Para lo que se pesa no son cantidades sino presentaciones —100 g, un
+   * cuarto, medio kilo— y salen de la ficha del producto. Es lo mismo que hace
+   * la dueña cuando dice «¿cien o un cuarto?»: ofrecer los pesos de siempre,
+   * sin cerrar la puerta a que le pidan 170.
+   */
   function atajosDe(l) {
-    const nums = ATAJOS.filter((n) => n <= l.prod.stock);
-    if (!nums.includes(l.cantidad)) nums.push(l.cantidad);
-    return nums.sort((a, b) => a - b);
+    const nums = esGranel(l.prod)
+      ? pesosDe(l.prod)
+      : ATAJOS.filter((n) => n <= l.prod.stock);
+    if (!nums.includes(l.cantidad) && l.cantidad <= l.prod.stock) nums.push(l.cantidad);
+    return [...new Set(nums)].sort((a, b) => a - b);
   }
 
   function fijar(id, n) {
     const linea = carrito.find((l) => l.id === id);
     if (!linea || linea.cantidad === n) return;
     const p = catalogo.find((x) => x.id === id);
-    if (p && n > p.stock) return avisar(`Solo quedan ${p.stock} unidades`);
+    if (!Number.isInteger(n) || n < 1) return;
+    if (p && n > p.stock) return avisar(`Solo quedan ${existencia(p)}`);
     linea.cantidad = n;
     guardarCarrito();
     refrescarCuenta();
@@ -241,9 +314,12 @@
     const linea = carrito.find((l) => l.id === id);
     if (!linea) return;
     const p = catalogo.find((x) => x.id === id);
-    const nueva = linea.cantidad + delta;
+    // El − y el + mueven de a 50 g en lo que se pesa: de a un gramo harían
+    // falta cincuenta toques para subir de 100 a 150.
+    const paso = esGranel(p) ? 50 : 1;
+    const nueva = linea.cantidad + delta * paso;
     if (nueva < 1) return quitar(id);
-    if (p && nueva > p.stock) return avisar(`Solo quedan ${p.stock} unidades`);
+    if (p && nueva > p.stock) return avisar(`Solo quedan ${existencia(p)}`);
     linea.cantidad = nueva;
     guardarCarrito();
     refrescarCuenta();
@@ -273,7 +349,7 @@
     .map((l) => ({ ...l, prod: catalogo.find((p) => p.id === l.id) }))
     .filter((l) => l.prod);
 
-  const total = () => lineasDetalladas().reduce((s, l) => s + l.prod.precio * l.cantidad, 0);
+  const total = () => lineasDetalladas().reduce((s, l) => s + importe(l.prod, l.cantidad), 0);
 
   function refrescarCuenta(latir = false) {
     const globo = $('cuenta-carrito');
@@ -447,21 +523,32 @@
           </div>
           <div class="linea-info">
             <strong>${escapar(l.prod.nombre)}</strong>
-            <span>${escapar(l.prod.presentacion)} · ${soles(l.prod.precio)} c/u</span>
+            <span>${esGranel(l.prod)
+              ? precioPor(l.prod)
+              : escapar(l.prod.presentacion) + ' · ' + precioPor(l.prod)}</span>
             <div class="atajos" role="group" aria-label="Cantidad de ${escapar(l.prod.nombre)}">
               ${atajosDe(l).map((n) => `<button class="atajo${n === l.cantidad ? ' activo' : ''}"
                  data-fijar="${l.id}" data-n="${n}"
-                 aria-pressed="${n === l.cantidad}">${n}</button>`).join('')}
+                 aria-pressed="${n === l.cantidad}">${esGranel(l.prod) ? enPeso(n) : n}</button>`).join('')}
             </div>
             <div class="contador">
-              <button data-menos="${l.id}" aria-label="Quitar uno">−</button>
-              <span data-cant="${l.id}">${l.cantidad}</span>
-              <button data-mas="${l.id}" aria-label="Agregar uno" ${tope ? 'disabled' : ''}>+</button>
+              <button data-menos="${l.id}" aria-label="Quitar">−</button>
+              ${esGranel(l.prod)
+                // Cantidad libre: el que pide 170 g existe, y con solo botones
+                // no tenía forma de pedirlo. El campo es la puerta de atrás de
+                // las presentaciones, no su reemplazo.
+                ? `<span class="cant-libre">
+                     <input type="number" data-gramos="${l.id}" value="${l.cantidad}"
+                            min="1" max="${l.prod.stock}" step="10"
+                            aria-label="Gramos de ${escapar(l.prod.nombre)}"><i>g</i>
+                   </span>`
+                : `<span data-cant="${l.id}">${l.cantidad}</span>`}
+              <button data-mas="${l.id}" aria-label="Agregar" ${tope ? 'disabled' : ''}>+</button>
               ${tope ? '<em class="tope">máximo en stock</em>' : ''}
             </div>
           </div>
           <div class="linea-derecha">
-            <div class="linea-total">${soles(l.prod.precio * l.cantidad)}</div>
+            <div class="linea-total">${soles(importe(l.prod, l.cantidad))}</div>
             <button class="quitar" data-quitar="${l.id}" aria-label="Eliminar">Eliminar</button>
           </div>
         </div>`;
@@ -901,9 +988,27 @@
     const atajo = e.target.closest('[data-fijar]');
     if (atajo) return fijar(Number(atajo.dataset.fijar), Number(atajo.dataset.n));
 
+    // El campo de gramos no dispara «click»; se atiende por separado más abajo.
+
     if (e.target.dataset.mas) return cambiar(Number(e.target.dataset.mas), 1);
     if (e.target.dataset.menos) return cambiar(Number(e.target.dataset.menos), -1);
     if (e.target.dataset.quitar) return quitar(Number(e.target.dataset.quitar));
+  });
+
+  /**
+   * La cantidad escrita a mano, en gramos.
+   *
+   * Se aplica al salir del campo y con Enter, no en cada tecla: repintando a
+   * cada pulsación, escribir «250» reordenaría la lista tres veces y el campo
+   * perdería el foco a mitad del número.
+   */
+  document.addEventListener('change', (e) => {
+    const campo = e.target.closest('[data-gramos]');
+    if (!campo) return;
+    fijar(Number(campo.dataset.gramos), Math.round(Number(campo.value)));
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && e.target.closest('[data-gramos]')) e.target.blur();
   });
 
   $('btn-carrito').onclick = abrirPanel;
