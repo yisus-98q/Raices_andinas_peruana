@@ -1089,3 +1089,98 @@ img { max-width: 100%; display: block; }
   display: flex; flex-wrap: wrap; gap: 10px;
   justify-content: center; margin-top: 16px;
 }
+
+
+/* ============================================================== CENTRADO
+   Cada parte de la página centrada, en cualquier pantalla.
+
+   El contenedor ya estaba centrado, pero todo lo de adentro se alineaba a la
+   izquierda: en un monitor ancho los títulos y el manifiesto dejaban medio
+   bloque vacío a la derecha, y las filas incompletas —las dos últimas
+   categorías, «Provincias» sola— quedaban pegadas al borde.
+
+   Lo que se centra es la composición: títulos, bajadas, botones y la
+   ubicación de cada tarjeta. Lo que NO se centra es el texto largo DENTRO de
+   una tarjeta o de una respuesta: un párrafo centrado de cuatro líneas se lee
+   a saltos, y ahí la izquierda sigue siendo lo correcto. */
+
+/* El epígrafe centrado lleva la raya a los dos lados, no solo a la izquierda. */
+.encabezado-centrado,
+.seccion-cabeza,
+.tienda-cabeza .contenedor { text-align: center; }
+.encabezado-centrado .kicker,
+.seccion-cabeza .kicker,
+.tienda-cabeza .kicker,
+.cierre .kicker { justify-content: center; }
+.encabezado-centrado .kicker::after,
+.seccion-cabeza .kicker::after,
+.tienda-cabeza .kicker::after,
+.cierre .kicker::after { content: ""; width: 42px; height: 1px; background: var(--ocre); }
+
+.seccion-cabeza { margin-left: auto; margin-right: auto; }
+.seccion-cabeza p { max-width: 62ch; margin-left: auto; margin-right: auto; }
+
+/* El manifiesto: la frase al centro y su pie debajo, también al centro. */
+.manifiesto p { margin-left: auto; margin-right: auto; text-align: center; }
+.manifiesto-pie { justify-content: center; flex-wrap: wrap; text-align: center; }
+
+/* Las filas incompletas se centran. Con grid, lo que sobra de la última fila
+   queda a la izquierda; con flex y `justify-content: center` queda al medio.
+   El ancho base de cada tarjeta decide cuántas entran por fila en cada
+   pantalla: cuatro categorías o cinco zonas en escritorio, dos o tres en
+   tablet, una en el celular. */
+.categorias, .zonas { display: flex; flex-wrap: wrap; justify-content: center; }
+.categorias > * { flex: 0 1 272px; }
+.zonas > * { flex: 0 1 222px; }
+
+/* Los pasos: número, título y texto alineados sobre el mismo eje. */
+.paso { text-align: center; }
+.paso-num { margin-left: auto; margin-right: auto; }
+.pasos p { max-width: 36ch; margin-left: auto; margin-right: auto; }
+
+/* Las preguntas: el bloque al centro; cada respuesta, a la izquierda. */
+.preguntas { margin-left: auto; margin-right: auto; }
+
+/* El asesor en la tienda: su presentación al centro, la conversación no. */
+.asesor-cabeza { justify-content: center; }
+.asesor-sub { text-align: center; margin-left: auto; margin-right: auto; }
+.sugerencias { justify-content: center; }
+.filtros { justify-content: center; }
+
+@media (max-width: 980px) {
+  /* Apilado, el hero ya no tiene una columna al lado que lo equilibre. */
+  .hero-texto { text-align: center; }
+  .hero-texto .kicker { justify-content: center; }
+  .hero-texto .kicker::after { content: ""; width: 42px; height: 1px; background: var(--ocre); }
+  .hero-sub { margin-left: auto; margin-right: auto; }
+  .hero-ctas, .hero-datos { justify-content: center; }
+  .dato { text-align: center; }
+
+  /* Una tarjeta por fila a todo el ancho de una tablet es una franja difícil
+     de leer: se acota y se centra. */
+  .tierras, .puertas, .pasos { max-width: 620px; margin-left: auto; margin-right: auto; }
+
+  /* El pie en columnas estrechas: cada bloque centrado, marca incluida. */
+  .pie-grilla { text-align: center; }
+  .pie .marca { justify-content: center; }
+  .pie-legal { justify-content: center; text-align: center; }
+}
+
+/* El número del fondo se montaba sobre el nombre de la categoría y sobre «18
+   orígenes». Se achica y el texto de arriba le deja su esquina. */
+.categoria .tierra-num { font-size: 46px; top: 14px; right: 14px; }
+.categoria h3, .categoria .altura { padding-right: 56px; }
+
+@media (max-width: 640px) {
+  /* El rótulo de cada cifra era un inline con el interlineado del párrafo:
+     entre sus dos líneas quedaba un hueco más alto que la cifra. */
+  .dato span { display: block; line-height: 1.25; margin-top: 4px; }
+  /* Cabecera de «Mi pedido» y créditos: el botón se partía en dos líneas y
+     empujaba la marca. La bajada se va, como en la barra de la portada. */
+  .cabecera-simple .btn { white-space: nowrap; }
+  .cabecera-simple .marca-bajada { display: none; }
+  .categorias > *, .zonas > * { flex-basis: 100%; }
+  .hero-texto .kicker::after, .seccion-cabeza .kicker::after,
+  .encabezado-centrado .kicker::after, .tienda-cabeza .kicker::after,
+  .cierre .kicker::after { width: 24px; }
+}
