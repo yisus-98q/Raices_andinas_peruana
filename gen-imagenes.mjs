@@ -20,30 +20,49 @@ const RAIZ = dirname(fileURLToPath(import.meta.url));
 const DESTINO = join(RAIZ, 'public', 'img');
 mkdirSync(DESTINO, { recursive: true });
 
-const TINTA = '#241a12';
-const GROSOR = 7;
+// El contorno es la tinta de la marca (verde casi negro), no un marrón aparte:
+// es el mismo color que los titulares de la página.
+const TINTA = '#1c2a22';
+const GROSOR = 6;
 
-// Paletas por familia de producto. f = fondo, a = cuerpo, b = detalle, c = sombra.
+/**
+ * Paletas por familia de producto. f1 = claro (etiquetas), a = cuerpo,
+ * b = detalle, c = sombra.
+ *
+ * Tercera versión: las siete salen de los colores de la marca. Antes cada una se
+ * eligió suelta —un naranja, un amarillo miel, un rojo cochinilla— y en una
+ * grilla de cuatrocientas tarjetas se veía como una caja de lápices, sin nada que
+ * ver con el verde y la terracota del resto de la página.
+ *
+ * Ahora son tres familias con la misma saturación contenida:
+ *   - verdes (verde, salvia)          ← --verde #2a6b46
+ *   - tierras (terracota, cochinilla,
+ *     arcilla)                        ← --terra #b4552f
+ *   - dorados (ocre, miel)            ← --miel  #d99a2b
+ * Los nombres se conservan porque son la clave de los archivos /img/gen y de
+ * `paletaDe` en ilustraciones.mjs: cambiar el color no cambia ninguna ruta.
+ */
 const PALETAS = {
-  ocre:       { f1: '#fbf1dd', f2: '#f2ddb4', a: '#e0a03c', b: '#c07a24', c: '#8f5715' },
-  verde:      { f1: '#eaf2e7', f2: '#cfe1c9', a: '#669463', b: '#3f6b45', c: '#2b4a30' },
-  salvia:     { f1: '#f0f3e6', f2: '#d9e2c2', a: '#8aa85e', b: '#647f3d', c: '#455a28' },
-  ambar:      { f1: '#fbecd9', f2: '#f3d5ac', a: '#d4832f', b: '#ab5c1c', c: '#7d3c0e' },
-  miel:       { f1: '#fdf3d6', f2: '#f8e2a2', a: '#eeb63a', b: '#c78d16', c: '#94640b' },
-  cochinilla: { f1: '#fbe9e4', f2: '#f2cabe', a: '#cb5f45', b: '#a23e28', c: '#76281a' },
-  arcilla:    { f1: '#fcefe8', f2: '#f3d6c5', a: '#d8916d', b: '#b26a48', c: '#874a2f' },
+  verde:      { f1: '#eef4ef', a: '#4f8a63', b: '#2a6b46', c: '#1d4a31' },
+  salvia:     { f1: '#f1f5ec', a: '#8fae7a', b: '#5f8a55', c: '#3f6340' },
+  ocre:       { f1: '#f7f0e4', a: '#c89b5a', b: '#9c7238', c: '#6e4f26' },
+  miel:       { f1: '#fbf3e1', a: '#d99a2b', b: '#b27c1c', c: '#7d5612' },
+  ambar:      { f1: '#f9ede5', a: '#cf8350', b: '#b4552f', c: '#7f3a20' },
+  cochinilla: { f1: '#f7e9e4', a: '#a8503a', b: '#823a28', c: '#5a281c' },
+  arcilla:    { f1: '#f8f1ec', a: '#d7b49a', b: '#a98266', c: '#74584a' },
 };
 
-/** Fondo: degradado + un aro concentrico. Nada mas: menos cosas, menos errores. */
-const fondo = (p, id) => `
-  <defs>
-    <linearGradient id="g${id}" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="${p.f1}"/><stop offset="1" stop-color="${p.f2}"/>
-    </linearGradient>
-  </defs>
-  <rect width="400" height="400" fill="url(#g${id})"/>
-  <circle cx="200" cy="200" r="150" fill="none" stroke="${p.b}" stroke-width="2" opacity=".22"/>
-  <circle cx="200" cy="200" r="128" fill="#fffdf8" opacity=".45"/>`;
+/**
+ * Fondo: blanco de estudio y una sombra de apoyo bajo el objeto.
+ *
+ * Antes era un degradado del color de la paleta con dos aros. Sobre el blanco de
+ * las tarjetas cada categoría quedaba como un cuadro de color distinto; ahora
+ * todas comparten el mismo fondo, como las fotos de producto de un catálogo, y
+ * lo único que cambia es el objeto.
+ */
+const fondo = () => `
+  <rect width="400" height="400" fill="#ffffff"/>
+  <ellipse cx="200" cy="338" rx="96" ry="12" fill="${TINTA}" opacity=".07"/>`;
 
 const T = (d, fill) =>
   `<path d="${d}" fill="${fill}" stroke="${TINTA}" stroke-width="${GROSOR}"

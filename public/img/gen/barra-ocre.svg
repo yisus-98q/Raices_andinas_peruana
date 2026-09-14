@@ -1,18 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" role="img">
 
-  <defs>
-    <linearGradient id="gbarraocre" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#fbf1dd"/><stop offset="1" stop-color="#f2ddb4"/>
-    </linearGradient>
-  </defs>
-  <rect width="400" height="400" fill="url(#gbarraocre)"/>
-  <circle cx="200" cy="200" r="150" fill="none" stroke="#c07a24" stroke-width="2" opacity=".22"/>
-  <circle cx="200" cy="200" r="128" fill="#fffdf8" opacity=".45"/>
-<rect x="132" y="156" width="156" height="96" rx="22" fill="#c07a24"
-     stroke="#241a12" stroke-width="7" stroke-linejoin="round"/>
-<rect x="116" y="178" width="156" height="96" rx="22" fill="#e0a03c"
-     stroke="#241a12" stroke-width="7" stroke-linejoin="round"/>
-<ellipse cx="194" cy="226" rx="50" ry="30" fill="#fbf1dd" opacity=".8"/>
-<circle cx="194" cy="226" r="16" fill="#c07a24"
-     stroke="#241a12" stroke-width="7"/>
+  <rect width="400" height="400" fill="#ffffff"/>
+  <ellipse cx="200" cy="338" rx="96" ry="12" fill="#1c2a22" opacity=".07"/>
+<rect x="132" y="156" width="156" height="96" rx="22" fill="#9c7238"
+     stroke="#1c2a22" stroke-width="6" stroke-linejoin="round"/>
+<rect x="116" y="178" width="156" height="96" rx="22" fill="#c89b5a"
+     stroke="#1c2a22" stroke-width="6" stroke-linejoin="round"/>
+<ellipse cx="194" cy="226" rx="50" ry="30" fill="#f7f0e4" opacity=".8"/>
+<circle cx="194" cy="226" r="16" fill="#9c7238"
+     stroke="#1c2a22" stroke-width="6"/>
 </svg>

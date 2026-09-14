@@ -1,21 +1,15 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" role="img">
 
-  <defs>
-    <linearGradient id="gcapsulasocre" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#fbf1dd"/><stop offset="1" stop-color="#f2ddb4"/>
-    </linearGradient>
-  </defs>
-  <rect width="400" height="400" fill="url(#gcapsulasocre)"/>
-  <circle cx="200" cy="200" r="150" fill="none" stroke="#c07a24" stroke-width="2" opacity=".22"/>
-  <circle cx="200" cy="200" r="128" fill="#fffdf8" opacity=".45"/>
-<rect x="164" y="92" width="72" height="30" rx="7" fill="#8f5715"
-     stroke="#241a12" stroke-width="7" stroke-linejoin="round"/>
-<rect x="176" y="120" width="48" height="30" rx="4" fill="#c07a24"
-     stroke="#241a12" stroke-width="7" stroke-linejoin="round"/>
-<rect x="140" y="148" width="120" height="172" rx="18" fill="#fbf1dd"
-     stroke="#241a12" stroke-width="7" stroke-linejoin="round"/>
-<rect x="140" y="200" width="120" height="74" rx="4" fill="#e0a03c"
-     stroke="#241a12" stroke-width="7" stroke-linejoin="round"/>
+  <rect width="400" height="400" fill="#ffffff"/>
+  <ellipse cx="200" cy="338" rx="96" ry="12" fill="#1c2a22" opacity=".07"/>
+<rect x="164" y="92" width="72" height="30" rx="7" fill="#6e4f26"
+     stroke="#1c2a22" stroke-width="6" stroke-linejoin="round"/>
+<rect x="176" y="120" width="48" height="30" rx="4" fill="#9c7238"
+     stroke="#1c2a22" stroke-width="6" stroke-linejoin="round"/>
+<rect x="140" y="148" width="120" height="172" rx="18" fill="#f7f0e4"
+     stroke="#1c2a22" stroke-width="6" stroke-linejoin="round"/>
+<rect x="140" y="200" width="120" height="74" rx="4" fill="#c89b5a"
+     stroke="#1c2a22" stroke-width="6" stroke-linejoin="round"/>
 <rect x="158" y="168" width="14" height="130" rx="7" fill="#fff" opacity=".3"/>
 <rect x="162" y="222" width="76" height="8" rx="4" fill="#fffdf6" opacity=".85"/>
 <rect x="174" y="244" width="52" height="8" rx="4" fill="#fffdf6" opacity=".6"/>
