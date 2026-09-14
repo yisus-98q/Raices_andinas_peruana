@@ -9,17 +9,10 @@
 <link rel="icon" type="image/png" sizes="64x64" href="/img/marca/favicon.png">
 <link rel="stylesheet" href="/css/panel.css">
 </head>
-<body>
+<body class="panel-fijo">
 
 <header class="admin-cabecera">
   <div class="contenedor">
-    <div class="menu-envoltura">
-      <button class="menu-boton" id="menu-boton" aria-expanded="false"
-              aria-controls="menu-secciones" aria-label="Secciones del panel">
-        <span></span><span></span><span></span>
-      </button>
-      <nav class="menu-secciones" id="menu-secciones" hidden></nav>
-    </div>
     <img class="marca-icono" src="/img/marca/emblema.png" alt="" width="60" height="60">
     <div>
       <h1 class="marca-titulo"><img class="marca-logotipo" src="/img/marca/logotipo.png" alt="Raíz Andina" width="92" height="42"></h1>
@@ -38,120 +31,151 @@
 </header>
 
 <main class="contenedor">
-  <div class="kpis" id="kpis"></div>
+  <!-- Navegación al costado. Las secciones son una lista vertical con sitio
+       para nombres largos, y el contenido arranca arriba del todo en vez de
+       debajo de una fila de pestañas. En el celular la barra se esconde y la
+       navegación es el menú de hamburguesa. -->
+  <div class="panel-con-lado">
+    <nav class="areas" id="areas" aria-label="Secciones del panel"></nav>
 
-  <div class="tarjetas-admin">
-    <div>
-      <section class="bloque" id="bloque-mostrador">
-        <div class="bloque-cabeza">
-          <h2>Venta en el local</h2>
-          <span class="kpi-nota">se lo lleva puesto</span>
-        </div>
-        <div class="bloque-cuerpo">
-          <input type="search" id="mos-buscar" class="buscar-panel buscar-ancho"
-                 placeholder="Buscar producto por nombre o código…"
-                 aria-label="Buscar producto para vender" autocomplete="off">
-          <div id="mos-resultados"></div>
-          <div id="mos-carrito"></div>
-        </div>
-      </section>
+    <div class="areas-cuerpo">
+      <div class="area area-ancha" id="area-resumen">
+        <section class="bloque" id="bloque-resumen">
+          <div class="bloque-cabeza"><h2>Resumen del día</h2></div>
+          <div class="bloque-cuerpo">
+            <div class="kpis" id="kpis"></div>
+          </div>
+        </section>
+      </div>
 
-      <section class="bloque" id="bloque-pedidos">
-        <div class="bloque-cabeza">
-          <h2>Pedidos recientes</h2>
-          <div class="cabeza-derecha">
-            <input type="search" id="buscar-pedido" class="buscar-panel"
-                   placeholder="Buscar por código, nombre o teléfono…"
-                   aria-label="Buscar pedidos">
-            <span class="kpi-nota" id="conteo-pedidos"></span>
+      <div class="area" id="area-vender" hidden>
+        <div class="tarjetas-admin">
+          <div>
+            <section class="bloque" id="bloque-mostrador">
+                        <div class="bloque-cabeza">
+                          <h2>Venta en el local</h2>
+                          <span class="kpi-nota">se lo lleva puesto</span>
+                        </div>
+                        <div class="bloque-cuerpo">
+                          <input type="search" id="mos-buscar" class="buscar-panel buscar-ancho"
+                                 placeholder="Buscar producto por nombre o código…"
+                                 aria-label="Buscar producto para vender" autocomplete="off">
+                          <div id="mos-resultados"></div>
+                          <div id="mos-carrito"></div>
+                        </div>
+                      </section>
+            <section class="bloque" id="bloque-pedidos">
+                        <div class="bloque-cabeza">
+                          <h2>Pedidos recientes</h2>
+                          <div class="cabeza-derecha">
+                            <input type="search" id="buscar-pedido" class="buscar-panel"
+                                   placeholder="Buscar por código, nombre o teléfono…"
+                                   aria-label="Buscar pedidos">
+                            <span class="kpi-nota" id="conteo-pedidos"></span>
+                          </div>
+                        </div>
+                        <div class="bloque-cuerpo" id="lista-pedidos"></div>
+                      </section>
+          </div>
+
+          <div>
+            <section class="bloque" id="bloque-comprobantes">
+                        <div class="bloque-cabeza">
+                          <h2>Comprobantes</h2>
+                          <span class="kpi-nota" id="conteo-comprobantes"></span>
+                        </div>
+                        <div class="bloque-cuerpo" id="lista-comprobantes"></div>
+                      </section>
           </div>
         </div>
-        <div class="bloque-cuerpo" id="lista-pedidos"></div>
-      </section>
+      </div>
 
-      <section class="bloque" id="bloque-calendario">
-        <div class="bloque-cabeza">
-          <h2>Calendario de ventas</h2>
-          <div class="cabeza-derecha">
-            <button class="btn-mini" id="mes-antes" aria-label="Mes anterior">&larr;</button>
-            <span class="kpi-nota" id="mes-nombre"></span>
-            <button class="btn-mini" id="mes-despues" aria-label="Mes siguiente">&rarr;</button>
+      <div class="area" id="area-inventario" hidden>
+        <div class="tarjetas-admin">
+          <div>
+            <section class="bloque" id="bloque-stock">
+                        <div class="bloque-cabeza">
+                          <h2>Reposición urgente</h2>
+                          <span class="kpi-nota">stock ≤ mínimo</span>
+                        </div>
+                        <div class="bloque-cuerpo" id="lista-stock"></div>
+                      </section>
+            <section class="bloque" id="bloque-movimientos">
+                        <div class="bloque-cabeza"><h2>Movimientos de inventario</h2></div>
+                        <div class="bloque-cuerpo" id="lista-movimientos"></div>
+                      </section>
+          </div>
+
+          <div>
+            <section class="bloque" id="bloque-cambios" hidden>
+                        <div class="bloque-cabeza"><h2>Cambios de ficha</h2></div>
+                        <div class="bloque-cuerpo" id="lista-cambios"></div>
+                      </section>
           </div>
         </div>
-        <div class="bloque-cuerpo" id="calendario"></div>
-      </section>
 
-      <section class="bloque" id="bloque-movimientos">
-        <div class="bloque-cabeza"><h2>Movimientos de inventario</h2></div>
-        <div class="bloque-cuerpo" id="lista-movimientos"></div>
-      </section>
-    </div>
+        <section class="bloque" id="bloque-catalogo" style="margin-bottom:40px">
+            <div class="bloque-cabeza">
+              <h2>Catálogo</h2>
+              <div class="cabeza-derecha">
+                <input type="search" id="buscar-producto" class="buscar-panel"
+                       placeholder="Buscar producto…" aria-label="Buscar productos">
+                <label class="interruptor">
+                  <input type="checkbox" id="ver-bajas"> Ver dados de baja
+                </label>
+                <span class="kpi-nota" id="conteo-productos"></span>
+                <button class="btn btn-primario btn-chico" id="abrir-alta">+ Nuevo producto</button>
+              </div>
+            </div>
+            <div class="bloque-cuerpo" id="lista-productos" style="max-height:none"></div>
+          </section>
+      </div>
 
-    <div>
-      <section class="bloque" id="bloque-stock">
-        <div class="bloque-cabeza">
-          <h2>Reposición urgente</h2>
-          <span class="kpi-nota">stock ≤ mínimo</span>
-        </div>
-        <div class="bloque-cuerpo" id="lista-stock"></div>
-      </section>
+      <div class="area" id="area-negocio" hidden>
+        <div class="tarjetas-admin">
+          <div>
+            <section class="bloque" id="bloque-calendario">
+                        <div class="bloque-cabeza">
+                          <h2>Calendario de ventas</h2>
+                          <div class="cabeza-derecha">
+                            <button class="btn-mini" id="mes-antes" aria-label="Mes anterior">&larr;</button>
+                            <span class="kpi-nota" id="mes-nombre"></span>
+                            <button class="btn-mini" id="mes-despues" aria-label="Mes siguiente">&rarr;</button>
+                          </div>
+                        </div>
+                        <div class="bloque-cuerpo" id="calendario"></div>
+                      </section>
+            <section class="bloque" id="bloque-clientes">
+                        <div class="bloque-cabeza">
+                          <h2>Clientes</h2>
+                          <div class="cabeza-derecha">
+                            <input type="search" id="buscar-cliente" class="buscar-panel"
+                                   placeholder="Nombre, documento o teléfono…"
+                                   aria-label="Buscar clientes">
+                            <span class="kpi-nota" id="conteo-clientes"></span>
+                          </div>
+                        </div>
+                        <div class="bloque-cuerpo" id="lista-clientes"></div>
+                      </section>
+          </div>
 
-      <section class="bloque" id="bloque-top">
-        <div class="bloque-cabeza"><h2>Más vendidos</h2></div>
-        <div class="bloque-cuerpo"><table class="tabla-top"><tbody id="lista-top"></tbody></table></div>
-      </section>
-
-      <section class="bloque" id="bloque-respaldo">
-        <div class="bloque-cabeza">
-          <h2>Respaldo</h2>
-          <button class="btn-mini btn-ancho" id="btn-respaldar">Respaldar ahora</button>
-        </div>
-        <div class="bloque-cuerpo" id="respaldo"></div>
-      </section>
-
-      <section class="bloque" id="bloque-clientes">
-        <div class="bloque-cabeza">
-          <h2>Clientes</h2>
-          <div class="cabeza-derecha">
-            <input type="search" id="buscar-cliente" class="buscar-panel"
-                   placeholder="Nombre, documento o teléfono…"
-                   aria-label="Buscar clientes">
-            <span class="kpi-nota" id="conteo-clientes"></span>
+          <div>
+            <section class="bloque" id="bloque-top">
+                        <div class="bloque-cabeza"><h2>Más vendidos</h2></div>
+                        <div class="bloque-cuerpo"><table class="tabla-top"><tbody id="lista-top"></tbody></table></div>
+                      </section>
+            <section class="bloque" id="bloque-respaldo">
+                        <div class="bloque-cabeza">
+                          <h2>Respaldo</h2>
+                          <button class="btn-mini btn-ancho" id="btn-respaldar">Respaldar ahora</button>
+                        </div>
+                        <div class="bloque-cuerpo" id="respaldo"></div>
+                      </section>
           </div>
         </div>
-        <div class="bloque-cuerpo" id="lista-clientes"></div>
-      </section>
-
-      <section class="bloque" id="bloque-comprobantes">
-        <div class="bloque-cabeza">
-          <h2>Comprobantes</h2>
-          <span class="kpi-nota" id="conteo-comprobantes"></span>
-        </div>
-        <div class="bloque-cuerpo" id="lista-comprobantes"></div>
-      </section>
-
-      <section class="bloque" id="bloque-cambios" hidden>
-        <div class="bloque-cabeza"><h2>Cambios de ficha</h2></div>
-        <div class="bloque-cuerpo" id="lista-cambios"></div>
-      </section>
-    </div>
-  </div>
-
-  <section class="bloque" id="bloque-catalogo" style="margin-bottom:40px">
-    <div class="bloque-cabeza">
-      <h2>Catálogo</h2>
-      <div class="cabeza-derecha">
-        <input type="search" id="buscar-producto" class="buscar-panel"
-               placeholder="Buscar producto…" aria-label="Buscar productos">
-        <label class="interruptor">
-          <input type="checkbox" id="ver-bajas"> Ver dados de baja
-        </label>
-        <span class="kpi-nota" id="conteo-productos"></span>
-        <button class="btn btn-primario btn-chico" id="abrir-alta">+ Nuevo producto</button>
       </div>
     </div>
-    <div class="bloque-cuerpo" id="lista-productos" style="max-height:none"></div>
-  </section>
+  </div>
 </main>
 
 <!--

@@ -148,15 +148,34 @@ describe('El motorizado ve su ruta y nada más', () => {
     }
   });
 
-  test('puede marcar entregado', async () => {
-    const r = await motorizado.pedir(`/api/pedidos/${pedidoEnvio.id}/estado`, {
-      metodo: 'PATCH', cuerpo: { estado: 'entregado' },
-    });
-    assert.equal(r.estado, 200, JSON.stringify(r.json));
+  /**
+   * Los tres toques del recorrido, y que cada uno se vea desde fuera.
+   *
+   * No son decorativos: son los que hacen que el comprador, mirando su página
+   * de seguimiento, pase de «Recibido» a «En preparación», «En camino» y
+   * «Entregado» sin tener que llamar al puesto a preguntar. Cerrar el pedido de
+   * un salto se lo ahorraba todo.
+   */
+  test('avanza el pedido de un toque por paso, y el cliente lo ve', async () => {
+    const estadoSegunElCliente = async () => {
+      const r = await cliente(srv.base).pedir('/api/seguimiento', {
+        metodo: 'POST',
+        cuerpo: { codigo: pedidoEnvio.codigo, telefono: CLIENTE_VALIDO.telefono },
+      });
+      assert.equal(r.estado, 200, JSON.stringify(r.json));
+      return r.json.estado;
+    };
 
-    const visto = (await duena.pedir('/api/pedidos')).json
-      .find((p) => p.id === pedidoEnvio.id);
-    assert.equal(visto.estado, 'entregado');
+    assert.equal(await estadoSegunElCliente(), 'pendiente');
+
+    for (const paso of ['preparando', 'enviado', 'entregado']) {
+      const r = await motorizado.pedir(`/api/pedidos/${pedidoEnvio.id}/estado`, {
+        metodo: 'PATCH', cuerpo: { estado: paso },
+      });
+      assert.equal(r.estado, 200, `no dejó marcar "${paso}": ${JSON.stringify(r.json)}`);
+      assert.equal(await estadoSegunElCliente(), paso,
+        `el comprador no vio el paso "${paso}"`);
+    }
   });
 
   test('no puede anular ni registrar devolución', async () => {

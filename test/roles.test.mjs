@@ -69,17 +69,38 @@ describe('El costo no sale para el mostrador', () => {
     assert.ok('costo' in r.json[0]);
   });
 
-  test('el tablero no le da el valor del inventario a costo', async () => {
+  /**
+   * Del tablero solo le llega lo suyo.
+   *
+   * De `/api/admin/resumen` salen dos cosas distintas: los indicadores del dia
+   * —caja, ganancia, inventario— y la lista de mas vendidos. El mostrador tiene
+   * «Mas vendidos» en su panel y no tiene los indicadores, asi que tampoco los
+   * recibe. Antes se le mandaban y el panel no los pintaba: la caja del dia
+   * quedaba a un `fetch` de distancia para cualquiera que abriera la consola.
+   */
+  test('el tablero no le da las cifras del negocio', async () => {
     const r = await mostrador.pedir('/api/admin/resumen');
     assert.equal(r.estado, 200);
-    assert.equal(r.json.valor_inventario, undefined, 'esa cifra es el costo del catalogo');
-    // Las unidades si: son lo que necesita para saber si hay que reponer.
-    assert.ok(Number.isInteger(r.json.unidades_inventario));
-    assert.ok(Array.isArray(r.json.bajo_stock));
+    for (const campo of ['valor_inventario', 'ganancia_hoy', 'ventas_hoy',
+      'ventas_local_hoy', 'ventas_web_hoy', 'unidades_inventario']) {
+      assert.equal(r.json[campo], undefined, `le llego «${campo}», que es del negocio`);
+    }
   });
 
-  test('la reposicion urgente no cuela el costo de rebote', async () => {
+  test('pero si la cola de trabajo y lo que mas sale', async () => {
     const r = await mostrador.pedir('/api/admin/resumen');
+    assert.ok(Number.isInteger(r.json.pedidos_pendientes), 'necesita saber cuantos atender');
+    // Solo que la lista llegue: en una base recien sembrada todavia no hay
+    // ventas, asi que exigir que traiga algo probaria la semilla, no el rol.
+    assert.ok(Array.isArray(r.json.top_productos), 'le falta «mas vendidos», que si es suyo');
+  });
+
+  test('al dueño si le llegan', async () => {
+    const r = await dueno.pedir('/api/admin/resumen');
+    assert.equal(r.estado, 200);
+    assert.ok(Number.isFinite(r.json.ventas_hoy));
+    assert.ok(Number.isFinite(r.json.valor_inventario));
+    // Y la reposicion no cuela el costo de rebote en cada ficha.
     for (const p of r.json.bajo_stock) {
       assert.ok(!('costo' in p), `${p.sku} llego con costo en bajo_stock`);
     }
@@ -131,13 +152,31 @@ describe('Lo que el mostrador no puede cambiar', () => {
   });
 
   /**
-   * El permiso se mira campo por campo y no en la puerta: ajustar el minimo de
-   * reposicion es trabajo de quien ve vaciarse el estante, no del dueño desde
-   * su casa. Y las dos cosas entran por la misma peticion.
+   * El minimo de reposicion tambien.
+   *
+   * Era del mostrador —«lo ajusta quien ve vaciarse el estante»— y la decision
+   * se reviso: con la seccion de reposicion fuera de su panel, no le quedaba
+   * donde hacerlo. La ficha entera pasa a ser de la dueña, que es quien
+   * responde por el inventario.
    */
-  test('SI puede ajustar el minimo de reposicion', async () => {
+  test('tampoco el minimo de reposicion', async () => {
+    const antes = (await dueno.pedir('/api/admin/productos')).json
+      .find((p) => p.id === unProducto.id);
     const r = await mostrador.pedir(`/api/productos/${unProducto.id}`, {
-      metodo: 'PATCH', cuerpo: { stock_min: unProducto.stock_min + 3 },
+      metodo: 'PATCH', cuerpo: { stock_min: antes.stock_min + 3 },
+    });
+    assert.equal(r.estado, 403, JSON.stringify(r.json));
+
+    const despues = (await dueno.pedir('/api/admin/productos')).json
+      .find((p) => p.id === unProducto.id);
+    assert.equal(despues.stock_min, antes.stock_min, 'el minimo cambio pese al 403');
+  });
+
+  test('la dueña si puede', async () => {
+    const antes = (await dueno.pedir('/api/admin/productos')).json
+      .find((p) => p.id === unProducto.id);
+    const r = await dueno.pedir(`/api/productos/${unProducto.id}`, {
+      metodo: 'PATCH', cuerpo: { stock_min: antes.stock_min + 3 },
     });
     assert.equal(r.estado, 200, JSON.stringify(r.json));
   });
@@ -162,18 +201,62 @@ describe('Lo que el mostrador SI necesita para trabajar', () => {
     assert.equal(r.estado, 200);
   });
 
-  test('mueve stock: el ingreso de mercaderia es su trabajo', async () => {
+  /**
+   * Vender es como el mostrador mueve stock, y es la unica forma.
+   *
+   * El ingreso de mercaderia era suyo y paso a ser de la dueña: quien registra
+   * lo que entra es quien responde por lo que falta. Lo que no cambia es que el
+   * inventario baja con cada venta suya, por la via que no se puede falsear.
+   */
+  test('no puede ingresar mercaderia a mano', async () => {
+    const antes = (await dueno.pedir('/api/admin/productos')).json
+      .find((p) => p.id === unProducto.id).stock;
+
     const r = await mostrador.pedir('/api/stock', {
       metodo: 'POST',
       cuerpo: { producto_id: unProducto.id, cantidad: 5, motivo: 'Llego el proveedor' },
     });
-    assert.equal(r.estado, 200, JSON.stringify(r.json));
+    assert.equal(r.estado, 403, JSON.stringify(r.json));
+
+    const despues = (await dueno.pedir('/api/admin/productos')).json
+      .find((p) => p.id === unProducto.id).stock;
+    assert.equal(despues, antes, 'el stock se movio pese al 403');
   });
 
-  test('consulta movimientos, comprobantes, clientes y el calendario', async () => {
-    for (const ruta of ['/api/admin/movimientos', '/api/admin/comprobantes',
-      '/api/admin/clientes', '/api/admin/calendario']) {
+  test('pero vendiendo si: es como mueve el inventario todo el dia', async () => {
+    const antes = (await dueno.pedir('/api/admin/productos')).json
+      .find((p) => p.id === unProducto.id).stock;
+
+    const v = await mostrador.pedir('/api/mostrador', {
+      metodo: 'POST', cuerpo: { items: [{ id: unProducto.id, cantidad: 1 }] },
+    });
+    assert.equal(v.estado, 201, JSON.stringify(v.json));
+
+    const despues = (await dueno.pedir('/api/admin/productos')).json
+      .find((p) => p.id === unProducto.id).stock;
+    assert.equal(despues, antes - 1);
+  });
+
+  test('consulta el catalogo, los comprobantes y los clientes', async () => {
+    // Lo que su panel pinta: vender necesita el catalogo, la ficha de cada
+    // pedido necesita su comprobante, y «Clientes» es suyo.
+    for (const ruta of ['/api/admin/productos', '/api/admin/comprobantes',
+      '/api/admin/clientes']) {
       assert.equal((await mostrador.pedir(ruta)).estado, 200, `deberia poder con ${ruta}`);
+    }
+  });
+
+  /**
+   * Y lo que se le corto: el kardex y la facturacion del mes.
+   *
+   * Son la contabilidad del negocio, no herramientas de mostrador. Se comprueba
+   * contra la API porque esconder la seccion del panel no impide escribir la
+   * URL a mano.
+   */
+  test('no consulta el kardex ni el calendario de ventas', async () => {
+    for (const ruta of ['/api/admin/movimientos', '/api/admin/calendario',
+      '/api/admin/categorias']) {
+      assert.equal((await mostrador.pedir(ruta)).estado, 403, `${ruta} no deberia dejarlo`);
     }
   });
 });

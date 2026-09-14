@@ -31,16 +31,6 @@
   const existencia = (p) => (esGranel(p) ? enPeso(p.stock) : String(p.stock));
   /** Y cómo se dice su precio. */
   const precioPor = (p) => (esGranel(p) ? `${soles(p.precio)} / ${enPeso(BASE_GRANEL)}` : soles(p.precio));
-  const SIGUIENTE = {
-    pendiente: 'preparando',
-    preparando: 'enviado',
-    enviado: 'entregado',
-  };
-  const VERBO = {
-    preparando: 'Marcar en preparación',
-    enviado: 'Marcar enviado',
-    entregado: 'Marcar entregado',
-  };
 
   let ultimosPedidos = [];
   let ultimosProductos = [];
@@ -62,12 +52,133 @@
    */
   let esReparto = false;
 
-  /** Los bloques que no son del reparto. El de pedidos y el de comprobantes sí. */
-  const BLOQUES_DEL_PUESTO = [
-    'bloque-mostrador', 'bloque-calendario', 'bloque-movimientos', 'bloque-stock',
-    'bloque-top', 'bloque-respaldo', 'bloque-clientes', 'bloque-cambios',
-    'bloque-catalogo',
+  /**
+   * Qué bloques ve cada rol.
+   *
+   * En una tabla y no escondiendo bloques sueltos por ahí: así se lee de un
+   * vistazo quién ve qué, y agregar una sección obliga a decidir de quién es en
+   * vez de que aparezca para todos por olvido.
+   *
+   *  - La **dueña** ve todo: es su negocio.
+   *  - La **vendedora** ve lo que necesita para atender a quien tiene delante:
+   *    cobrar, ver los pedidos del día, saber qué se mueve y quién es el
+   *    cliente que entró. Nada de lo que se administra desde atrás.
+   *  - El **reparto** ve su ruta. Su teléfono sale a la calle todos los días.
+   *
+   * null es «todo». Esconder no protege nada —el servidor es el que corta—,
+   * pero un panel que ofrece diez sitios a quien solo usa cuatro esconde los
+   * cuatro que importan entre los otros seis.
+   */
+  const BLOQUES_POR_ROL = {
+    admin: null,
+    // Sin `bloque-resumen`: la caja del día, la ganancia y el valor del
+    // inventario son las tres cifras que resumen el negocio, y el negocio es
+    // de la dueña. La vendedora entra directo a vender.
+    vendedor: ['bloque-mostrador', 'bloque-pedidos', 'bloque-top', 'bloque-clientes'],
+    reparto: ['bloque-pedidos'],
+  };
+
+  /** Todos los bloques del panel, para saber cuáles apagar. */
+  const TODOS_LOS_BLOQUES = () =>
+    [...document.querySelectorAll('.bloque')].map((b) => b.id).filter(Boolean);
+
+  /**
+   * Las cuatro áreas del panel, y qué bloque vive en cada una.
+   *
+   * Doce bloques uno debajo de otro obligaban a bajar buscando. Ahora se ve un
+   * área por vez, entera en la pantalla, y se cambia por la barra del costado.
+   * No son categorías de software: son las preguntas con las que alguien abre
+   * el panel.
+   *
+   *   1. RESUMEN     — cómo va el día. Es la principal: es a lo que se entra.
+   *   2. VENDER HOY  — lo que está pasando ahora: cobrar, despachar, el papel
+   *                    del cliente que llama preguntando por su boleta.
+   *   3. INVENTARIO  — qué hay, qué falta y por qué cambió.
+   *   4. EL NEGOCIO  — cómo viene la cosa, y que exista una copia.
+   *
+   * La lista de ids está aquí y no leída del DOM a propósito: agregar una
+   * sección obliga a decidir en qué área vive, en vez de que quede invisible
+   * por olvido.
+   */
+  const AREAS = [
+    { id: 'area-resumen', nombre: 'Resumen', hace: 'Cómo va el día',
+      bloques: ['bloque-resumen'] },
+    { id: 'area-vender', nombre: 'Vender hoy', hace: 'Cobrar y despachar',
+      bloques: ['bloque-mostrador', 'bloque-pedidos', 'bloque-comprobantes'] },
+    { id: 'area-inventario', nombre: 'Inventario', hace: 'Qué hay y qué falta',
+      bloques: ['bloque-stock', 'bloque-movimientos', 'bloque-cambios', 'bloque-catalogo'] },
+    { id: 'area-negocio', nombre: 'El negocio', hace: 'Cómo viene la cosa',
+      bloques: ['bloque-calendario', 'bloque-clientes', 'bloque-top', 'bloque-respaldo'] },
   ];
+
+  /** Un área sin ningún bloque visible para este rol no se ofrece. */
+  const areaTieneAlgo = (a) => a.bloques.some((b) => $(b) && !$(b).hidden);
+
+  // El resumen es la principal. Quien no lo tenga —la vendedora, el reparto—
+  // cae en la primera que sí tenga, y de eso se encarga `mostrarArea`.
+  let areaActiva = 'area-resumen';
+
+  function mostrarArea(id) {
+    const conAlgo = AREAS.filter(areaTieneAlgo);
+    if (!conAlgo.length) return;
+    if (!conAlgo.some((a) => a.id === id)) id = conAlgo[0].id;
+    areaActiva = id;
+
+    for (const a of AREAS) {
+      if ($(a.id)) $(a.id).hidden = a.id !== id;
+    }
+    pintarAreas();
+  }
+
+  /**
+   * La barra del costado. Se pinta según lo que el rol pueda ver, así que a la
+   * vendedora le salen las suyas y nunca una sección vacía.
+   */
+  function pintarAreas() {
+    const conAlgo = AREAS.filter(areaTieneAlgo);
+    const caja = $('areas');
+    if (!caja) return;
+    // Con una sola área no hay nada que elegir: la barra sobra.
+    caja.hidden = conAlgo.length < 2;
+    pintar('areas', conAlgo.map((a) => `
+      <button class="area-tab${a.id === areaActiva ? ' activa' : ''}"
+              data-area="${a.id}" aria-current="${a.id === areaActiva}">
+        <strong>${a.nombre}</strong>
+        <span>${a.hace}</span>
+      </button>`).join(''));
+  }
+
+  /**
+   * El recorrido del pedido, de un toque por paso.
+   *
+   * Son los mismos tres pasos que el comprador ve encenderse en su página de
+   * seguimiento —«En preparación», «En camino», «Entregado»—, y por eso el
+   * botón dice adónde va: quien pulsa sabe exactamente qué le acaba de
+   * aparecer al otro en el teléfono.
+   *
+   * Lo usan los tres roles. Nació para el motorizado, pero la pregunta que
+   * resuelve —«¿este en qué va, y qué sigue?»— es la misma en el mostrador con
+   * el cliente delante, y era absurdo que el panel la contestara de dos formas
+   * distintas según quién mirara.
+   */
+  const PASO_PEDIDO = {
+    pendiente: 'preparando',
+    preparando: 'enviado',
+    enviado: 'entregado',
+  };
+  /**
+   * Lo que el comprador va a leer en su seguimiento cuando se pulse.
+   *
+   * El botón no dice «marcar X»: dice en qué estado está el pedido AHORA y,
+   * debajo, adónde lo manda el toque. En la puerta de un cliente la pregunta
+   * que se hace el motorizado es «¿este cuál era?», y la respuesta tiene que
+   * estar en el mismo sitio que se pulsa.
+   */
+  const SIGUIENTE_PEDIDO = {
+    preparando: 'en preparación',
+    enviado: 'en camino',
+    entregado: 'entregado',
+  };
   /**
    * El carrito del mostrador: id del producto -> cuantas unidades.
    *
@@ -173,20 +284,20 @@
       // responderian 403. No se piden en vez de pedirlos y descartar la
       // respuesta — pedir lo que se sabe prohibido llena el registro del
       // servidor de 403 que no son un intento de nada.
-      // Al reparto el servidor le responde 403 en casi todo, por la misma
-      // razón por la que al mostrador se le niegan los del dueño. No se piden:
-      // pedir lo que se sabe prohibido llena el registro de 403 que no son un
-      // intento de nada, y esconde los que sí lo serían.
+      // No se pide lo que se sabe prohibido: llena el registro del servidor de
+      // 403 que no son un intento de nada, y esconde los que sí lo serían. Cada
+      // rol pide exactamente lo que su panel va a pintar.
       const delPuesto = (ruta, vacio) => (esReparto ? vacio : pedir(ruta));
+      const soloDuena = (ruta, vacio) => (esDueno ? pedir(ruta) : vacio);
 
       const [resumen, pedidos, movimientos, productos, comprobantes,
         cal, clientes, cambios, resp] = await Promise.all([
         delPuesto('/api/admin/resumen', null),
         pedir('/api/pedidos'),
-        delPuesto('/api/admin/movimientos', []),
+        soloDuena('/api/admin/movimientos', []),
         delPuesto('/api/admin/productos', []),
         pedir('/api/admin/comprobantes'),
-        delPuesto('/api/admin/calendario' + (mesVisto ? '?mes=' + mesVisto : ''), null),
+        soloDuena('/api/admin/calendario' + (mesVisto ? '?mes=' + mesVisto : ''), null),
         delPuesto('/api/admin/clientes', []),
         esDueno ? pedir('/api/admin/cambios') : [],
         esDueno ? pedir('/api/admin/respaldos') : null,
@@ -196,19 +307,23 @@
       // Los comprobantes se guardan porque cada pedido enlaza al suyo.
       ultimosComprobantes = comprobantes;
       if (resumen) {
-        pintarKpis(resumen);
-        pintarStock(resumen.bajo_stock);
         pintarTop(resumen.top_productos);
+        if (esDueno) {
+          pintarKpis(resumen);
+          pintarStock(resumen.bajo_stock);
+        }
       }
       pintarPedidos();
       pintarComprobantes(comprobantes);
       if (!esReparto) {
-        pintarMovimientos(movimientos);
         pintarProductos();
-        pintarCambios(cambios);
-        pintarCalendario(cal);
         ultimosClientes = clientes;
         pintarClientes();
+      }
+      if (esDueno) {
+        pintarMovimientos(movimientos);
+        pintarCambios(cambios);
+        pintarCalendario(cal);
       }
       if (resp) pintarRespaldo(resp);
       pintarMostrador();
@@ -236,20 +351,27 @@
         $('abrir-alta').hidden = true;
       }
 
+      const suyos = BLOQUES_POR_ROL[s.rol];
+      if (suyos) {
+        for (const id of TODOS_LOS_BLOQUES()) {
+          if (!suyos.includes(id) && $(id)) $(id).hidden = true;
+        }
+      }
+
       if (esReparto) {
         // Los indicadores de arriba son la caja del día, la ganancia y el valor
         // del inventario: las tres cifras que resumen el negocio. El reparto
         // lleva este panel abierto en la calle, en un teléfono que se presta y
         // se pierde.
         $('kpis').hidden = true;
-        for (const id of BLOQUES_DEL_PUESTO) {
-          if ($(id)) $(id).hidden = true;
-        }
         // Y el bloque que le queda se llama por lo que es para él. Un panel con
         // un solo bloque titulado «Pedidos recientes» parece un panel roto.
         const titulo = document.querySelector('#bloque-pedidos h2');
         if (titulo) titulo.textContent = 'Mi ruta de hoy';
       }
+
+      // Con los bloques del rol ya decididos se sabe qué áreas quedan en pie.
+      mostrarArea(areaActiva);
     } catch { /* pedir() ya redirigió */ }
   }
 
@@ -270,11 +392,19 @@
           etiqueta: 'Ganancia de hoy', valor: soles(r.ganancia_hoy),
           nota: `${r.pedidos_pendientes} pedido(s) por atender`,
         },
-      {
+      /**
+       * La alarma de reposición solo para quien puede apagarla.
+       *
+       * A la vendedora se le quitó el bloque de reposición, así que la tarjeta
+       * le quedaría avisando de diecinueve productos por acabarse sin ningún
+       * sitio adonde ir a resolverlo. Una alarma que no se puede atender se
+       * aprende a ignorar, y con ella se ignoran las demás.
+       */
+      ...(esDueno ? [{
         etiqueta: 'Reposición urgente', valor: r.bajo_stock.length,
         nota: r.agotados ? `${r.agotados} ya agotado(s)` : 'ninguno agotado aún',
         alerta: r.bajo_stock.length > 0,
-      },
+      }] : []),
       // El valor del inventario esta calculado a costo: es el costo del
       // catalogo entero en una cifra. Para el mostrador la tarjeta cuenta las
       // unidades, que es lo que necesita para saber si hay que reponer.
@@ -346,6 +476,47 @@
       </span>`;
   }
 
+  /**
+   * El pie de la ficha del pedido. El mismo para los tres roles.
+   *
+   * Dos controles en columnas iguales: mover el pedido y sacar su papel. Son
+   * las dos cosas que se hacen con un pedido y ninguna manda sobre la otra, así
+   * que ninguna es más ancha — con anchos distintos, la mayor se lee como «la
+   * importante» y la otra se pulsa por error.
+   *
+   * El estado ES el botón. Antes eran dos cosas separadas —una pastilla que
+   * informaba y un botón al lado que actuaba— y la pregunta que uno trae a un
+   * pedido es una sola: «¿en qué va y qué sigue?». Ahora la respuesta está en
+   * el mismo sitio que se pulsa.
+   *
+   * Lo que deshace —anular, registrar devolución— va debajo y en otro peso.
+   * Repone stock y emite nota de crédito: no es «el otro botón», es la
+   * excepción, y ponerla del mismo tamaño que avanzar es cómo se pulsa una
+   * queriendo la otra. El reparto directamente no la tiene.
+   */
+  function pieDePedido(p, deshacer = []) {
+    const paso = PASO_PEDIDO[p.estado];
+    const estado = `<span class="paso-ahora"><i></i>${p.estado}</span>`;
+
+    const avance = paso
+      ? `<button class="paso-reparto e-${p.estado}" data-estado="${paso}" data-id="${p.id}">
+           ${estado}
+           <span class="paso-siguiente">tocar: ${SIGUIENTE_PEDIDO[paso]}</span>
+         </button>`
+      : `<span class="paso-reparto paso-cerrado e-${p.estado}">
+           ${estado}
+           <span class="paso-siguiente">${
+             p.estado === 'entregado' ? 'entrega cerrada' : 'sin más pasos'}</span>
+         </span>`;
+
+    return `
+      <div class="pedido-reparto">
+        ${avance}
+        <div class="comprobante-reparto">${comprobanteDe(p)}</div>
+      </div>
+      ${deshacer.length ? `<div class="pedido-deshacer">${deshacer.join('')}</div>` : ''}`;
+  }
+
   function pintarPedidos() {
     const q = filtro.trim().toLowerCase();
     const lista = ultimosPedidos.filter((p) => coincide(p, q));
@@ -364,27 +535,20 @@
     }
 
     pintar('lista-pedidos', lista.map((p) => {
-      const siguiente = SIGUIENTE[p.estado];
       const items = p.items.map((i) => `${i.cantidad} × ${escapar(i.nombre)}`).join(' · ');
 
-      const acciones = [];
-      if (esReparto) {
-        // Un solo botón, y es el que se pulsa con una mano en la puerta del
-        // cliente. Anular y devolver reponen stock y emiten nota de crédito:
-        // son decisiones de caja, y el servidor además se las niega.
-        if (p.estado !== 'entregado') {
-          acciones.push(`<button class="mini mini-entregar" data-estado="entregado" data-id="${p.id}">✓ Entregado</button>`);
-        }
-      } else {
-        // Un pedido entregado todavía admite devolución: la política da 7 días.
-        // Antes el botón se ocultaba y el dueño no podía procesarla.
-        if (siguiente) {
-          acciones.push(`<button class="mini" data-estado="${siguiente}" data-id="${p.id}">${VERBO[siguiente]}</button>`);
-        }
+      /**
+       * Lo que deshace una venta. Solo el puesto, nunca el reparto.
+       *
+       * Un pedido entregado todavía admite devolución: la política da 7 días.
+       * Antes el botón se ocultaba y el dueño no podía procesarla.
+       */
+      const deshacer = [];
+      if (!esReparto) {
         if (p.estado === 'entregado') {
-          acciones.push(`<button class="mini mini-peligro" data-estado="devuelto" data-id="${p.id}">Registrar devolución</button>`);
+          deshacer.push(`<button class="mini mini-peligro" data-estado="devuelto" data-id="${p.id}">Registrar devolución</button>`);
         } else if (p.estado !== 'anulado' && p.estado !== 'devuelto') {
-          acciones.push(`<button class="mini mini-peligro" data-estado="anulado" data-id="${p.id}">Anular y devolver stock</button>`);
+          deshacer.push(`<button class="mini mini-peligro" data-estado="anulado" data-id="${p.id}">Anular y devolver stock</button>`);
         }
       }
 
@@ -414,20 +578,9 @@
         </div>
         <div class="pedido-items">${items}</div>
 
-        <!-- El pie: en qué va el pedido, el papel del cliente y qué se puede
-             hacer. Es lo que se mira para despachar, así que va al final y
+        <!-- El pie: en qué va el pedido y el papel del cliente. Va al final y
              en grande: arriba compite con el código y el total. -->
-        <div class="pedido-pie">
-          <span class="estado-grande e-${p.estado}">
-            <i></i>${p.estado}
-          </span>
-          ${acciones.length ? `<span class="acciones-pedido">${acciones.join('')}</span>` : ''}
-        </div>
-
-        <!-- El comprobante en su propia linea. Pegado al estado se leian como
-             una sola cosa, y son dos: en que va el pedido, y el papel que se
-             le entrega al cliente. -->
-        <div class="pedido-comprobante">${comprobanteDe(p)}</div>
+        ${pieDePedido(p, deshacer)}
       </div>`;
     }).join(''));
   }
@@ -787,88 +940,7 @@
     }
   }
 
-  // ------------------------------------------------------- menu de secciones
-  /**
-   * Las secciones del panel, con lo que hace cada una.
-   *
-   * El panel creció hasta diez bloques en dos columnas, y en una pantalla de
-   * laptop no entran: hay que bajar buscando. El menú es la lista de lo que
-   * hay, y la linea de abajo dice PARA QUE sirve — quien atiende tres veces
-   * por semana no tiene por que acordarse de que «Movimientos» es el kardex.
-   *
-   * `soloDueno` no protege nada: el servidor ya corta. Es para no ofrecer un
-   * sitio al que el mostrador no puede llegar.
-   */
-  const SECCIONES = [
-    { id: 'bloque-mostrador', nombre: 'Venta en el local',
-      hace: 'Cobrar al que está en el puesto. Descuenta del mismo stock.' },
-    { id: 'bloque-pedidos', nombre: 'Pedidos recientes',
-      hace: 'Lo que hay que atender hoy: preparar, enviar, anular.' },
-    { id: 'bloque-calendario', nombre: 'Calendario de ventas',
-      hace: 'Cuánto entró cada día del mes y cuál fue el mejor.' },
-    { id: 'bloque-movimientos', nombre: 'Movimientos de inventario',
-      hace: 'Cada unidad que entró o salió, y por qué.' },
-    { id: 'bloque-stock', nombre: 'Reposición urgente',
-      hace: 'Lo que está por acabarse, con cuánto pedir.' },
-    { id: 'bloque-top', nombre: 'Más vendidos',
-      hace: 'Qué se mueve y qué está parado.' },
-    { id: 'bloque-clientes', nombre: 'Clientes',
-      hace: 'Quién compra, cuánto gastó y qué se llevó antes.' },
-    { id: 'bloque-comprobantes', nombre: 'Comprobantes',
-      hace: 'Boletas y facturas emitidas, para imprimir o mandar.' },
-    { id: 'bloque-respaldo', nombre: 'Respaldo', soloDueno: true,
-      hace: 'La copia de seguridad del negocio. Debe estar al día.' },
-    { id: 'bloque-cambios', nombre: 'Cambios de ficha', soloDueno: true,
-      hace: 'Quién cambió un precio o un mínimo, y cuándo.' },
-    { id: 'bloque-catalogo', nombre: 'Catálogo',
-      hace: 'Todos los productos: precio, mínimo y stock.' },
-  ];
 
-  function pintarMenu() {
-    const visibles = SECCIONES.filter((s) => {
-      if (s.soloDueno && !esDueno) return false;
-      // Un bloque oculto por no tener nada que mostrar tampoco se ofrece:
-      // llevar a alguien a una sección vacía es peor que no ofrecerla.
-      const el = $(s.id);
-      return el && !el.hidden;
-    });
-    pintar('menu-secciones', visibles.map((s) => `
-      <button class="menu-item" data-ir="${s.id}">
-        <strong>${s.nombre}</strong>
-        <span>${s.hace}</span>
-      </button>`).join(''));
-  }
-
-  const cerrarMenu = () => {
-    $('menu-secciones').hidden = true;
-    $('menu-boton').setAttribute('aria-expanded', 'false');
-  };
-
-  function alternarMenu() {
-    const nav = $('menu-secciones');
-    if (nav.hidden) {
-      pintarMenu();                 // al abrir, no al cargar: el rol y los
-      nav.hidden = false;           // bloques ocultos cambian entre medias
-      $('menu-boton').setAttribute('aria-expanded', 'true');
-    } else cerrarMenu();
-  }
-
-  /**
-   * Lleva a la sección y la enmarca un momento. Sin el destello, en una
-   * pantalla con diez bloques iguales uno no sabe a cuál llegó.
-   */
-  function irA(id) {
-    cerrarMenu();
-    const el = $(id);
-    if (!el) return;
-    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    el.classList.remove('recien-llegado');
-    // Reflow forzado: sin esto, quitar y poner la clase en el mismo cuadro no
-    // reinicia la animación y el segundo clic en la misma sección no destella.
-    void el.offsetWidth;
-    el.classList.add('recien-llegado');
-    setTimeout(() => el.classList.remove('recien-llegado'), 1600);
-  }
 
   // ----------------------------------------------------------- respaldo
   const kb = (b) => `${Math.round(b / 1024).toLocaleString('es-PE')} KB`;
@@ -1439,22 +1511,6 @@
     if (razon) razon.hidden = e.target.value.trim().length !== 11;
   });
 
-  $('menu-boton').onclick = alternarMenu;
-  $('menu-secciones').addEventListener('click', (e) => {
-    const b = e.target.closest('[data-ir]');
-    if (b) irA(b.dataset.ir);
-  });
-  // Clic fuera y Escape cierran. Un menú que solo cierra con su propio botón
-  // se queda abierto tapando el panel.
-  document.addEventListener('click', (e) => {
-    if (!$('menu-secciones').hidden && !e.target.closest('.menu-envoltura')) cerrarMenu();
-  });
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && !$('menu-secciones').hidden) {
-      cerrarMenu();
-      $('menu-boton').focus();
-    }
-  });
 
   $('btn-respaldar').onclick = respaldarAhora;
 
@@ -1462,6 +1518,11 @@
   $('mes-despues').onclick = () => moverMes(1);
 
   $('btn-refrescar').onclick = cargar;
+  $('areas').onclick = (e) => {
+    const b = e.target.closest('[data-area]');
+    if (b) mostrarArea(b.dataset.area);
+  };
+
   $('btn-qr').onclick = imprimirQr;
   $('btn-ruta').onclick = imprimirRuta;
   $('btn-salir').onclick = async () => {

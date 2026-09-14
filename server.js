@@ -1091,12 +1091,21 @@ async function api(req, res, url) {
     const pedido = Q.pedido.get(id);
     if (!pedido) return json(res, 404, { error: 'Pedido no encontrado' });
 
-    // El motorizado cierra la entrega y nada mas. Anular y devolver reponen
-    // stock y emiten una nota de credito: son decisiones de caja, y quien las
-    // toma tiene que ser quien responde por el inventario.
+    /**
+     * El motorizado mueve su pedido hacia adelante y nada mas.
+     *
+     * Puede marcarlo «preparando», «enviado» y «entregado»: los tres toques de
+     * su recorrido, que son los tres que el comprador ve encenderse en su
+     * pagina de seguimiento mientras espera. Lo que no puede es anular ni
+     * devolver: eso repone stock y emite una nota de credito, y quien lo decide
+     * tiene que ser quien responde por el inventario.
+     */
+    const DEL_REPARTO = new Set(['preparando', 'enviado', 'entregado']);
     if (esReparto(sesion)) {
-      if (estado !== 'entregado') {
-        return json(res, 403, { error: 'Desde el reparto solo se marca «entregado».' });
+      if (!DEL_REPARTO.has(estado)) {
+        return json(res, 403, {
+          error: 'Desde el reparto solo se avanza el pedido: preparando, en camino o entregado.',
+        });
       }
       if (!salePorReparto(pedido)) {
         return json(res, 403, { error: 'Ese pedido no sale a reparto.' });
@@ -1142,8 +1151,17 @@ async function api(req, res, url) {
     return json(res, 200, Q.pedido.get(id));
   }
 
+  /**
+   * Mover el stock a mano: ingreso de mercadería y ajustes.
+   *
+   * Pasa a ser de la dueña. Era del mostrador —«el ingreso de mercadería es su
+   * trabajo»— y la decisión se revisó: quien registra lo que entra es quien
+   * responde por lo que falta, y en este puesto esa es ella. El mostrador sigue
+   * moviendo stock todo el día, pero por la vía que no se puede falsear:
+   * vendiendo.
+   */
   if (metodo === 'POST' && ruta === '/api/stock') {
-    const sesion = requierePuesto(req, res);
+    const sesion = requiereAdmin(req, res);
     if (!sesion) return;
     const { producto_id, cantidad, motivo } = await leerCuerpo(req);
     const cant = Number(cantidad);
@@ -1181,8 +1199,9 @@ async function api(req, res, url) {
 
   // Categorias existentes, para que el formulario de alta las sugiera y no se
   // llene el catalogo de "Hierbas", "hierbas" y "Yerbas".
+  // Solo la usa el formulario de alta de fichas, que ya era de la dueña.
   if (metodo === 'GET' && ruta === '/api/admin/categorias') {
-    if (!requierePuesto(req, res)) return;
+    if (!requiereAdmin(req, res)) return;
     return json(res, 200, Q.categorias.all());
   }
 
@@ -1282,8 +1301,11 @@ async function api(req, res, url) {
   }
 
   // Edicion de ficha: precio, minimo y alta/baja. Cada cambio queda firmado.
+  // La ficha entera es de la dueña, incluido el mínimo de reposición: con la
+  // sección de reposición fuera del panel del mostrador, ajustarlo desde ahí ya
+  // no tenía dónde hacerse.
   if (metodo === 'PATCH' && /^\/api\/productos\/\d+$/.test(ruta)) {
-    const sesion = requierePuesto(req, res);
+    const sesion = requiereAdmin(req, res);
     if (!sesion) return;
 
     const p = Q.paraActualizar.get(Number(ruta.split('/')[3]));
@@ -1338,8 +1360,10 @@ async function api(req, res, url) {
     return json(res, 200, resumen(sesion));
   }
 
+  // El kardex: cada unidad que entró o salió y por qué. Es la contabilidad
+  // del inventario, no una herramienta de mostrador.
   if (metodo === 'GET' && ruta === '/api/admin/movimientos') {
-    if (!requierePuesto(req, res)) return;
+    if (!requiereAdmin(req, res)) return;
     return json(res, 200, Q.movimientos.all());
   }
 
@@ -1371,8 +1395,9 @@ async function api(req, res, url) {
   }
 
   // Cuanto se vendio cada dia del mes. Sin `?mes=`, el mes en curso.
+  // Cuánto entró cada día del mes: la facturación del negocio.
   if (metodo === 'GET' && ruta === '/api/admin/calendario') {
-    if (!requierePuesto(req, res)) return;
+    if (!requiereAdmin(req, res)) return;
     return json(res, 200, calendario(url.searchParams.get('mes')));
   }
 
@@ -1763,6 +1788,24 @@ function resumen(sesion) {
   const top = db.prepare(`SELECT nombre, SUM(cantidad) unidades, SUM(subtotal) monto
     FROM pedido_items GROUP BY producto_id ORDER BY unidades DESC LIMIT 5`).all();
   const bajos = Q.bajoStock.all();
+
+  /**
+   * Al mostrador solo lo suyo.
+   *
+   * De este endpoint salen dos cosas distintas: los indicadores del día —caja,
+   * ganancia, inventario— y la lista de más vendidos. La vendedora tiene «Más
+   * vendidos» en su panel y no tiene los indicadores, así que tampoco los
+   * recibe: mandárselos y no pintarlos dejaba la caja del día a un `fetch` de
+   * distancia. Los pedidos por atender sí: son su cola de trabajo.
+   */
+  if (!esAdmin(sesion)) {
+    return {
+      pedidos_pendientes: pendientes.c,
+      top_productos: top,
+      bajo_stock: [],
+    };
+  }
+
   return {
     ventas_hoy: +hoy.t.toFixed(2),
     pedidos_hoy: hoy.c,
