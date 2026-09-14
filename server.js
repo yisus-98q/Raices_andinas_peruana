@@ -135,15 +135,22 @@ function leerBinario(req, limite) {
   return new Promise((resolve, reject) => {
     const trozos = [];
     let total = 0;
+    let excedido = false;
     req.on('data', (c) => {
       total += c.length;
+      if (excedido) {
+        // Pasado el tope se sigue LEYENDO, pero sin guardar nada, para que el
+        // navegador termine de enviar y lea el 413. Cortar el socket con la
+        // subida a medias hacía que en Windows la respuesta se perdiera: al
+        // otro lado llegaba «se cayó la conexión» en vez de «pesa más de 4 MB».
+        // El drenaje también tiene techo: quien mande un cuerpo sin fin no
+        // retiene la conexión para siempre.
+        if (total > limite * 4) req.destroy();
+        return;
+      }
       if (total > limite) {
-        // Se deja de leer, pero NO se mata el socket todavía: primero hay que
-        // poder contestar por qué. Cortando aquí, al navegador le llega «se
-        // cayó la conexión» —que no dice nada y parece un fallo del servidor—
-        // en vez de «la foto pesa más de 4 MB». El socket se cierra después de
-        // responder, en quien llamó.
-        req.pause();
+        excedido = true;
+        trozos.length = 0;
         return reject(Object.assign(new Error('demasiado grande'), { demasiado: true }));
       }
       trozos.push(c);
@@ -862,11 +869,10 @@ async function api(req, res, url) {
     try {
       bytes = await leerBinario(req, 4 * 1024 * 1024);
     } catch (e) {
-      json(res, 413, { error: 'La foto pesa más de 4 MB. Usa una más liviana.' });
-      // Y recién ahora se corta: lo que quedaba por subir ya no interesa, pero
-      // la respuesta salió primero.
-      if (e.demasiado) req.destroy();
-      return;
+      // `Connection: close`: lo que queda por subir se descarta (ver
+      // leerBinario) y la conexión no se reusa para otra petición.
+      if (e.demasiado) res.setHeader('Connection', 'close');
+      return json(res, 413, { error: 'La foto pesa más de 4 MB. Usa una más liviana.' });
     }
     if (!bytes.length) return json(res, 400, { error: 'No llegó ninguna foto.' });
 
