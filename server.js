@@ -904,12 +904,43 @@ async function api(req, res, url) {
       referencia: TIENDA.referencia,
       abierto: estaAbierto(),
       horario: TIENDA.horario.texto,
+      domingo: TIENDA.horario.domingo,
+      /**
+       * Lo que la portada le cuenta a quien todavía no compra: zonas y costos
+       * de envío, provincias, comprobantes, devoluciones y pedidos por mayor.
+       * Todo es lo mismo que el asesor ya responde a cualquiera. Sale de aquí y
+       * no escrito en el HTML para que la portada y el asesor no digan dos
+       * cifras distintas el día que el dueño cambie una tarifa.
+       */
       delivery: {
         gratisDesde: TIENDA.delivery.gratisDesde,
         recojoEnTienda: TIENDA.delivery.recojoEnTienda,
+        zonas: TIENDA.delivery.zonas.map(({ nombre, costo, horas, distritos }) =>
+          ({ nombre, costo, horas, distritos })),
+        provincias: TIENDA.delivery.provincias.habilitado ? {
+          agencias: TIENDA.delivery.provincias.agencias,
+          plazo: TIENDA.delivery.provincias.plazo,
+          quienPaga: TIENDA.delivery.provincias.quienPaga,
+        } : null,
       },
       igv: TIENDA.igv,
-      pago: { medios: TIENDA.pago.medios },
+      pago: { medios: TIENDA.pago.medios, tarjeta: TIENDA.pago.tarjeta },
+      comprobante: {
+        boleta: TIENDA.comprobante.boleta,
+        factura: TIENDA.comprobante.factura,
+      },
+      politicas: {
+        devolucion: {
+          diasPlazo: TIENDA.politicas.devolucion.diasPlazo,
+          nota: TIENDA.politicas.devolucion.nota,
+        },
+        mayorista: {
+          desde: TIENDA.politicas.mayorista.desde,
+          plazoReposicion: TIENDA.politicas.mayorista.plazoReposicion,
+        },
+        escalones: TIENDA.politicas.regateo.escalones,
+        garantiaOrigen: TIENDA.politicas.garantiaOrigen,
+      },
     });
   }
 

@@ -96,6 +96,7 @@
       }
       pintarFiltros();
       pintarGrilla();
+      pintarCategorias();
       // El globo necesita el catálogo para saber qué se vende por peso: antes de
       // cargarlo contaba los gramos como piezas.
       refrescarCuenta();
@@ -399,7 +400,7 @@
   let TIENDA = { delivery: { gratisDesde: 0 } };
   fetch('/api/tienda')
     .then((r) => r.json())
-    .then((t) => { TIENDA = t; pintarContacto(t); })
+    .then((t) => { TIENDA = t; pintarContacto(t); pintarInformacion(t); })
     .catch(() => {});
 
   /**
@@ -431,6 +432,116 @@
     if ($('pie-abierto')) {
       $('pie-abierto').textContent = t.abierto ? 'Abierto ahora' : 'Cerrado ahora';
       $('pie-abierto').style.color = t.abierto ? 'var(--verde)' : 'var(--crema-suave)';
+    }
+  }
+
+  // ------------------------------------------------------------- la portada
+  /**
+   * Qué encontrarás: una tarjeta por categoría, sacada del catálogo real.
+   *
+   * Con cuántos productos tiene, de cuántos lugares salen y tres ejemplos. La
+   * más surtida va primero: es la que mejor dice qué clase de puesto es. Cada
+   * tarjeta abre la tienda con esa categoría ya elegida.
+   */
+  function pintarCategorias() {
+    const caja = $('lista-categorias');
+    if (!caja || !catalogo.length) return;
+
+    const grupos = new Map();
+    for (const p of catalogo) {
+      if (!grupos.has(p.categoria)) grupos.set(p.categoria, []);
+      grupos.get(p.categoria).push(p);
+    }
+    const orden = [...grupos].sort((a, b) => b[1].length - a[1].length);
+
+    caja.innerHTML = orden.map(([cat, prods]) => {
+      const origenes = new Set(prods.map((p) => p.origen).filter(Boolean)).size;
+      const ejemplos = prods.slice(0, 3).map((p) => escapar(p.nombre)).join(' · ');
+      return `
+      <a class="tierra puerta categoria" href="/tienda?cat=${encodeURIComponent(cat)}#catalogo">
+        <span class="tierra-num">${prods.length}</span>
+        <h3>${escapar(cat)}</h3>
+        <div class="altura">${prods.length} producto${prods.length === 1 ? '' : 's'}${
+          origenes > 1 ? ` · ${origenes} orígenes` : ''}</div>
+        <p>${ejemplos}</p>
+        <div class="tierra-productos"><b>Ver ${escapar(cat.toLowerCase())} →</b></div>
+      </a>`;
+    }).join('');
+
+    if ($('categorias-bajada')) {
+      $('categorias-bajada').textContent =
+        `${catalogo.length} productos en ${orden.length} categorías, cada uno con el lugar del que salió.`;
+    }
+    if (window.revelarNuevos) window.revelarNuevos([...caja.children]);
+  }
+
+  /** «Yape, Plin o efectivo»: la lista como se dice, no como se programa. */
+  const enLista = (xs, y = 'o') => (xs.length < 2 ? xs.join('')
+    : `${xs.slice(0, -1).join(', ')} ${y} ${xs[xs.length - 1]}`);
+  const conMayuscula = (t) => String(t || '').replace(/^./, (c) => c.toUpperCase());
+
+  /**
+   * Envíos, pagos, devoluciones y mayoristas, con las cifras de la
+   * configuración. El HTML trae el mismo texto escrito como respaldo; aquí se
+   * reemplaza por el vigente, que es el mismo con el que cobra el carrito.
+   */
+  function pintarInformacion(t) {
+    const poner = (clave, texto) => {
+      const el = document.querySelector(`[data-info="${clave}"]`);
+      if (el && texto) el.textContent = texto;
+    };
+    const medios = t.pago?.medios || [];
+    const d = t.delivery || {};
+    const pol = t.politicas || {};
+
+    if (medios.length) {
+      poner('medios', `${conMayuscula(enLista(medios))}.${t.pago.tarjeta ? '' : ' Sin tarjeta.'}`);
+      poner('pagos', `Con ${enLista(medios)}.${t.pago.tarjeta ? '' : ' Por ahora no aceptamos tarjeta.'}`);
+    }
+    if (d.gratisDesde) poner('gratis', `En Lima el envío es gratis en compras desde ${soles(d.gratisDesde)}.`);
+    if (pol.garantiaOrigen) poner('garantia', pol.garantiaOrigen);
+    if (pol.devolucion) {
+      poner('devolucion', `Tienes ${pol.devolucion.diasPlazo} días. ${pol.devolucion.nota || ''}`.trim());
+    }
+    poner('provincias', d.provincias
+      ? `Sí, enviamos a agencia por ${enLista(d.provincias.agencias, 'u')}, en ${d.provincias.plazo}. ${conMayuscula(d.provincias.quienPaga)}.`
+      : 'Por ahora solo hacemos envíos dentro de Lima y Callao.');
+    if (pol.mayorista && pol.escalones?.length) {
+      const escala = enLista(pol.escalones.map((e) => `${e.porcentaje} % desde ${e.desde} unidades`), 'y');
+      poner('mayor', `Sí, desde ${pol.mayorista.desde} unidades del mismo producto. Hay descuento por volumen: ${escala}. `
+        + 'Se coordina por WhatsApp o preguntándole al asesor, no en el carrito.');
+    }
+
+    const zonas = $('zonas');
+    if (zonas && d.zonas) {
+      const tarjeta = (titulo, dato, texto) => `
+        <article class="tierra zona">
+          <h3>${escapar(titulo)}</h3>
+          <div class="altura">${escapar(dato)}</div>
+          <p>${escapar(texto)}</p>
+        </article>`;
+      zonas.innerHTML = [
+        d.recojoEnTienda ? tarjeta('Recojo en el puesto', 'Sin costo · ' + (t.horario || ''),
+          [t.direccion, t.referencia].filter(Boolean).join(', ') + '.') : '',
+        ...d.zonas.map((z) => tarjeta(z.nombre, `${soles(z.costo)} · ${z.horas}`,
+          z.distritos.length ? z.distritos.join(', ') + '.' : 'El resto de Lima Metropolitana y Callao.')),
+        d.provincias ? tarjeta('Provincias', `Por agencia · ${d.provincias.plazo}`,
+          `${enLista(d.provincias.agencias, 'u')}. ${conMayuscula(d.provincias.quienPaga)}.`) : '',
+      ].join('');
+      if (window.revelarNuevos) window.revelarNuevos([...zonas.children]);
+    }
+
+    if ($('cierre-texto') && t.direccion) {
+      $('cierre-texto').textContent = `${t.direccion}${t.referencia ? ', ' + t.referencia : ''}. `
+        + `Abrimos de ${t.horario}${t.domingo ? '; ' + t.domingo : ''}. `
+        + 'Pregunta por lo que necesites: si no lo tenemos, te lo decimos.';
+    }
+    const wa = $('cierre-whatsapp');
+    if (wa) {
+      if (t.whatsapp) {
+        wa.href = 'https://wa.me/' + (t.pais || '') + String(t.whatsapp).replace(/\D/g, '')
+          + '?text=' + encodeURIComponent('Hola, tengo una consulta');
+      } else wa.hidden = true;
     }
   }
 
@@ -1054,23 +1165,22 @@
   }
 
   const buscar = $('buscar');
-  if (buscar && ES_TIENDA) {
+  if (buscar) {
     let debounce;
     buscar.oninput = (e) => {
       clearTimeout(debounce);
       debounce = setTimeout(() => { busqueda = e.target.value; mostrando = TANDA; pintarGrilla(); }, 180);
     };
-    // Lo que se buscó desde la portada llega como ?q= y la grilla abre filtrada.
-    const q = new URLSearchParams(location.search).get('q');
-    if (q) { buscar.value = q; busqueda = q; }
-  } else if (buscar) {
-    // En la portada no hay grilla que filtrar: Enter lleva a la tienda con lo
-    // escrito, que es lo que quien busca «muña» espera que pase.
-    buscar.addEventListener('keydown', (e) => {
-      if (e.key !== 'Enter') return;
-      const texto = buscar.value.trim();
-      location.href = '/tienda' + (texto ? '?q=' + encodeURIComponent(texto) : '');
-    });
+  }
+
+  // La tienda puede abrir ya filtrada: ?q= busca, ?cat= elige la categoría. Es
+  // como llegan las tarjetas de «Qué encontrarás» de la portada. Una categoría
+  // que no exista simplemente no encuentra nada y el botón «Todos» la deshace.
+  if (ES_TIENDA) {
+    const params = new URLSearchParams(location.search);
+    const q = params.get('q');
+    if (q && buscar) { buscar.value = q; busqueda = q; }
+    if (params.get('cat')) filtro = params.get('cat');
   }
 
   refrescarCuenta();

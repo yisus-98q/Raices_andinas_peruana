@@ -503,6 +503,48 @@ img { max-width: 100%; display: block; }
 .puerta { display: flex; flex-direction: column; color: inherit; }
 .puerta .tierra-productos b { color: var(--ocre); }
 
+/* ------------------------------------------------------- qué encontrarás
+   Las mismas tarjetas, más chicas: son una por categoría y hay una docena. El
+   número grande del fondo es cuántos productos tiene. */
+.categorias { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 18px; }
+.categoria { padding: 26px 22px 22px; }
+.categoria h3 { font-size: 21px; padding-right: 64px; }
+.categoria .tierra-num { font-size: 64px; }
+.categoria .altura { margin-bottom: 12px; }
+.categoria p { font-size: 13.5px; }
+.categoria .tierra-productos { margin-top: 16px; padding-top: 13px; }
+
+/* ------------------------------------------------------- cómo comprar */
+.pasos.pasos-4 { grid-template-columns: repeat(4, 1fr); gap: 34px; }
+
+/* ------------------------------------------------------- envíos y recojo */
+.zonas { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 18px; }
+.zona { padding: 26px 22px; }
+.zona h3 { font-size: 20px; }
+.zona .altura { letter-spacing: .08em; margin-bottom: 12px; }
+.zona p { font-size: 13.5px; }
+
+/* ------------------------------------------------------- preguntas
+   <details> nativo: se abre sin JavaScript, con teclado y con lector de
+   pantalla. Solo se le cambia el triángulo por un «+» que gira. */
+.preguntas { max-width: 860px; border-top: 1px solid var(--borde); }
+.pregunta { border-bottom: 1px solid var(--borde); }
+.pregunta summary {
+  list-style: none; cursor: pointer; position: relative;
+  padding: 22px 48px 22px 0; font-size: 18px; font-weight: 700; letter-spacing: -.01em;
+}
+.pregunta summary::-webkit-details-marker { display: none; }
+.pregunta summary::after {
+  content: "+"; position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+  font-size: 26px; font-weight: 400; color: var(--ocre); transition: transform .25s;
+}
+.pregunta[open] summary::after { transform: translateY(-50%) rotate(45deg); }
+.pregunta summary:hover { color: var(--ocre); }
+.pregunta p { margin: 0 0 22px; max-width: 70ch; font-size: 15.5px; color: var(--tinta-suave); }
+
+.cierre-ctas { display: flex; gap: 13px; justify-content: center; flex-wrap: wrap; margin-top: 36px; }
+.cierre-ctas .btn { margin-top: 0; }
+
 /* --------------------------------------------------------- página /tienda
    Sin hero: quien llega aquí viene a comprar. La cabecera solo despeja la
    barra fija (122 px) y dice cuántos productos hay; los bloques de abajo van
@@ -639,6 +681,7 @@ img { max-width: 100%; display: block; }
   }
   .vitrina-alta { grid-row: span 1; }
   .tierras, .pasos, .puertas { grid-template-columns: 1fr; }
+  .pasos.pasos-4 { grid-template-columns: 1fr 1fr; }
   .pie-grilla { grid-template-columns: 1fr 1fr; }
   .nav-enlaces { display: none; }
 }
@@ -656,6 +699,8 @@ img { max-width: 100%; display: block; }
   .seccion { padding: 78px 0; }
   /* La barra mide 86 px en el celular: la cabecera de la tienda la sigue. */
   .tienda-cabeza { padding-top: 112px; }
+  .pasos.pasos-4 { grid-template-columns: 1fr; gap: 28px; }
+  .pregunta summary { font-size: 16px; padding: 18px 40px 18px 0; }
   .seccion-tienda { padding: 22px 0; }
   .seccion-tienda .asesor-caja { padding: 24px; }
   .buscador { display: none; }

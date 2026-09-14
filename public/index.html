@@ -60,27 +60,20 @@
       </div>
     </a>
 
+    <!-- La portada informa; comprar es de /tienda. Por eso aquí no hay
+         buscador, carrito ni «Mi pedido»: los enlaces recorren la historia y las
+         dudas, y el botón es la única puerta a la tienda — en el celular, donde
+         los enlaces se esconden, es lo que queda. -->
     <nav class="nav-enlaces">
       <a href="#origenes">Orígenes</a>
-      <a href="#proceso">Proceso</a>
-      <a href="/tienda#asesor">Asesor</a>
-      <a href="/tienda">Tienda</a>
-      <a href="/mi-pedido.html">Mi pedido</a>
+      <a href="#categorias">Qué hay</a>
+      <a href="#como-comprar">Cómo comprar</a>
+      <a href="#envios">Envíos</a>
+      <a href="#preguntas">Preguntas</a>
     </nav>
 
-    <!-- La portada no vende: cuenta. El buscador lleva a la tienda con lo
-         escrito, y el botón es la puerta de entrada — en el celular, donde los
-         enlaces de arriba se esconden, es la única. Lleva el globo del carrito
-         para que quien ya agregó algo vea que lo tiene esperando. -->
     <div class="nav-acciones">
-      <div class="buscador">
-        <input type="search" id="buscar" placeholder="Buscar maca, muña…" aria-label="Buscar productos"
-               enterkeyhint="search">
-      </div>
-      <a class="btn btn-primario btn-chico pastilla-carrito" href="/tienda" id="btn-tienda">
-        Ir a la tienda
-        <span class="cuenta" id="cuenta-carrito" hidden>0</span>
-      </a>
+      <a class="btn btn-primario btn-chico" href="/tienda" id="btn-tienda">Ir a la tienda →</a>
     </div>
   </div>
 </header>
@@ -104,7 +97,7 @@
         antes que nosotros.</strong>
       </p>
       <div class="hero-ctas">
-        <a class="btn btn-primario" href="/tienda" id="cta-magnetico">Ver la tienda →</a>
+        <a class="btn btn-primario" href="/tienda" id="cta-magnetico">Ir a la tienda →</a>
         <a class="btn btn-fantasma" href="/tienda#asesor">Consultar al asesor</a>
       </div>
 
@@ -211,41 +204,6 @@
   </div>
 </section>
 
-<!-- ═══════════════════════════════════════════════════ puerta a la tienda -->
-<!-- El catálogo y el asesor viven en /tienda. Aquí quedan las dos puertas, con
-     lo que hay detrás de cada una: quien baja leyendo la historia tiene que
-     tropezar con la tienda en el camino, no enterarse al final. -->
-<section class="seccion" id="tienda">
-  <div class="contenedor">
-    <div class="seccion-cabeza revelar">
-      <span class="kicker">La tienda</span>
-      <h2 class="grande">Pide desde<br>tu casa</h2>
-      <p>Lo que ves disponible es lo que hay en el puesto ahora. Pides en línea
-         y lo recoges en el local, o te lo llevamos.</p>
-    </div>
-
-    <div class="puertas">
-      <a class="tierra puerta revelar" data-retraso="1" href="/tienda#catalogo">
-        <span class="tierra-num">01</span>
-        <h3>El catálogo</h3>
-        <div class="altura">Stock real · con su origen</div>
-        <p>Filtra por categoría o busca por lo que necesitas —«para dormir»,
-           no solo «manzanilla»—. Las hierbas sueltas se piden por gramo.</p>
-        <div class="tierra-productos"><b>Ver los productos →</b></div>
-      </a>
-
-      <a class="tierra puerta revelar" data-retraso="2" href="/tienda#asesor">
-        <span class="tierra-num">02</span>
-        <h3>El asesor Raíz</h3>
-        <div class="altura">Inteligencia artificial</div>
-        <p>Cuéntale con tus palabras qué te pasa y te sugiere solo lo que hay en
-           tienda hoy. También responde por delivery, pagos y pedidos por mayor.</p>
-        <div class="tierra-productos"><b>Consultar al asesor →</b></div>
-      </a>
-    </div>
-  </div>
-</section>
-
 <!-- ═════════════════════════════════════════════════════════════ proceso -->
 <section class="seccion proceso" id="proceso">
   <div class="contenedor">
@@ -277,16 +235,193 @@
   </div>
 </section>
 
+<!-- ═════════════════════════════════════════════════════ qué encontrarás -->
+<!-- Las categorías salen del catálogo de verdad, con cuántos productos tiene
+     cada una y tres ejemplos: si el dueño crea una categoría en el panel,
+     aparece aquí sin tocar el HTML. Cada tarjeta abre la tienda ya filtrada. -->
+<section class="seccion" id="categorias">
+  <div class="contenedor">
+    <div class="seccion-cabeza revelar">
+      <span class="kicker">Qué encontrarás</span>
+      <h2 class="grande">Todo el puesto,<br>por categoría</h2>
+      <p id="categorias-bajada">Tónicos, cremas, hierbas, esencias, aceites y
+         superalimentos, cada uno con el lugar del que salió.</p>
+    </div>
+    <div class="categorias" id="lista-categorias"></div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════ puerta a la tienda -->
+<!-- El catálogo, el asesor, el carrito y el seguimiento del pedido viven en
+     /tienda. Aquí quedan las puertas, con lo que hay detrás de cada una. -->
+<section class="seccion" id="tienda">
+  <div class="contenedor">
+    <div class="seccion-cabeza revelar">
+      <span class="kicker">La tienda</span>
+      <h2 class="grande">Pide desde<br>tu casa</h2>
+      <p>Lo que ves disponible es lo que hay en el puesto ahora. Pides en línea
+         y lo recoges en el local, o te lo llevamos.</p>
+    </div>
+
+    <div class="puertas">
+      <a class="tierra puerta revelar" data-retraso="1" href="/tienda#catalogo">
+        <span class="tierra-num">01</span>
+        <h3>El catálogo</h3>
+        <div class="altura">Stock real · con su origen</div>
+        <p>Filtra por categoría o busca por lo que necesitas —«para dormir»,
+           no solo «manzanilla»—. Cada ficha dice de dónde viene y cuánto queda.</p>
+        <div class="tierra-productos"><b>Ver los productos →</b></div>
+      </a>
+
+      <a class="tierra puerta revelar" data-retraso="2" href="/tienda#asesor">
+        <span class="tierra-num">02</span>
+        <h3>El asesor Raíz</h3>
+        <div class="altura">Inteligencia artificial</div>
+        <p>Cuéntale con tus palabras qué te pasa y te sugiere solo lo que hay en
+           tienda hoy. También responde por delivery, pagos y pedidos por mayor.</p>
+        <div class="tierra-productos"><b>Consultar al asesor →</b></div>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════ cómo comprar -->
+<section class="seccion proceso" id="como-comprar">
+  <div class="contenedor">
+    <div class="seccion-cabeza revelar">
+      <span class="kicker">Cómo comprar</span>
+      <h2 class="grande">Cuatro pasos,<br>sin registrarte</h2>
+      <p>No hace falta crear una cuenta ni una contraseña. Con tu nombre y tu
+         teléfono basta para que el pedido quede registrado.</p>
+    </div>
+
+    <div class="pasos pasos-4">
+      <div class="paso revelar" data-retraso="1">
+        <div class="paso-num">01</div>
+        <h3>Elige</h3>
+        <p>Arma tu pedido en la tienda, o cuéntale al asesor qué necesitas y
+           agrega lo que te sugiera.</p>
+      </div>
+      <div class="paso revelar" data-retraso="2">
+        <div class="paso-num">02</div>
+        <h3>Deja tus datos</h3>
+        <p>Con tu DNI sale boleta; con tu RUC y razón social, factura. Te damos
+           un código para seguir el pedido.</p>
+      </div>
+      <div class="paso revelar" data-retraso="3">
+        <div class="paso-num">03</div>
+        <h3>Paga como prefieras</h3>
+        <p data-info="medios">Yape, Plin, efectivo contra entrega o
+           transferencia BCP. Sin tarjeta.</p>
+      </div>
+      <div class="paso revelar" data-retraso="4">
+        <div class="paso-num">04</div>
+        <h3>Recoge o recibe</h3>
+        <p>Pasa por el puesto sin costo de envío, o te lo llevamos a tu casa en
+           Lima y a agencia en provincias.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════ envíos -->
+<!-- Zonas, costos y plazos pintados desde /api/tienda: son las mismas cifras
+     con las que cobra el carrito y responde el asesor. Lo escrito aquí es solo
+     el respaldo para quien llegue sin JavaScript. -->
+<section class="seccion" id="envios">
+  <div class="contenedor">
+    <div class="seccion-cabeza revelar">
+      <span class="kicker">Envíos y recojo</span>
+      <h2 class="grande">¿Cuánto cuesta<br>y cuándo llega?</h2>
+      <p data-info="gratis">En Lima el envío es gratis en compras desde S/ 120.</p>
+    </div>
+
+    <div class="zonas" id="zonas">
+      <article class="tierra zona">
+        <h3>Recojo en el puesto</h3>
+        <div class="altura">Sin costo</div>
+        <p>Jr. Ayacucho 412, puesto 87, Mercado Central.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════════════════════════════════════════════ preguntas frecuentes -->
+<!-- Las preguntas que más llegan por WhatsApp antes de comprar. Las respuestas
+     con cifras se completan desde /api/tienda al cargar. -->
+<section class="seccion proceso" id="preguntas">
+  <div class="contenedor">
+    <div class="seccion-cabeza revelar">
+      <span class="kicker">Preguntas frecuentes</span>
+      <h2 class="grande">Antes de<br>comprar</h2>
+    </div>
+
+    <div class="preguntas revelar">
+      <details class="pregunta">
+        <summary>¿Son medicamentos? ¿Me pueden recomendar algo para una enfermedad?</summary>
+        <p>No son medicamentos ni reemplazan un tratamiento. Si nos cuentas de
+           un diagnóstico, un embarazo o un medicamento que tomas, no te vamos a
+           recomendar nada por escrito: algunos naturales interactúan con
+           medicamentos. Lo que sí hacemos es agendarte una atención en el
+           puesto con la dueña, con la indicación de tu médico en la mano.</p>
+      </details>
+      <details class="pregunta">
+        <summary>¿De dónde vienen los productos?</summary>
+        <p data-info="garantia">Compramos directo al productor y guardamos la guía
+           de cada lote. Si quieres, en el local te mostramos de qué lote salió
+           tu frasco.</p>
+      </details>
+      <details class="pregunta">
+        <summary>¿Cómo pago?</summary>
+        <p data-info="pagos">Con Yape, Plin, efectivo contra entrega o
+           transferencia BCP. Por ahora no aceptamos tarjeta.</p>
+      </details>
+      <details class="pregunta">
+        <summary>¿Me dan boleta o factura?</summary>
+        <p>Las dos. Con tu DNI emitimos boleta; para factura necesitamos tu RUC y
+           tu razón social al momento del pedido. La puedes ver e imprimir desde
+           la tienda, en «Mi pedido», con tu código y tu teléfono.</p>
+      </details>
+      <details class="pregunta">
+        <summary>¿Hacen envíos a provincias?</summary>
+        <p data-info="provincias">Sí, enviamos a agencia por Shalom u Olva Courier,
+           en 2 a 4 días hábiles. El flete se paga en la agencia de destino.</p>
+      </details>
+      <details class="pregunta">
+        <summary>¿Venden por mayor?</summary>
+        <p data-info="mayor">Sí, desde 12 unidades del mismo producto. Hay descuento
+           por volumen: 10 % desde 3 unidades, 15 % desde 12 y 20 % desde 24. Se
+           coordina por WhatsApp o preguntándole al asesor, no en el carrito.</p>
+      </details>
+      <details class="pregunta">
+        <summary>¿Puedo devolver un producto?</summary>
+        <p data-info="devolucion">Tienes 7 días. Por sanidad no recibimos productos
+           abiertos o ya consumidos.</p>
+      </details>
+      <details class="pregunta">
+        <summary>¿Cómo sé en qué va mi pedido?</summary>
+        <p>En la tienda, en «Mi pedido», con el código que te dimos al comprar y
+           los últimos 4 dígitos de tu teléfono. Ves cuándo pasa a preparación,
+           cuándo sale y cuándo se entrega, sin tener que llamar.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
 <!-- ══════════════════════════════════════════════════════════════ cierre -->
-<section class="seccion cierre">
+<section class="seccion cierre" id="visitanos">
   <div class="contenedor">
     <span class="kicker revelar">Ven al puesto 87</span>
     <h2 class="enorme revelar" data-retraso="1">Te esperamos</h2>
-    <p class="revelar" data-retraso="2">
-      Jr. Ayacucho 412, Mercado Central. De lunes a sábado, de 8 de la mañana
-      a 7 de la noche. Pregunta por lo que necesites: si no lo tenemos, te lo decimos.
+    <p class="revelar" data-retraso="2" id="cierre-texto">
+      Jr. Ayacucho 412, Mercado Central, a media cuadra de la puerta de
+      Andahuaylas. De lunes a sábado, de 8:00 a 19:00. Pregunta por lo que
+      necesites: si no lo tenemos, te lo decimos.
     </p>
-    <a class="btn btn-primario revelar" data-retraso="3" href="/tienda">Empezar mi pedido →</a>
+    <div class="cierre-ctas revelar" data-retraso="3">
+      <a class="btn btn-primario" href="/tienda">Empezar mi pedido →</a>
+      <a class="btn btn-fantasma" id="cierre-whatsapp" href="#" target="_blank" rel="noopener">Escríbenos por WhatsApp</a>
+    </div>
   </div>
 </section>
 
@@ -305,13 +440,14 @@
         <p id="pie-direccion">Jr. Ayacucho 412, puesto 87<br>Mercado Central, Lima</p>
       </div>
       <div>
-        <h4>Tienda</h4>
+        <h4>Conócenos</h4>
         <ul>
-          <li><a href="/tienda">Catálogo</a></li>
-          <li><a href="/tienda#asesor">Asesor Raíz</a></li>
           <li><a href="#origenes">Orígenes</a></li>
           <li><a href="#proceso">Cómo trabajamos</a></li>
-          <li><a href="/mi-pedido.html">Seguir mi pedido</a></li>
+          <li><a href="#como-comprar">Cómo comprar</a></li>
+          <li><a href="#envios">Envíos y recojo</a></li>
+          <li><a href="#preguntas">Preguntas frecuentes</a></li>
+          <li><a href="/tienda">Ir a la tienda →</a></li>
         </ul>
       </div>
       <div>

@@ -96,8 +96,30 @@ describe('La portada cuenta y lleva a la tienda', () => {
     // Los enlaces de la barra se esconden por debajo de 980 px: el botón de la
     // derecha es lo único que queda.
     assert.match(portada.html, /<a class="btn[^"]*" href="\/tienda" id="btn-tienda">/);
-    assert.ok(tieneId(portada.html, 'cuenta-carrito'),
-      'el botón perdió el globo del carrito');
+  });
+
+  test('comprar es de la tienda: sin buscador, carrito ni «Mi pedido» en la portada', () => {
+    for (const id of ['buscar', 'cuenta-carrito', 'btn-carrito']) {
+      assert.ok(!tieneId(portada.html, id), `la portada todavía tiene id="${id}"`);
+    }
+    assert.doesNotMatch(portada.html, /href="\/mi-pedido\.html"/,
+      'el seguimiento del pedido se enlaza desde la tienda');
+    assert.match(tienda.html, /href="\/mi-pedido\.html"/, 'la tienda perdió «Mi pedido»');
+  });
+
+  test('informa: qué hay, cómo comprar, envíos, preguntas y dónde queda', () => {
+    for (const id of ['categorias', 'lista-categorias', 'como-comprar', 'envios', 'zonas',
+      'preguntas', 'visitanos', 'cierre-whatsapp']) {
+      assert.ok(tieneId(portada.html, id), `a la portada le falta id="${id}"`);
+    }
+    const preguntas = (portada.html.match(/<details class="pregunta">/g) || []).length;
+    assert.ok(preguntas >= 6, `solo ${preguntas} preguntas frecuentes`);
+  });
+
+  test('cada respuesta con cifras tiene dónde recibir el dato vigente', () => {
+    for (const clave of ['medios', 'pagos', 'gratis', 'garantia', 'devolucion', 'provincias', 'mayor']) {
+      assert.match(portada.html, new RegExp(`data-info="${clave}"`), `falta data-info="${clave}"`);
+    }
   });
 
   test('las anclas a las que lleva existen en la tienda', () => {
@@ -106,6 +128,41 @@ describe('La portada cuenta y lleva a la tienda', () => {
     for (const ancla of new Set(destinos)) {
       assert.ok(tieneId(tienda.html, ancla), `la portada lleva a /tienda#${ancla}, que no existe`);
     }
+  });
+});
+
+describe('La portada informa con las cifras de la configuración', () => {
+  /**
+   * Las tarifas de envío y la escala de descuentos ya se habían desincronizado
+   * una vez entre la documentación y el panel. La portada no las escribe: las
+   * pide aquí, así que lo que se prueba es que salgan iguales a tienda.config.
+   */
+  test('/api/tienda trae zonas, provincias y políticas tal cual la configuración', async () => {
+    const { TIENDA } = await import('../tienda.config.js');
+    const t = await (await fetch(srv.base + '/api/tienda')).json();
+
+    assert.deepEqual(t.delivery.zonas.map((z) => [z.nombre, z.costo, z.horas]),
+      TIENDA.delivery.zonas.map((z) => [z.nombre, z.costo, z.horas]));
+    assert.equal(t.delivery.gratisDesde, TIENDA.delivery.gratisDesde);
+    assert.deepEqual(t.politicas.escalones, TIENDA.politicas.regateo.escalones);
+    assert.equal(t.politicas.devolucion.diasPlazo, TIENDA.politicas.devolucion.diasPlazo);
+    if (TIENDA.delivery.provincias.habilitado) {
+      assert.deepEqual(t.delivery.provincias.agencias, TIENDA.delivery.provincias.agencias);
+    }
+  });
+
+  test('y no deja salir nada que no sea para el público', async () => {
+    const t = await (await fetch(srv.base + '/api/tienda')).json();
+    const texto = JSON.stringify(t);
+    for (const secreto of ['ruc', 'razonSocial', 'costo_unit', 'ADMIN']) {
+      assert.ok(!texto.includes(`"${secreto}"`), `/api/tienda expone «${secreto}»`);
+    }
+  });
+
+  test('la tienda abre filtrada por la categoría que se eligió en la portada', () => {
+    const js = readFileSync(join(RAIZ, 'public/js/app.js'), 'utf8');
+    assert.match(js, /href="\/tienda\?cat=\$\{encodeURIComponent\(cat\)\}#catalogo"/);
+    assert.match(js, /params\.get\('cat'\)/);
   });
 });
 
