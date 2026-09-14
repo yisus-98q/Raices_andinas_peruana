@@ -1349,12 +1349,8 @@ img { max-width: 100%; display: block; }
 /* El manifiesto ya era serif (Georgia); pasa a la misma familia que los títulos. */
 .portada .manifiesto p { font-weight: 500; line-height: 1.3; }
 
-/* ------------------------------------------------- nada se mueve al bajar
-   El estado final desde el primer cuadro: sin deslizamientos de entrada, con
-   el manifiesto entero encendido y la barra con su alto de siempre. */
-.revelar, .revelar.visto { opacity: 1; transform: none; transition: none; }
-.manifiesto .palabra { opacity: 1; transition: none; }
-.manifiesto .palabra.acento { color: var(--ocre); }
+/* La barra nace compacta y no cambia de alto al bajar. Las animaciones de
+   entrada, los contadores y el manifiesto sí se mueven: ver PANTALLA COMPLETA. */
 .nav { transition: none; }
 /* Con la barra fija ya compacta (unos 96 px), el hero sube lo que ella bajó. */
 .hero { padding-top: 112px; }
@@ -1366,3 +1362,75 @@ img { max-width: 100%; display: block; }
   .portada .pregunta summary { font-size: 16.5px; }
   .hero { padding-top: 84px; }
 }
+
+/* ===================================================== PANTALLA COMPLETA
+   Cada sección de la portada ocupa al menos una pantalla, con su contenido
+   centrado en alto, y al soltar la rueda la página se acomoda en la más
+   cercana: se recorre como una presentación, una idea por pantalla.
+
+   - `min-height` y no `height`: categorías o preguntas pueden medir más que
+     la pantalla, y ahí la sección crece. Con el encaje `mandatory` el
+     navegador deja bajar dentro de una sección más alta que la ventana antes
+     de saltar a la siguiente.
+   - El relleno de arriba despeja la barra fija (unos 96 px) para que el
+     contenido quede centrado en lo que se ve, no detrás de la barra.
+   - El encaje solo en pantallas grandes y con alto suficiente. En el celular
+     y en ventanas bajas las secciones largas quedarían cortadas a mitad de
+     un salto, así que ahí el scroll es libre.
+   - La marquesina pasa a ser el pie del hero: suelta entre dos secciones que
+     encajan, el salto se la saltaba. */
+.portada .seccion {
+  min-height: 100svh;
+  display: flex; flex-direction: column; justify-content: center;
+  padding-top: 112px; padding-bottom: 64px;
+}
+.portada .seccion > .contenedor { width: 100%; }
+
+.portada .hero { padding-bottom: 96px; }
+.portada .hero .marquesina { position: absolute; left: 0; right: 0; bottom: 0; }
+
+@media (min-width: 981px) and (min-height: 620px) {
+  html:has(body.portada) { scroll-snap-type: y mandatory; }
+  .portada .hero, .portada .seccion { scroll-snap-align: start; }
+  .portada .pie { scroll-snap-align: end; }
+}
+
+@media (max-width: 640px) {
+  .portada .seccion { padding-top: 92px; padding-bottom: 44px; }
+  .portada .hero { padding-bottom: 76px; }
+}
+
+/* ======================================================= SECCIONES CON FOTO
+   Dos pantallas con fotografía de fondo: el guacamayo en el manifiesto y la
+   Amazonía desde el aire en orígenes. Las dos son de dominio público (CC0),
+   descargadas a /img/fondos para que funcionen sin internet; la licencia de
+   cada una queda en img/fondos/creditos.json.
+
+   El velo es un degradado de la tinta de la marca, no negro: oscurece lo
+   justo para que el texto blanco se lea sin apagar el verde de la selva. */
+.manifiesto.con-foto {
+  border: none;
+  background:
+    linear-gradient(180deg, rgba(14, 28, 20, .72), rgba(14, 28, 20, .58) 55%, rgba(14, 28, 20, .78)),
+    url("/img/fondos/guacamayo.jpg") center 35% / cover no-repeat;
+  color: #fff;
+}
+.manifiesto.con-foto .palabra { color: #fff; opacity: .28; }
+.manifiesto.con-foto .palabra.viva { opacity: 1; }
+/* El acento pasa del verde —que sobre la selva se pierde— al dorado miel. */
+.manifiesto.con-foto .palabra.acento.viva { color: #f0c05a; }
+.manifiesto.con-foto .manifiesto-pie { color: rgba(255, 255, 255, .85); }
+.manifiesto.con-foto .manifiesto-pie i { background: #f0c05a; }
+
+#origenes.con-foto {
+  background:
+    linear-gradient(180deg, rgba(14, 28, 20, .82), rgba(14, 28, 20, .5) 45%, rgba(14, 28, 20, .72)),
+    url("/img/fondos/selva-amazonia.jpg") center / cover no-repeat;
+}
+#origenes.con-foto .seccion-cabeza h2 { color: #fff; }
+#origenes.con-foto .seccion-cabeza p { color: rgba(255, 255, 255, .86); }
+#origenes.con-foto .kicker { color: #f0c05a; }
+#origenes.con-foto .kicker::before,
+#origenes.con-foto .kicker::after { background: #f0c05a; }
+/* Las tarjetas se quedan blancas y ganan una sombra para despegarse de la foto. */
+#origenes.con-foto .tierra { box-shadow: 0 18px 40px rgba(0, 0, 0, .25); }

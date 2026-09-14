@@ -1,0 +1,20 @@
+{
+  "guacamayo.jpg": {
+    "uso": "Fondo del manifiesto en la portada",
+    "titulo": "Flying Macaw parrot photo",
+    "autor": "Desconocido",
+    "licencia": "CC0 1.0",
+    "fuente": "https://www.rawpixel.com/image/6028175/photo-image-public-domain-blue-nature",
+    "proveedor": "rawpixel (vía Openverse)",
+    "nota": "Dominio público: uso comercial libre, sin atribución obligatoria."
+  },
+  "selva-amazonia.jpg": {
+    "uso": "Fondo de la sección Orígenes en la portada",
+    "titulo": "Amazon rainforest is often called",
+    "autor": "U.S. Forest Service",
+    "licencia": "CC0 1.0",
+    "fuente": "https://www.rawpixel.com/image/8732155/photo-image-plant-public-domain-green",
+    "proveedor": "rawpixel (vía Openverse)",
+    "nota": "Dominio público: uso comercial libre, sin atribución obligatoria."
+  }
+}
