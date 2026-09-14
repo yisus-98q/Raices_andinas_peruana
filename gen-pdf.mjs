@@ -119,6 +119,9 @@ for (const doc of DOCUMENTOS) {
 
   const destino = join(DOCS, doc.salida);
   execFileSync(exe, [
+    // Perfil propio y desechable: sin esto, con el Chrome personal abierto,
+    // el proceso headless puede engancharse a esa sesion en vez de imprimir.
+    `--user-data-dir=${join(temporal, 'perfil')}`,
     '--headless=new',
     '--disable-gpu',
     '--no-sandbox',

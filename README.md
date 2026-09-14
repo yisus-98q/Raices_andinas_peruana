@@ -8,6 +8,7 @@ sistema que reduce pérdidas por quiebre de stock y ahorra el tiempo administrat
 ## Arrancar
 
 ```bash
+copy .env.example .env   # y pon ADMIN_PASSWORD (ver «Acceso al panel»)
 node gen-ubigeo.mjs      # compacta el ubigeo del INEI (una sola vez)
 node gen-catalogo.mjs    # arma el catálogo de 400 productos de ejemplo
 node gen-imagenes.mjs    # dibuja las ilustraciones (por SKU y de respaldo)
@@ -183,12 +184,26 @@ que es exactamente lo que hace falta para demostrar en la laptop del cliente.
 por curiosidad. Los atajos `/panel` y `/entrar` existen para dictarlos por teléfono.
 
 **Acceso al panel:** se entra con **correo y contraseña**. El servidor crea el
-primer acceso al arrancar y lo imprime en consola:
+primer acceso la primera vez que arranca, cuando todavía no hay ningún usuario.
+**Ninguna instalación queda con una clave conocida**: ya no existe una clave de
+fábrica escrita en este README.
+
+1. **Con clave propia (lo normal).** Antes del primer arranque se copia
+   `.env.example` a `.env` y se pone la clave en `ADMIN_PASSWORD` (y el correo en
+   `ADMIN_EMAIL`, si no es el de `tienda.config.js`). `entorno.js` lee el `.env`
+   solo al arrancar; lo que ya venga definido en la consola manda sobre el archivo.
+2. **Sin clave propia.** Si `ADMIN_PASSWORD` falta, o se dejó el
+   `cambia-esta-clave` del ejemplo, el servidor genera una clave al azar de 12
+   caracteres y la muestra **una sola vez** en la consola. Solo se guarda su hash:
+   hay que anotarla en ese momento.
 
 ```
-correo:      hola@raizandina.pe      (sale de tienda.config.js)
-contrasena:  raiz2026
+Acceso al panel creado:
+  correo:      hola@raizandina.pe
+  contrasena:  (la de tu .env, o la generada al azar)
 ```
+
+Si se pierde, o para cambiarla cuando quieras:
 
 ```bash
 node clave.mjs hola@raizandina.pe miClaveSegura        # cambiar contraseña (mín. 8)
@@ -226,8 +241,9 @@ nada — ni el precio ni lo que venía junto en la misma petición.
 El rol se lee de la tabla en cada petición, no de la cookie: degradar a alguien
 tiene efecto en su siguiente clic, sin cerrarle la sesión.
 
-> Cambia la contraseña por defecto antes de mostrarle esto a alguien. También
-> puedes fijar ambas desde el arranque con `ADMIN_EMAIL` y `ADMIN_PASSWORD`.
+> `ADMIN_PASSWORD` solo se usa en el primer arranque. Cambiarla después en el
+> `.env` no cambia la clave del panel: para eso está `node clave.mjs`. Quien use
+> `importar-catalogo.mjs` sí la necesita en el `.env`, porque entra al panel con ella.
 
 **Por qué se conserva el usuario corto además del correo:** es lo que firma el
 kardex y la bitácora. En un movimiento de stock se lee mejor
@@ -249,20 +265,23 @@ contraseña.
 
 Abre la portada (`/`) en pantalla completa.
 
-0. **La portada cuenta, la tienda vende.** Baja por la historia —orígenes, pisos
-   ecológicos— y entra con **Ver la tienda →**. El carrito es el mismo en las dos
-   páginas: lo que se agrega sigue ahí al volver.
+0. **La portada cuenta, la tienda vende.** La portada es solo informativa: baja
+   por la historia —orígenes, pisos ecológicos, cómo comprar— sin botones de
+   compra. A la tienda se entra por el ítem **Tienda** del menú. El carrito es el
+   mismo en las dos páginas: lo que se agrega sigue ahí al volver.
 1. **El origen es el argumento.** Cada tarjeta dice *"Meseta de Bombón, Junín"*, no
    solo "Maca". Y trae el uso tradicional. Eso es lo que una farmacia no puede copiar.
 2. **Filtra por categoría** y **busca "muña"**: responde al instante, sin recargar.
-3. Nota los indicadores de stock: *Disponible*, *Últimas 4*, *Agotado*.
-   **El cliente ve la verdad del inventario.** Nadie compra lo que no hay.
+3. Nota que cada tarjeta dice solo *Disponible* o *Agotado*. **Nunca una cifra.**
+   Nadie compra lo que no hay, y la competencia que entra a mirar no se entera de
+   cuánto tiene usted en el almacén. Las cantidades las ve el dueño en el panel.
 
 ### Acto 2 — El pedido y el descuento de stock (4 min)
 
 > Antes de este paso, ten el panel abierto en otra pestaña.
 
-1. Agrega **Propóleo en gotas** (stock 4) — el catálogo lo marca *Últimas 4*.
+1. Agrega **Propóleo en gotas**. En la tienda solo dice *Disponible*; en el panel
+   tiene stock 4 y mínimo 10. **El cliente no ve el inventario; el dueño, sí.**
 2. Pon 3 unidades, confirma con datos de cliente. Sale el código `RA-…`.
    **Anótalo: es el que cierra el Acto 3.**
 3. **Cambia a la pestaña del panel.** Sin tocar nada:
@@ -275,7 +294,8 @@ Abre la portada (`/`) en pantalla completa.
    Acá pasó solo, en el mismo segundo en que el cliente pagó."*
 
 4. Vuelve a la tienda e intenta comprar 5 propóleos. El sistema lo bloquea y dice
-   cuántos quedan. **Ahí está la pérdida que se evita:** vender lo que no existe.
+   qué producto no alcanza, sin dar la cifra. **Ahí está la pérdida que se evita:**
+   vender lo que no existe.
 5. En el panel, pulsa **+19** en Propóleo → repuesto, con su movimiento registrado.
 6. **Haz un segundo pedido** —cualquier cosa, una unidad— y **anula ese**: el
    stock vuelve solo al inventario y la nota de crédito `BC01-…` se emite sin que
@@ -288,7 +308,7 @@ Abre la portada (`/`) en pantalla completa.
 
 ### Acto 3 — La IA como diferenciador (3 min)
 
-En el asesor —arriba de todo en `/tienda`—, escribe **"no puedo dormir y ando con mucho estrés"**.
+En el asesor —la primera pantalla de `/tienda`—, escribe **"no puedo dormir y ando con mucho estrés"**.
 
 - Recomienda Valeriana + Pasiflora, Manzanilla y Graviola, y **resalta esas tarjetas**
   en el catálogo.
@@ -301,6 +321,15 @@ recomendar** y deriva a un profesional.
 > *"Esto lo protege a usted. Un chatbot común le recomienda cualquier cosa a una
 > gestante y le trae un problema legal. Este sabe cuándo callarse."*
 
+Remátalo con dos frases como las dice la gente, sin palabra técnica:
+**"mi bebé tiene tos"** y **"tengo el azúcar alta"**. Las dos derivan igual, y
+la respuesta no termina en un portazo: ofrece **agendar una atención con la
+dueña** en el local.
+
+> *"Un bot que le recomienda miel a un bebé o yacón a un diabético es la prueba
+> perfecta en una inspección. Este lo convierte en una visita a su local, que es
+> justo donde usted le gana a la competencia."*
+
 Prueba también **"me lo dejas en 20 soles"** (responde con la política de descuento
 por volumen, no con un precio inventado) y **"aceptan yape"**.
 
@@ -308,13 +337,15 @@ por volumen, no con un precio inventado) y **"aceptan yape"**.
 
 > *"cuánto me sale 50 bolsas de maca negra"*
 
-El asesor aplica el 20 % por volumen, da el total… **y dice que solo hay 42 en
-almacén**, ofreciendo entregar 42 ya y 8 en 3 a 5 días.
+El asesor aplica el 20 % por volumen y da el total… **y dice si se lo puede
+entregar todo hoy**. Con 42 en almacén, no: *"una parte te la entrego de una vez y
+el resto llega en 3 a 5 días hábiles. Te confirmo por WhatsApp cuántas salen ya"*.
+Nunca dice la cifra.
 
 > *"Fíjese en lo que acaba de pasar: le cotizó, le dio el descuento que corresponde
-> y le dijo la verdad del almacén, todo junto. Hoy usted contesta eso revisando el
-> depósito y llamando al proveedor. Y si se equivoca, se equivoca en el pedido más
-> grande del mes."*
+> y le dijo si se lo entrega todo hoy, sin mostrarle a la competencia cuánto tiene
+> usted. Hoy contesta eso revisando el depósito y llamando al proveedor. Y si se
+> equivoca, se equivoca en el pedido más grande del mes."*
 
 Y el remate, el que amarra los tres actos: pega el **código del pedido del paso 2
 del Acto 2** —el que anotaste, no el que anulaste— seguido de *"no llega"*. El
@@ -370,7 +401,7 @@ gen-pdf.mjs        Arma el manual desde este README e imprime los tres PDF
 verificar-imagenes.mjs  Comprueba que las ilustraciones no se corten
 importar-fotos.mjs Importa las fotos propias desde img/ (empareja por nombre)
 traer-fotos.mjs    Descarga fotografías libres y guarda sus créditos
-test/              222 tests con node:test, sin dependencias
+test/              512 tests con node:test (npm test)
 public/            Tienda, panel, login, hoja de contactos, /img
 img/               Las fotos originales del negocio, FUERA de public/
 docs/              Los tres documentos, en HTML y PDF
@@ -419,12 +450,12 @@ Ahora se reparte en tres tramos:
 Sobre los 400 quedan **19 por reponer, 6 de ellos agotados**. Es lo que se
 parece a un almacén de verdad: casi todo surtido, unos pocos en rojo y algún
 hueco. Y es lo que hace que los dos indicadores del guion signifiquen algo — el
-*Agotado* de la vitrina en el Acto 1, y el Propóleo subiendo a *1 de 10* en el
-Acto 2.
+*Agotado* de la vitrina en el Acto 1, y el Propóleo marcado *1 de 10* en
+*Reposición urgente* del panel en el Acto 2.
 
 Los 24 curados no pasan por aquí: su stock está escrito a mano en `db.js`, que
-es lo que fija el *Últimas 4* del propóleo y las *42 bolsas* de la cotización
-mayorista. Regenerar el catálogo no los toca.
+es lo que fija las 4 unidades del propóleo y las 42 bolsas que hacen que la
+cotización mayorista del Acto 3 no alcance. Regenerar el catálogo no los toca.
 
 Categorías: Hierbas, Superalimentos, Suplementos, Tónicos, Colágeno, Aceites,
 Esencias, Apícolas, Cremas y Cuidado personal.
@@ -658,6 +689,11 @@ Cómo está hecho, sin dependencias:
   `SameSite=Strict` es lo que cubre el CSRF sin token aparte.
 - **Bloqueo por fuerza bruta:** 5 intentos fallidos → 5 minutos de espera, incluso
   si luego aciertan la clave. Se guarda en memoria: reiniciar limpia los bloqueos.
+- **Las cuotas por IP usan la IP de la conexión**, no la cabecera
+  `X-Forwarded-For`: esa la escribe el cliente, y rotarla anulaba los límites de
+  login, asesor y seguimiento. Detrás de un proxy propio (nginx, Caddy) que la
+  reescribe, se activa con `CONFIAR_PROXY=1`; sin eso, todos los clientes
+  compartirían la IP del proxy.
 - **El error de login nunca distingue** entre usuario inexistente y clave mala.
 - **Cambiar la clave cierra las sesiones abiertas** de esa persona.
 - **El kardex anota quién fue:** un ajuste manual queda como
@@ -677,7 +713,7 @@ Por eso el asesor tiene tres capas, en este orden:
 
 | Capa | Qué atiende | De dónde saca la respuesta |
 |---|---|---|
-| 1. Cotización | *"50 bolsas de maca negra"* | precio + escala de descuento + **stock real** |
+| 1. Cotización | *"50 bolsas de maca negra"* | precio + escala de descuento + **si alcanza el stock** (sin decir la cifra) |
 | 2. Intenciones | saludo, despedida, presencia, catálogo, WhatsApp, delivery (Lima y provincia), horario, pago, comprobante, ubicación, regateo, mayorista, devolución, reclamo, autenticidad | `tienda.config.js` y, en un reclamo con código, la tabla `pedidos` |
 | 3. Productos | síntomas y necesidades | catálogo filtrado contra stock real |
 
@@ -685,22 +721,106 @@ La comparación —*"¿qué es mejor, la maca o el camu camu?"*— no pasa por l
 de intenciones: se detecta en `asesor.js` sobre los nombres del catálogo, porque
 necesita saber de qué dos productos habla.
 
-Cinco decisiones que valen la pena señalar:
+Seis decisiones que valen la pena señalar:
 
 - **El regateo no se improvisa.** No responde con un descuento inventado, sino con
   la escala de `tienda.config.js` (10 / 15 / 20 % según cantidad). El asesor nunca
   regala margen del negocio.
-- **Una cotización siempre dice cuánto hay.** Es el argumento de venta completo en
-  una sola respuesta: precio correcto y verdad de almacén, en el pedido donde más
-  cuesta equivocarse.
+- **Una cotización siempre dice si alcanza.** Es el argumento de venta completo en
+  una sola respuesta: precio correcto y si se entrega todo hoy o una parte después,
+  en el pedido donde más cuesta equivocarse. La cifra no sale: el inventario es
+  información del negocio, no de quien pregunta.
 - **El asesor no cambia el estado de un pedido.** Informa y compromete a la tienda,
   pero no ejecuta. Si lo hiciera, cualquiera con un código movería el inventario
   desde el chat.
 - **Un saludo no dispara un catálogo.** `hola` y `ok gracias` están anclados con
-  `^…$`, así que *"hola, tienes algo pa la gastritis"* sigue de largo a productos.
+  `^…$`, así que *"hola, tienes algo pa dormir"* sigue de largo a productos.
 - **El relleno de demostración va último, empate o no.** Un producto inventado
   con las etiquetas perfectas no desplaza a uno que el negocio sí tiene, por
   muchas señales que acierte. Ver abajo.
+- **El asesor no receta.** Ante una enfermedad, un medicamento, un embarazo, un
+  bebé o un síntoma de alarma no recomienda nada y ofrece atención con la dueña.
+  Ver *El asesor no receta*, a continuación.
+
+#### Cómo escribe la gente
+
+El asesor se midió contra un banco de **146 consultas reales**, escritas como
+llegan por WhatsApp: *"q tienen pa la tos d mi hijo"*, *"a q numero yapeo"*,
+*"toy embarasada"*, *"uña de gat"*. Antes acertaba el **76,7 %**; hoy el 100 % de
+ese banco. Con **36 frases de control** que no se usaron para ajustarlo acertó
+el **83,3 %** antes de corregir lo que destaparon, y esa es la cifra honesta de
+cuánto generaliza.
+
+Cuatro piezas, todas sin dependencias:
+
+- **Jerga de WhatsApp a diccionario** (`expandirJerga`): *q, x, pa, d, toy, bb,
+  xfa*… y las letras repetidas (*holaaa*). Por palabra entera y con letras
+  Unicode: `\b` de JavaScript cree que la «é» corta la palabra.
+- **Erratas de producto** (`corregirErratas`): *maka*, *hercanpuri*, *propolio*,
+  corregidas **contra el vocabulario del propio catálogo** y solo con un
+  candidato claro. Nunca se corrigen palabras comunes (*cada* estaba a una
+  letra de *caída*) ni las que el asesor ya entiende.
+- **La derivación no depende de la ortografía**: fonética de oído (v/b, z/s,
+  ce/se) y una letra de distancia en palabras largas y específicas. *Embarasada*
+  y *diabetis* derivan igual. La corrección de erratas **no** corre antes de
+  derivar: una enfermedad mal escrita no puede «corregirse» a un producto.
+- **Intenciones con variantes reales**: *yapeo*, *rebajita*, *me llegó roto*,
+  *ya pasaron 3 días y nada*, *es bamba*.
+
+Y dos cambios de tono. La respuesta cierra con una pregunta útil —*¿es para ti o
+para alguien de la casa?*, o *¿lo recoges en el puesto o te lo mandamos?* si ya
+nombró el producto— y, cuando no entiende, **pregunta qué busca en vez de
+ofrecer tres productos fijos**. `test/asesor-entrenamiento.test.mjs` guarda una
+muestra del banco para que no se desentrene.
+
+#### El asesor no receta
+
+Un suplemento o una hierba no puede promocionarse como que previene, trata o cura
+una enfermedad, y decir qué tomar y cuánto es una posología. Un asistente que
+recibe un diagnóstico y devuelve un producto hace exactamente eso, por escrito y
+guardado en un servidor. Por eso la derivación va **antes** que todo lo demás
+(`hayQueDerivar()` en `asesor.js`).
+
+La primera versión solo reconocía la palabra técnica, y la gente no habla así.
+Probado contra la tienda en marcha:
+
+| Consulta | Antes | Ahora |
+|---|---|---|
+| *"tengo el azúcar alta"* | Jarabe de Yacón · Yacón en hojuelas | deriva |
+| *"mi bebé tiene tos"* | **Miel** de Abeja · Propóleo (miel antes del año: riesgo de botulismo) | deriva |
+| *"tengo dolor de pecho"* | Aceite de Copaiba · Uña de Gato | deriva |
+| *"tomo sertralina y estoy con estrés"* | Valeriana + Pasiflora · Magnesio | deriva |
+
+La lista cubre ahora cinco frentes: embarazo y lactancia dichos de cualquier forma
+(*"espero un bebé"*, *"estoy lactando"*), bebés y edad en meses, **síntomas de
+alarma** (pecho, falta de aire, desmayo, palpitaciones, sangrado, fiebre),
+crónicas dichas como las dice el cliente (*"problemas de presión"*, *"piedras en
+la vesícula"*) y **cualquier medicamento**, por su nombre genérico o como
+*"tomo pastillas para…"* / *"me recetaron…"*.
+
+Los términos nuevos traían sus propios parecidos, y cada uno tiene su test:
+*"cómo se bebe la muña"* (el verbo), *"algo para beber"*, *"sin lácteos"*,
+*"propóleo en gotas"* y *"venden antibióticos"* (sin tomarlos sigue siendo «no
+trabajamos medicamentos de farmacia») **no** derivan.
+
+Lo que **no** deriva a propósito: descanso, digestión, energía, ánimo, defensas,
+cuidado de la piel. Son categorías de bienestar y el asesor las atiende. Si
+alguien pregunta **cuánto** tomar (*"cuánta muña tomo al día"*), no se le da una
+cifra: la respuesta manda a la forma de uso del envase del fabricante.
+
+**El catálogo tampoco promete curar.** La ficha se ve en la tienda aunque el
+asesor derive, y es el texto que se le pasa al modelo. Los 400 productos traían
+*"Cicatriza heridas y calma la gastritis"*, *"Endulzante apto para diabéticos"*,
+*"Circulación, próstata y anemia"* y posologías como *"Cucharada en ayunas"* o
+*"Dos veces al día"*, además de etiquetas como `colesterol`, `artritis` o
+`presion`. Se reescribieron en `gen-catalogo.mjs` y `db.js` como bienestar y uso
+tradicional —historia del producto, no promesa de efecto—, sin tocar precios,
+stock ni códigos. `test/catalogo-sin-claims.test.mjs` revisa el catálogo generado
+y la semilla, y falla si vuelve a entrar una enfermedad o una dosis.
+
+> **Al cargar el catálogo real del negocio** (CSV o panel), esa revisión no
+> corre sola: los textos del proveedor suelen traer claims. Conviene pasar el
+> test sobre la base cargada antes de publicar.
 
 #### Dos magnesios que tapaban a la valeriana
 
@@ -752,7 +872,10 @@ Sobre los 400 productos, eso los agrupa en **122 insumos**. El resultado:
 | Consulta | Antes | Ahora |
 |---|---|---|
 | *"me duelen las rodillas"* | Uña de Gato · **Crema de Uña de Gato** · **Tónico de Uña de Gato** | Uña de Gato · Cúrcuma con Pimienta · Colágeno con Magnesio |
-| *"tengo gastritis"* | Manzanilla Orgánica · **Manzanilla · hierba seca** · Sangre de Grado | Manzanilla Orgánica · Muña · Sangre de Grado |
+| *"algo para los nervios"* | Valeriana + Pasiflora · **Pasiflora en filtrantes** | una sola pasiflora |
+
+(*"tengo gastritis"* también repetía planta; hoy ya no recomienda nada: deriva,
+ver *El asesor no receta*.)
 
 El test destapó uno más que no habíamos visto: *"algo para los nervios"* ofrecía
 **Valeriana + Pasiflora** y **Pasiflora en filtrantes** en la misma respuesta.
@@ -858,8 +981,10 @@ Sin esas dos cosas la tienda funciona igual, con el motor de reglas.
 El campo `fuente` de `/api/asesor` dice `"reglas"` o `"claude"`.
 
 Modelo: `claude-opus-5`, `effort: low` (respuestas cortas y rápidas).
-El prompt del sistema le prohíbe atribuir propiedades curativas — requisito legal
-para publicidad de productos naturales.
+El prompt del sistema le prohíbe atribuir propiedades curativas, nombrar
+enfermedades, indicar dosis y dar cifras de stock — requisito legal para
+publicidad de productos naturales. Y aunque el modelo se saltara la regla, no
+elige productos: la derivación y la lista vienen resueltas del motor de reglas.
 
 ---
 

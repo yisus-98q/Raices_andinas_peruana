@@ -218,11 +218,11 @@
   </header>
 
   <div class="cifras">
-    <div class="cifra"><b>23</b><span>módulos</span></div>
-    <div class="cifra"><b>9 031</b><span>líneas</span></div>
-    <div class="cifra"><b>222</b><span>pruebas</span></div>
+    <div class="cifra"><b>30</b><span>módulos</span></div>
+    <div class="cifra"><b>9 274</b><span>líneas</span></div>
+    <div class="cifra"><b>512</b><span>pruebas</span></div>
     <div class="cifra"><b>400</b><span>productos</span></div>
-    <div class="cifra"><b>0</b><span>dependencias</span></div>
+    <div class="cifra"><b>1</b><span>dependencia</span></div>
     <div class="cifra"><b>1 874</b><span>distritos</span></div>
   </div>
 
@@ -254,12 +254,14 @@
   <section class="seccion">
     <div class="rail">02<em>La restricción</em></div>
     <div class="cuerpo">
-      <h2>Cero dependencias, y eso manda sobre todo lo demás</h2>
+      <h2>Una sola dependencia, y eso manda sobre todo lo demás</h2>
       <p>
-        No hay <code>npm install</code>, no hay paso de compilación, no hay
-        <code>node_modules</code>. La base de datos es <code>node:sqlite</code>,
+        No hay paso de compilación. La base de datos es <code>node:sqlite</code>,
         el cifrado es <code>node:crypto</code>, las pruebas son
-        <code>node:test</code>. Todo viene dentro de Node 22.5 o superior.
+        <code>node:test</code>: todo viene dentro de Node 22.5 o superior. El
+        único paquete es <code>qrcode</code>, que dibuja el QR escaneable de los
+        comprobantes. Por eso <code>npm install</code> se corre una vez, antes de
+        salir hacia el local.
       </p>
       <p>Tres razones, en orden de peso:</p>
       <ul class="limpia">
@@ -271,7 +273,7 @@
         <li>
           <strong>Sigue arrancando en dos años.</strong> Un proyecto con cuarenta
           paquetes se pudre solo: alguno se abandona, otro cambia de versión y
-          deja de instalar. Sin paquetes no hay nada que se pudra.
+          deja de instalar. Con uno solo, casi no hay nada que se pudra.
         </li>
         <li>
           <strong>Se puede leer entero.</strong> Nada pasa por una caja negra de
@@ -281,8 +283,9 @@
       <p>
         El costo es real y hay que decirlo: cosas que un framework regala
         —enrutado, plantillas, validación— están escritas a mano. Son unas
-        seiscientas líneas de <code>server.js</code>. A cambio, el proyecto entero
-        pesa lo que pesa el código.
+        seiscientas líneas de <code>server.js</code>, que ya supera las dos mil y
+        es el primer candidato a dividirse. A cambio, el proyecto entero pesa lo
+        que pesa el código.
       </p>
     </div>
   </section>
@@ -291,7 +294,7 @@
   <section class="seccion">
     <div class="rail">03<em>El mapa</em></div>
     <div class="cuerpo">
-      <h2>Los veinte módulos y de qué se ocupa cada uno</h2>
+      <h2>Los treinta módulos y de qué se ocupa cada uno</h2>
       <p>
         Cada archivo tiene un trabajo y no se mete en el de al lado. Los que
         empiezan por <code>gen-</code> son herramientas que se corren una vez y
@@ -302,37 +305,37 @@
         <div class="mod">
           <div class="mod-nombre">server.js</div>
           <div class="mod-que">El servidor HTTP sin framework: rutas, sesiones, cabeceras de seguridad, plantillas y el alta de productos.</div>
-          <div class="mod-lineas">1 041</div>
+          <div class="mod-lineas">2 072</div>
         </div>
         <div class="mod">
           <div class="mod-nombre">gen-catalogo.mjs</div>
           <div class="mod-que">Arma los 400 productos combinando 132 insumos reales con las presentaciones que le tocan a cada uno.</div>
-          <div class="mod-lineas">889</div>
+          <div class="mod-lineas">900</div>
         </div>
         <div class="mod">
           <div class="mod-nombre">db.js</div>
           <div class="mod-que">Esquema, migraciones idempotentes y carga inicial. Nueve tablas con restricciones a nivel de base.</div>
-          <div class="mod-lineas">517</div>
+          <div class="mod-lineas">629</div>
         </div>
         <div class="mod">
           <div class="mod-nombre">comprobantes.js</div>
           <div class="mod-que">Boletas, facturas y notas de crédito: numeración, aritmética del IGV, XML UBL 2.1 y contenido del QR.</div>
-          <div class="mod-lineas">510</div>
+          <div class="mod-lineas">515</div>
         </div>
         <div class="mod">
           <div class="mod-nombre">asesor.js</div>
-          <div class="mod-que">Empareja el malestar que escribe el cliente con los productos que lo tratan, filtrados por stock.</div>
-          <div class="mod-lineas">449</div>
+          <div class="mod-que">Entiende la consulta como llega por WhatsApp —jerga, erratas, sin tildes—, la empareja con productos disponibles y deriva a la dueña ante una enfermedad, un medicamento o un embarazo.</div>
+          <div class="mod-lineas">920</div>
         </div>
         <div class="mod">
           <div class="mod-nombre">intenciones.js</div>
           <div class="mod-que">Quince intenciones de negocio —delivery, horarios, devoluciones, regateo— y la cotización al por mayor.</div>
-          <div class="mod-lineas">442</div>
+          <div class="mod-lineas">456</div>
         </div>
         <div class="mod">
           <div class="mod-nombre">gen-imagenes.mjs</div>
           <div class="mod-que">Dibuja las ilustraciones: 24 por producto curado y 84 de respaldo, silueta por color.</div>
-          <div class="mod-lineas">253</div>
+          <div class="mod-lineas">272</div>
         </div>
         <div class="mod">
           <div class="mod-nombre">importar-fotos.mjs</div>
@@ -341,8 +344,8 @@
         </div>
         <div class="mod">
           <div class="mod-nombre">auth.js</div>
-          <div class="mod-que">Login con scrypt, sesiones en cookie firmada y bloqueo tras varios intentos fallidos.</div>
-          <div class="mod-lineas">175</div>
+          <div class="mod-que">Login con scrypt, sesiones en cookie, bloqueo tras varios intentos, tres papeles y una clave inicial al azar si no hay una propia.</div>
+          <div class="mod-lineas">248</div>
         </div>
         <div class="mod">
           <div class="mod-nombre">traer-fotos.mjs</div>
@@ -352,7 +355,7 @@
         <div class="mod">
           <div class="mod-nombre">tienda.config.js</div>
           <div class="mod-que">El único punto de edición: teléfono, RUC, horarios, zonas de reparto, IGV, correo.</div>
-          <div class="mod-lineas">135</div>
+          <div class="mod-lineas">143</div>
         </div>
         <div class="mod">
           <div class="mod-nombre">ubigeo.js</div>
@@ -372,7 +375,7 @@
         <div class="mod">
           <div class="mod-nombre">catalogos-sunat.js</div>
           <div class="mod-que">Los catálogos 01, 02, 03, 05, 06, 07 y 09 de SUNAT, que son los que exige el XML.</div>
-          <div class="mod-lineas">102</div>
+          <div class="mod-lineas">103</div>
         </div>
         <div class="mod">
           <div class="mod-nombre">verificar-imagenes.mjs</div>
@@ -387,7 +390,7 @@
         <div class="mod">
           <div class="mod-nombre">limites.js</div>
           <div class="mod-que">Cuotas por IP con cubeta de fichas, para que nadie pruebe códigos de pedido ajenos en masa.</div>
-          <div class="mod-lineas">66</div>
+          <div class="mod-lineas">63</div>
         </div>
         <div class="mod">
           <div class="mod-nombre">gen-ubigeo.mjs</div>
@@ -396,8 +399,58 @@
         </div>
         <div class="mod">
           <div class="mod-nombre">clave.mjs</div>
-          <div class="mod-que">Crea y cambia la contraseña del panel desde la línea de comandos.</div>
-          <div class="mod-lineas">83</div>
+          <div class="mod-que">Crea accesos, cambia contraseñas y asigna papeles desde la línea de comandos.</div>
+          <div class="mod-lineas">125</div>
+        </div>
+        <div class="mod">
+          <div class="mod-nombre">importar-catalogo.mjs</div>
+          <div class="mod-que">Carga el catálogo real desde un CSV armado en Excel, fila por fila, y hace respaldo antes de tocar nada.</div>
+          <div class="mod-lineas">296</div>
+        </div>
+        <div class="mod">
+          <div class="mod-nombre">pdf.js</div>
+          <div class="mod-que">Escritor de PDF mínimo, a mano: texto, líneas y rectángulos con las tipografías base 14.</div>
+          <div class="mod-lineas">282</div>
+        </div>
+        <div class="mod">
+          <div class="mod-nombre">manual.mjs</div>
+          <div class="mod-que">Viste el README para imprimirlo: portada, índice y hoja A4.</div>
+          <div class="mod-lineas">262</div>
+        </div>
+        <div class="mod">
+          <div class="mod-nombre">respaldo.js</div>
+          <div class="mod-que">Copia diaria de la base con VACUUM INTO, verificada fila por fila, y rotación de las últimas catorce.</div>
+          <div class="mod-lineas">229</div>
+        </div>
+        <div class="mod">
+          <div class="mod-nombre">comprobante-pdf.js</div>
+          <div class="mod-que">Dibuja la boleta o la factura como PDF, con el nombre de archivo que pide SUNAT.</div>
+          <div class="mod-lineas">204</div>
+        </div>
+        <div class="mod">
+          <div class="mod-nombre">markdown.mjs</div>
+          <div class="mod-que">Markdown a HTML, solo lo que usa el README.</div>
+          <div class="mod-lineas">192</div>
+        </div>
+        <div class="mod">
+          <div class="mod-nombre">gen-pdf.mjs</div>
+          <div class="mod-que">Imprime los tres documentos a PDF con el Chrome o Edge del sistema, en un perfil desechable.</div>
+          <div class="mod-lineas">139</div>
+        </div>
+        <div class="mod">
+          <div class="mod-nombre">csv.js</div>
+          <div class="mod-que">Lee el CSV tal como sale del Excel peruano: punto y coma, coma decimal, BOM y cabeceras con tildes.</div>
+          <div class="mod-lineas">134</div>
+        </div>
+        <div class="mod">
+          <div class="mod-nombre">respaldo.mjs</div>
+          <div class="mod-que">Respaldar, listar o restaurar la base desde la consola.</div>
+          <div class="mod-lineas">69</div>
+        </div>
+        <div class="mod">
+          <div class="mod-nombre">entorno.js</div>
+          <div class="mod-que">Lee el .env al arrancar, sin pisar lo que ya viene de la consola y sin tocar los tests.</div>
+          <div class="mod-lineas">37</div>
         </div>
       </div>
     </div>
@@ -526,12 +579,12 @@
   <section class="seccion">
     <div class="rail">06<em>Pruebas</em></div>
     <div class="cuerpo">
-      <h2>222 pruebas automáticas, todas verdes</h2>
+      <h2>512 pruebas automáticas, todas verdes</h2>
       <p>
         Cada archivo levanta su propio servidor en un puerto libre y con una base
         de datos desechable, así que no dependen del orden en que corran ni
-        ensucian la demo. Se ejecutan con <code>npm test</code> en unos ocho
-        segundos.
+        ensucian la demo. Se ejecutan con <code>npm test</code> en menos de un
+        minuto.
       </p>
       <div class="tabla-envoltura">
         <table>
@@ -539,18 +592,31 @@
             <tr><th>Archivo</th><th>Qué vigila</th><th class="num">Pruebas</th></tr>
           </thead>
           <tbody>
+            <tr><td class="arch">asesor-salud</td><td>Deriva ante enfermedad, medicamento, embarazo, bebé o síntoma de alarma; no deriva de más; no da dosis</td><td class="num">51</td></tr>
+            <tr><td class="arch">asesor-entrenamiento</td><td>Consultas con jerga y erratas de WhatsApp: bienestar, nombres, intenciones y derivación, sin romper las reglas</td><td class="num">49</td></tr>
+            <tr><td class="arch">pedidos</td><td>Stock, transacciones, estados, devoluciones, códigos repetidos</td><td class="num">44</td></tr>
+            <tr><td class="arch">portada-tienda</td><td>Portada informativa, tienda por el menú, el cliente no ve stock ni conteos</td><td class="num">41</td></tr>
             <tr><td class="arch">comprobantes</td><td>Numeración sin huecos, IGV cuadrado, XML, QR, PDF, notas de crédito</td><td class="num">39</td></tr>
             <tr><td class="arch">checkout</td><td>DNI, RUC, ubigeo, costo de envío, correo y teléfono</td><td class="num">36</td></tr>
-            <tr><td class="arch">pedidos</td><td>Stock, transacciones, estados, devoluciones, códigos repetidos</td><td class="num">34</td></tr>
+            <tr><td class="arch">auth</td><td>Sesiones, bloqueo, cierre de sesión, páginas privadas</td><td class="num">26</td></tr>
             <tr><td class="arch">alta</td><td>Alta de productos y de categorías nuevas, y lo que debe rechazar</td><td class="num">25</td></tr>
-            <tr><td class="arch">auth</td><td>Sesiones, bloqueo, cierre de sesión, páginas privadas</td><td class="num">25</td></tr>
+            <tr><td class="arch">catalogo-real</td><td>El CSV del Excel peruano, vaciar la demo, importar punta a punta</td><td class="num">25</td></tr>
             <tr><td class="arch">seguimiento</td><td>Doble factor, fugas de datos, constancia de recepción, boleta del comprador</td><td class="num">22</td></tr>
+            <tr><td class="arch">roles</td><td>El costo no sale para el mostrador, tampoco en el historial de clientes; lo que puede y no puede cambiar</td><td class="num">22</td></tr>
+            <tr><td class="arch">reparto</td><td>El motorizado ve su ruta y nada más del negocio</td><td class="num">19</td></tr>
             <tr><td class="arch">peru</td><td>Escalones mayoristas, cotización, intenciones de negocio</td><td class="num">16</td></tr>
+            <tr><td class="arch">granel</td><td>Venta por peso: precio por 100 g, pedido y comprobante en gramos</td><td class="num">16</td></tr>
             <tr><td class="arch">catalogo</td><td>Variedad del asesor, relleno de demostración, costo oculto, compresión</td><td class="num">14</td></tr>
-            <tr><td class="arch">seguridad</td><td>Cabeceras, cuotas, inyección, recorrido de rutas</td><td class="num">11</td></tr>
+            <tr><td class="arch">mostrador</td><td>Venta en el local, ganancia al costo del momento, stock que cuadra entre canales</td><td class="num">14</td></tr>
+            <tr><td class="arch">respaldo</td><td>Que la copia diaria sirva de verdad y se pueda restaurar</td><td class="num">12</td></tr>
+            <tr><td class="arch">areas-panel</td><td>Cada bloque del panel vive en un área a la que se puede llegar</td><td class="num">11</td></tr>
+            <tr><td class="arch">fotos</td><td>Subir la foto del producto y todo lo que tiene que rebotar</td><td class="num">11</td></tr>
+            <tr><td class="arch">seguridad</td><td>Cabeceras, cuotas que no se esquivan con una cabecera, inyección, recorrido de rutas</td><td class="num">12</td></tr>
+            <tr><td class="arch">entorno</td><td>El .env se lee sin pisar la consola y sin alterar los tests</td><td class="num">4</td></tr>
+            <tr><td class="arch">catalogo-sin-claims</td><td>Ninguna ficha nombra una enfermedad ni indica dosis</td><td class="num">3</td></tr>
           </tbody>
           <tfoot>
-            <tr><td>Total</td><td>2 361 líneas de pruebas</td><td class="num">222</td></tr>
+            <tr><td>Total</td><td>5 180 líneas de pruebas</td><td class="num">512</td></tr>
           </tfoot>
         </table>
       </div>
@@ -561,7 +627,7 @@
   <section class="seccion">
     <div class="rail">07<em>Fallas</em></div>
     <div class="cuerpo">
-      <h2>Seis fallas que habrían arruinado la demostración</h2>
+      <h2>Siete fallas que habrían arruinado la demostración</h2>
       <p>
         Las encontró probar la tienda como cliente, no leer el código. Van aquí
         porque explican por qué existen la mitad de las pruebas.
@@ -579,12 +645,27 @@
         </div>
 
         <div class="falla">
-          <p class="falla-titulo"><span class="marca">Venta perdida</span>Al mayorista no le decía cuántas había</p>
+          <p class="falla-titulo"><span class="marca">Crítica</span>El asesor recomendaba ante síntomas de riesgo</p>
           <p>
-            «50 bolsas de maca» devolvía el precio unitario y nada más. Nunca
-            mencionaba que solo quedaban 42.
+            Solo reconocía la palabra técnica. «Tengo dolor de pecho» recibía
+            un aceite, «mi bebé tiene tos» recibía miel —riesgo de botulismo
+            antes del año— y «tomo sertralina» recibía valeriana. Y el catálogo
+            prometía «calma la gastritis» o «apto para diabéticos».
+            <span class="arreglo">Ahora deriva ante una enfermedad, un
+            medicamento, un embarazo, un bebé o un síntoma de alarma, y ofrece
+            cita con la dueña. Las fichas se reescribieron sin enfermedades ni
+            dosis, y dos archivos de pruebas lo vigilan.</span>
+          </p>
+        </div>
+
+        <div class="falla">
+          <p class="falla-titulo"><span class="marca">Venta perdida</span>Al mayorista no le decía si alcanzaba</p>
+          <p>
+            «50 bolsas de maca» devolvía el precio unitario y nada más, sin
+            avisar que no había cincuenta.
             <span class="arreglo">Ahora cotiza con descuento por volumen y dice
-            cuántas entrega hoy y cuántas faltan.</span>
+            si entrega todo hoy o una parte después, sin revelar la cifra del
+            almacén.</span>
           </p>
         </div>
 
@@ -684,16 +765,33 @@
         <div class="pendiente">
           <span class="quien q-codigo">Código</span>
           <p>
-            <b>Un solo usuario.</b>
-            No hay cuentas separadas para el dueño y para quien despacha, ni
-            permisos distintos entre ellos.
+            <b>No avisa cuando entra un pedido.</b>
+            El panel se refresca solo con la pestaña abierta: no hay aviso por
+            WhatsApp, correo ni sonido. Un pedido nocturno se ve recién al abrir
+            el panel.
           </p>
         </div>
 
         <div class="pendiente">
           <span class="quien q-codigo">Código</span>
           <p>
-            <b>Sin respaldo automático</b> de la base de datos.
+            <b>Endurecer el acceso antes de publicar.</b>
+            La cookie de sesión necesita <code>Secure</code> y el panel tiene que
+            dejar de escuchar en toda la red antes de publicarse. Lo demás que
+            encontró la auditoría ya está resuelto: no hay clave de fábrica (sin
+            <code>ADMIN_PASSWORD</code> se genera una al azar), las cuotas por IP
+            ya no confían en <code>X-Forwarded-For</code> y el historial de
+            clientes ya no le entrega el costo al mostrador.
+          </p>
+        </div>
+
+        <div class="pendiente">
+          <span class="quien q-codigo">Código</span>
+          <p>
+            <b>El respaldo diario queda en el mismo disco.</b>
+            La copia se hace sola cada día y se verifica, pero por defecto vive
+            al lado de la base. Hay que apuntar <code>RESPALDO_DIR</code> a un
+            disco externo o a la nube.
           </p>
         </div>
       </div>
@@ -702,7 +800,7 @@
 
   <footer class="cierre">
     <p>
-      Raíz Andina · demostración comercial · Node 22.5+ · sin dependencias
+      Raíz Andina · demostración comercial · Node 22.5+ · una dependencia
       externas · <code>npm start</code> en <code>localhost:3000</code>
     </p>
   </footer>
