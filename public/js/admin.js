@@ -1241,6 +1241,9 @@
    */
   function imprimirQr() {
     const url = location.origin;
+    // A la tienda y no a la portada: quien escanea en la feria ya está frente al
+    // puesto y conoce la historia. Viene a ver qué hay.
+    const tienda = url + '/tienda';
     const v = window.open('', '_blank');
     if (!v) return avisar('El navegador bloqueó la ventana de impresión');
 
@@ -1269,8 +1272,8 @@
       <img class="marca" src="${url}/img/marca/logotipo.png" alt="Raíz Andina">
       <h1>Mira todo el catálogo</h1>
       <p class="bajada">Apunta con la cámara de tu celular</p>
-      <div class="qr"><img src="${url}/api/qr?d=${encodeURIComponent(url)}" alt="Código QR de la tienda"></div>
-      <div class="url">${url.replace(/^https?:\/\//, '')}</div>
+      <div class="qr"><img src="${url}/api/qr?d=${encodeURIComponent(tienda)}" alt="Código QR de la tienda"></div>
+      <div class="url">${tienda.replace(/^https?:\/\//, '')}</div>
       <p class="pie">Pide por aquí a cualquier hora y recógelo en el puesto.</p>
       </body></html>`);
     v.document.close();

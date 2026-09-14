@@ -43,6 +43,16 @@
 
   const quieto = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+  /**
+   * Este script lo cargan la portada y la tienda.
+   *
+   * La tienda tiene la grilla, el asesor y el carrito. La portada no vende:
+   * usa el catálogo solo para contar productos en el hero y nombrar las
+   * categorías de la marquesina, y el globo del carrito para avisar que hay algo
+   * esperando. Cada pieza se pinta si su sitio existe en la página.
+   */
+  const ES_TIENDA = !!$('grilla');
+
   let catalogo = [];
   let filtro = 'Todos';
   let busqueda = '';
@@ -65,6 +75,7 @@
   let temporizador;
   function avisar(texto) {
     const t = $('toast');
+    if (!t) return;
     t.textContent = texto;
     t.classList.add('visible');
     clearTimeout(temporizador);
@@ -79,21 +90,30 @@
       // El contador del hero lee `data-contar` en cada cuadro; si ya terminó,
       // le escribimos el número directamente.
       const contador = $('dato-productos');
-      contador.dataset.contar = catalogo.length;
-      if (contador.dataset.contado) contador.textContent = catalogo.length;
+      if (contador) {
+        contador.dataset.contar = catalogo.length;
+        if (contador.dataset.contado) contador.textContent = catalogo.length;
+      }
       pintarFiltros();
       pintarGrilla();
+      // El globo necesita el catálogo para saber qué se vende por peso: antes de
+      // cargarlo contaba los gramos como piezas.
+      refrescarCuenta();
     } catch {
-      $('grilla').innerHTML = '<p class="vacio">No pudimos cargar el catálogo. Revisa que el servidor esté encendido.</p>';
+      if ($('grilla')) {
+        $('grilla').innerHTML = '<p class="vacio">No pudimos cargar el catálogo. Revisa que el servidor esté encendido.</p>';
+      }
     }
   }
 
   function pintarFiltros() {
     const propias = [...new Set(catalogo.map((p) => p.categoria))];
     const cats = ['Todos', ...propias];
-    $('filtros').innerHTML = cats.map((c) =>
-      `<button class="filtro${c === filtro ? ' activo' : ''}" data-cat="${escapar(c)}">${escapar(c)}</button>`
-    ).join('');
+    if ($('filtros')) {
+      $('filtros').innerHTML = cats.map((c) =>
+        `<button class="filtro${c === filtro ? ' activo' : ''}" data-cat="${escapar(c)}">${escapar(c)}</button>`
+      ).join('');
+    }
 
     // La marquesina del inicio lista las categorías: si se escribe a mano, en
     // cuanto el dueño crea una nueva desde el panel queda mintiendo. El HTML
@@ -129,6 +149,7 @@
   let mostrando = TANDA;
 
   function pintarGrilla(resaltar = []) {
+    if (!ES_TIENDA) return;
     const lista = visibles();
     $('conteo-catalogo').textContent = lista.length === catalogo.length
       ? `${catalogo.length} productos, cada uno con su origen y su historia`
@@ -353,7 +374,13 @@
 
   function refrescarCuenta(latir = false) {
     const globo = $('cuenta-carrito');
-    const n = carrito.reduce((s, l) => s + l.cantidad, 0);
+    if (!globo) return;
+    // Lo que se pesa cuenta como uno: 250 g de muña es una cosa en la bolsa, y
+    // sumado en gramos el globo decía «99+» con un solo producto.
+    const n = carrito.reduce((s, l) => {
+      const p = catalogo.find((x) => x.id === l.id);
+      return s + (esGranel(p) ? 1 : l.cantidad);
+    }, 0);
 
     // Con el carrito vacío el globo desaparece. Un "0" permanente en la esquina
     // se lee como un error de la página, no como información.
@@ -1011,22 +1038,40 @@
     if (e.key === 'Enter' && e.target.closest('[data-gramos]')) e.target.blur();
   });
 
-  $('btn-carrito').onclick = abrirPanel;
-  $('cerrar-carrito').onclick = cerrarPanel;
-  $('velo').onclick = cerrarPanel;
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') cerrarPanel(); });
+  if ($('panel-carrito')) {
+    $('btn-carrito').onclick = abrirPanel;
+    $('cerrar-carrito').onclick = cerrarPanel;
+    $('velo').onclick = cerrarPanel;
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') cerrarPanel(); });
+  }
 
-  $('forma-asesor').onsubmit = (e) => {
-    e.preventDefault();
-    const texto = $('consulta').value.trim();
-    if (texto) consultarAsesor(texto);
-  };
+  if ($('forma-asesor')) {
+    $('forma-asesor').onsubmit = (e) => {
+      e.preventDefault();
+      const texto = $('consulta').value.trim();
+      if (texto) consultarAsesor(texto);
+    };
+  }
 
-  let debounce;
-  $('buscar').oninput = (e) => {
-    clearTimeout(debounce);
-    debounce = setTimeout(() => { busqueda = e.target.value; mostrando = TANDA; pintarGrilla(); }, 180);
-  };
+  const buscar = $('buscar');
+  if (buscar && ES_TIENDA) {
+    let debounce;
+    buscar.oninput = (e) => {
+      clearTimeout(debounce);
+      debounce = setTimeout(() => { busqueda = e.target.value; mostrando = TANDA; pintarGrilla(); }, 180);
+    };
+    // Lo que se buscó desde la portada llega como ?q= y la grilla abre filtrada.
+    const q = new URLSearchParams(location.search).get('q');
+    if (q) { buscar.value = q; busqueda = q; }
+  } else if (buscar) {
+    // En la portada no hay grilla que filtrar: Enter lleva a la tienda con lo
+    // escrito, que es lo que quien busca «muña» espera que pase.
+    buscar.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter') return;
+      const texto = buscar.value.trim();
+      location.href = '/tienda' + (texto ? '?q=' + encodeURIComponent(texto) : '');
+    });
+  }
 
   refrescarCuenta();
   cargarCatalogo();

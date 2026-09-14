@@ -495,6 +495,31 @@ img { max-width: 100%; display: block; }
 .cierre p { max-width: 52ch; margin: 24px auto 0; color: var(--tinta-suave); font-size: 17px; }
 .cierre .btn { margin-top: 36px; }
 
+/* ------------------------------------------------------ puerta a la tienda
+   Las dos tarjetas de la portada que llevan a /tienda. Son las de orígenes
+   (.tierra) puestas de dos en fila: mismo lenguaje que la sección de arriba,
+   pero todo el cuadro es el enlace. */
+.puertas { display: grid; grid-template-columns: repeat(2, 1fr); gap: 22px; }
+.puerta { display: flex; flex-direction: column; color: inherit; }
+.puerta .tierra-productos b { color: var(--ocre); }
+
+/* --------------------------------------------------------- página /tienda
+   Sin hero: quien llega aquí viene a comprar. La cabecera solo despeja la
+   barra fija (122 px) y dice cuántos productos hay; los bloques de abajo van
+   más juntos que en la portada, donde el aire es parte del relato. */
+.tienda-cabeza { position: relative; z-index: 1; padding: 150px 0 0; }
+/* Un cuerpo más chico que el .grande de la portada, a propósito: con aquel, en
+   una laptop de 768 px de alto el titular y el asesor llenaban la pantalla y no
+   se veía un solo producto al entrar a la tienda. */
+.tienda-cabeza h1 {
+  margin: 14px 0 0; font-size: clamp(1.9rem, 3.4vw, 3rem);
+  text-transform: uppercase; line-height: 1;
+}
+.tienda-cabeza p { margin-top: 10px; font-size: 16px; color: var(--tinta-suave); }
+.seccion-tienda { padding: 32px 0; }
+.seccion-tienda .asesor-caja { padding: 30px 36px; }
+.seccion-tienda + .seccion-tienda { padding-top: 0; }
+
 /* --------------------------------------------------------------------- pie */
 .pie { background: var(--papel-hondo); border-top: 1px solid var(--borde); padding: 68px 0 30px; position: relative; z-index: 1; }
 .pie-grilla { display: grid; grid-template-columns: 1.6fr 1fr 1fr 1fr; gap: 40px; }
@@ -613,7 +638,7 @@ img { max-width: 100%; display: block; }
     grid-template-columns: repeat(3, 1fr); grid-template-rows: 1fr;
   }
   .vitrina-alta { grid-row: span 1; }
-  .tierras, .pasos { grid-template-columns: 1fr; }
+  .tierras, .pasos, .puertas { grid-template-columns: 1fr; }
   .pie-grilla { grid-template-columns: 1fr 1fr; }
   .nav-enlaces { display: none; }
 }
@@ -629,6 +654,10 @@ img { max-width: 100%; display: block; }
      En el pie, donde hay ancho de sobra, se queda. */
   .nav .marca-bajada { display: none; }
   .seccion { padding: 78px 0; }
+  /* La barra mide 86 px en el celular: la cabecera de la tienda la sigue. */
+  .tienda-cabeza { padding-top: 112px; }
+  .seccion-tienda { padding: 22px 0; }
+  .seccion-tienda .asesor-caja { padding: 24px; }
   .buscador { display: none; }
   .grilla { grid-template-columns: repeat(auto-fill, minmax(158px, 1fr)); gap: 14px; }
   .tarjeta-cuerpo { padding: 14px; }

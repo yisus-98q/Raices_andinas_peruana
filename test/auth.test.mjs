@@ -110,7 +110,7 @@ describe('Protección de rutas', () => {
     });
   }
 
-  const PUBLICAS = ['/', '/api/productos', '/api/tienda', '/creditos.html', '/login.html'];
+  const PUBLICAS = ['/', '/tienda', '/api/productos', '/api/tienda', '/creditos.html', '/login.html'];
   for (const ruta of PUBLICAS) {
     test(`${ruta} es pública`, async () => {
       const c = cliente(srv.base);

@@ -1,6 +1,7 @@
 # Raiz Andina
 User-agent: *
 Allow: /
+Allow: /tienda
 Allow: /creditos.html
 
 # Zona interna: nunca debe indexarse.

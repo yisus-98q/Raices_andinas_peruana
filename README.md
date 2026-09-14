@@ -165,12 +165,15 @@ carpeta, por si el que restauró se equivocó de copia.
 
 ---
 
-Sin `npm install`. Node 22.5+ (usa `node:sqlite` nativo). Funciona sin internet,
-que es exactamente lo que hace falta para demostrar en la laptop, en el local del cliente.
+Node 22.5+ (usa `node:sqlite` nativo). Una sola dependencia, `qrcode`, que dibuja
+el QR de los comprobantes: **corre `npm install` antes de salir hacia el local**,
+porque allá puede no haber internet. Con eso instalado todo funciona sin conexión,
+que es exactamente lo que hace falta para demostrar en la laptop del cliente.
 
 | Ruta | Quién entra |
 |---|---|
-| <http://localhost:4000> | Pública — la tienda |
+| <http://localhost:4000> | Pública — la portada: historia, orígenes y proceso |
+| <http://localhost:4000/tienda> | Pública — la tienda: asesor, catálogo y carrito |
 | <http://localhost:4000/creditos.html> | Pública — atribución de las fotos |
 | `/panel` (o `/admin.html`) | **Personal.** Pide login |
 | `/imagenes.html` | **Personal.** Hoja de contactos de las ilustraciones |
@@ -244,8 +247,11 @@ contraseña.
 
 ### Acto 1 — La vista del cliente (3 min)
 
-Abre la tienda en pantalla completa.
+Abre la portada (`/`) en pantalla completa.
 
+0. **La portada cuenta, la tienda vende.** Baja por la historia —orígenes, pisos
+   ecológicos— y entra con **Ver la tienda →**. El carrito es el mismo en las dos
+   páginas: lo que se agrega sigue ahí al volver.
 1. **El origen es el argumento.** Cada tarjeta dice *"Meseta de Bombón, Junín"*, no
    solo "Maca". Y trae el uso tradicional. Eso es lo que una farmacia no puede copiar.
 2. **Filtra por categoría** y **busca "muña"**: responde al instante, sin recargar.
@@ -282,7 +288,7 @@ Abre la tienda en pantalla completa.
 
 ### Acto 3 — La IA como diferenciador (3 min)
 
-En el asesor, escribe **"no puedo dormir y ando con mucho estrés"**.
+En el asesor —arriba de todo en `/tienda`—, escribe **"no puedo dormir y ando con mucho estrés"**.
 
 - Recomienda Valeriana + Pasiflora, Manzanilla y Graviola, y **resalta esas tarjetas**
   en el catálogo.

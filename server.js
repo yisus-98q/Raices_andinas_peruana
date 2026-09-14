@@ -1894,6 +1894,11 @@ const PAGINAS_PRIVADAS = new Set(['/admin.html', '/imagenes.html']);
 // no enlaza a ninguno: quien no sabe que existen, no entra por curiosidad.
 const ATAJOS = { '/panel': '/admin.html', '/entrar': '/login.html' };
 
+// Las páginas públicas con dirección limpia. Se sirven tal cual, sin redirigir:
+// /tienda es la que se imprime en el QR del puesto y la que se dicta por
+// teléfono, y tiene que quedarse así en la barra del navegador.
+const PAGINAS_LIMPIAS = { '/': '/index.html', '/tienda': '/tienda.html' };
+
 async function estatico(req, res, pathname) {
   if (ATAJOS[pathname]) {
     res.writeHead(302, { Location: ATAJOS[pathname] });
@@ -1903,7 +1908,7 @@ async function estatico(req, res, pathname) {
     res.writeHead(302, { Location: '/login.html?volver=' + encodeURIComponent(pathname) });
     return res.end();
   }
-  const rel = pathname === '/' ? '/index.html' : pathname;
+  const rel = PAGINAS_LIMPIAS[pathname] || pathname;
   const destino = normalize(join(PUBLIC, rel));
   if (!destino.startsWith(PUBLIC)) {
     res.writeHead(403).end('Prohibido');
@@ -1939,7 +1944,7 @@ async function estatico(req, res, pathname) {
           <h1 style="font-size:52px;letter-spacing:-.04em">404</h1>
           <p style="color:var(--crema-suave);margin:12px 0 26px">
             Esta página no existe. Puede que el enlace esté viejo.</p>
-          <a class="btn btn-primario" href="/">Ir a la tienda</a>
+          <a class="btn btn-primario" href="/tienda">Ir a la tienda</a>
         </div>
       </body></html>`);
   }
