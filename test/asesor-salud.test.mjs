@@ -85,6 +85,45 @@ describe('Ante una enfermedad, el asesor no vende', () => {
     });
   }
 
+  /**
+   * La gente no dice «diabetes»: dice «el azúcar alta». Estas frases pasaban
+   * de largo por la lista de palabras técnicas y recibían productos — Yacón al
+   * azúcar alta, miel a un bebé con tos (riesgo de botulismo antes del año),
+   * Copaiba a un dolor de pecho, Valeriana a quien toma sertralina.
+   */
+  const DICHAS_DE_OTRA_FORMA = [
+    ['azúcar alta', 'tengo el azúcar alta'],
+    ['bebé con tos', 'mi bebé tiene tos'],
+    ['dolor de pecho', 'tengo dolor de pecho'],
+    ['antidepresivo por nombre', 'tomo sertralina y estoy con estrés'],
+    ['ansiolítico por nombre', 'tomo clonazepam y no puedo dormir'],
+    ['embarazo como espera', 'espero un bebé y tengo náuseas'],
+    ['gestación', '3 meses de gestación y ansiedad'],
+    ['lactancia', 'estoy lactando y no duermo'],
+    ['presión sin «alta»', 'tengo problemas de presión'],
+    ['infección', 'infección urinaria'],
+    ['vesícula', 'piedras en la vesícula'],
+    ['palpitaciones', 'tengo palpitaciones'],
+    ['edad en meses', 'mi hijo de 8 meses no duerme'],
+    ['esperando un hijo', 'estoy esperando mi primer hijo'],
+    ['pastillas', 'tomo pastillas para la tiroides'],
+    ['receta', 'me recetaron omeprazol'],
+    ['fiebre', 'tengo fiebre y tos'],
+    ['falta de aire', 'me falta el aire al caminar'],
+    ['antibiótico tomado', 'tomo antibióticos, algo para las defensas'],
+    ['gota', 'tengo gota'],
+    ['médico de por medio', 'mi médico me dijo que tome algo natural'],
+  ];
+
+  for (const [caso, consulta] of DICHAS_DE_OTRA_FORMA) {
+    test(`deriva aunque no use la palabra técnica: ${caso}`, async () => {
+      const r = await responder(consulta);
+      assert.equal(r.derivar, true, `no derivó: «${consulta}»`);
+      assert.equal(r.recomendaciones.length, 0,
+        `derivó pero igual ofreció ${r.recomendaciones.map((p) => p.nombre).join(', ')}`);
+    });
+  }
+
   test('el mensaje ofrece atención presencial, no solo un portazo', async () => {
     const r = await responder('mi papá tiene diabetes tipo 2');
     assert.match(r.mensaje, /medico|nutricionista/i, 'no deriva a un profesional');
@@ -136,4 +175,36 @@ describe('Pero el bienestar se responde con normalidad', () => {
       assert.equal(r.derivar, false, `derivó por subcadena: «${consulta}»`);
     });
   }
+
+  /**
+   * Los términos nuevos tienen sus propios parecidos: «bebe» también es el
+   * verbo, «para bebe» vive dentro de «para beber», «lact» dentro de
+   * «lácteos» y «gota» dentro de «gotas».
+   */
+  const PARECIDOS_NUEVOS = [
+    ['«bebe» como verbo', 'cómo se bebe la muña'],
+    ['«se la bebe»', 'se la bebe caliente'],
+    ['«para beber»', 'algo para beber en las noches'],
+    ['«lácteos»', 'productos sin lácteos'],
+    ['«gotas»', 'quiero propóleo en gotas'],
+    ['meses sin edad', 'hace un par de meses que no duermo bien'],
+    ['«antibiótico» sin tomarlo', 'venden antibióticos'],
+  ];
+
+  for (const [caso, consulta] of PARECIDOS_NUEVOS) {
+    test(`no deriva por parecido: ${caso}`, async () => {
+      const r = await responder(consulta);
+      assert.equal(r.derivar, false, `derivó de más: «${consulta}»`);
+    });
+  }
+});
+
+describe('Cuánto tomar no se responde con una cifra', () => {
+  test('pregunta por cantidad: manda al envase del fabricante', async () => {
+    const r = await responder('cuánta muña tomo al día');
+    assert.equal(r.derivar, false, 'quien pregunta cómo se usa la muña no está enfermo');
+    assert.match(r.mensaje, /envase del fabricante/, 'no dice de dónde sale la forma de uso');
+    assert.ok(!/\b\d+\s*(veces|tazas|capsulas|cápsulas|gotas|cucharad)/i.test(r.mensaje),
+      'la respuesta da una cantidad');
+  });
 });

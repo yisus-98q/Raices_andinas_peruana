@@ -38,11 +38,12 @@ const INTENCIONES = [
   // "hola tienes algo pa la gastritis" tiene que seguir de largo a productos.
   {
     nombre: 'saludo',
-    patron: /^(hola|holi|buenas|buenos dias|buenas tardes|buenas noches|que tal|alo|hey)( buenas| tardes| dias| noches| amigo| casera| señor| señora)*$/,
+    // El texto llega sin tildes ni «ñ» (señora -> senora): por eso esas formas.
+    patron: /^(hola|holi|holis|buenas|buenos dias|buenas tardes|buenas noches|que tal|alo|hey)( buenas| tardes| dias| noches| amigo| amiga| casera| casero| senor| senora| senorita| hermano| causa| que tal)*$/,
   },
   {
     nombre: 'despedida',
-    patron: /^(ok|oka|ya|listo|gracias|muchas gracias|ok gracias|ya gracias|mil gracias|perfecto|de acuerdo|bueno|chau|hasta luego|nos vemos|lo pensare|lo voy a pensar)( gracias| amigo| casera)*$/,
+    patron: /^(ok|oka|okey|ya|listo|gracias|muchas gracias|ok gracias|ya gracias|mil gracias|perfecto|de acuerdo|bueno|chau|chao|hasta luego|nos vemos|lo pensare|lo voy a pensar)( gracias| amigo| amiga| casera| casero| senora| senorita| hermano| causa| bendiciones)*$/,
   },
   {
     nombre: 'presencia',
@@ -50,7 +51,9 @@ const INTENCIONES = [
   },
   {
     nombre: 'catalogo',
-    patron: /\b(catalogo|lista de precios|que (productos |cosas )?(tienen|venden|manejan)|que mas tienen|todos los productos|muestrame todo|que precios (tienen|manejan|hay)|pasame (la lista|los precios|el catalogo))\b/,
+    // «que tienen» a secas pide el catálogo; «que tienen para el insomnio» pide
+    // un producto, y se iba al catálogo entero.
+    patron: /\b(catalogo|lista de precios|que (productos |cosas )?(tienen|venden|manejan)(?! para| pal| contra| de bueno)|que mas tienen|todos los productos|muestrame todo|que precios (tienen|manejan|hay)|pasame (la lista|los precios|el catalogo))\b/,
   },
   {
     nombre: 'canal',
@@ -63,23 +66,23 @@ const INTENCIONES = [
   },
   {
     nombre: 'mayorista',
-    patron: /\b(por mayor|al por mayor|mayorista|precio de mayorista|precio por caja|por caja|por docena|para (mi|una) (bodega|tienda|botica|restaurante|negocio)|revender|para revender|distribuidor|proveedor)\b/,
+    patron: /\b(por mayor|al por mayor|mayorista|precio de mayorista|precio por caja|por caja|por docena|para (mi|una) (bodega|tienda|botica|restaurante|negocio)|revend\w*|para revender|vender en (mi|una) \w+|mi bodega|distribuidor\w*|proveedor)\b/,
   },
   {
     nombre: 'reclamo',
-    patron: /\b(no (me )?(llegan?|llego|ha llegado|llegaron)|no llega nadie|sigue sin llegar|donde esta mi pedido|mi pedido no|hace \w+ dias? (que|y)|se demoro|esta demorando|nadie me (llamo|contacto)|estafa|reclamo)\b/,
+    patron: /\b(no (me )?(llegan?|llego|ha llegado|llegaron)|no llega nadie|sigue sin llegar|donde esta mi pedido|mi pedido no|hace \w+ dias? (que|y)|pasaron (\w+ )?dias|y nada$|se demoro|esta demorando|nadie me (llama|llamo|contacta|contacto|contesta|responde)|no me (llaman|responden|contestan)|estafa|reclamo)\b/,
   },
   {
     nombre: 'devolucion',
-    patron: /\b(devolver\w*|devolucion|cambiar el producto|me lo cambias|no me (hizo|sirvio|funciono)|quiero mi (plata|dinero)|reembolso|vino (mal|malogrado|vencido)|esta vencido)\b/,
+    patron: /\b(devolver\w*|devolucion|cambiar el producto|me lo cambias|no me (hizo|sirvio|funciono)|quiero mi (plata|dinero)|reembolso|vino (mal|malogrado|vencido|roto|abierto)|lleg\w* (roto|rota|abierto|abierta|derramado|malogrado|vencido|mal)|esta vencido|vencid[oa]s?)\b/,
   },
   {
     nombre: 'regateo',
-    patron: /\b(me lo dejas|dejamelo|rebaja|descuento|mas barato|ultimo precio|precio final|hazme precio|yapa|casera|se puede menos|baja(le|me)? el precio)\b/,
+    patron: /\b(me lo dejas|dejamelo|rebaj\w*|descuent\w*|mas barato|ultimo precio|precio final|hazme precio|me haces precio|haces precio|lo menos|yapa|yapita|casera|se puede menos|baja(le|me)? el precio)\b/,
   },
   {
     nombre: 'delivery',
-    patron: /\b(delivery|reparto|envio|env[ií]an|mandan|llevan a|reparten|cuanto demora|en cuanto llega|hacen entrega|a domicilio|recojo|recoger|envios?)\b/,
+    patron: /\b(delivery|reparto|envio|env[ií]an|mandan|llevan a|reparten|cuanto demora|en cuanto llega|llega (hoy |manana )?a|me lo traen|hacen entrega|a domicilio|recojo|recoger|envios?)\b/,
   },
   {
     nombre: 'horario',
@@ -87,15 +90,16 @@ const INTENCIONES = [
   },
   {
     nombre: 'pago',
-    patron: /\b(yape|plin|tarjeta|visa|mastercard|transferencia|como (pago|se paga)|forma de pago|medios de pago|efectivo|contra entrega|factura|boleta)\b/,
+    // «yapeo», «yapear», «plinear»: el medio de pago se volvió verbo.
+    patron: /\b(yape\w*|plin\w*|tarjeta|visa|mastercard|transferencia|como (pago|se paga)|forma de pago|medios de pago|efectivo|contra entrega|puedo pagar|factura|boleta)\b/,
   },
   {
     nombre: 'ubicacion',
-    patron: /\b(donde (estan?|quedan?|los ubico|puedo ir|los encuentro)|direccion|como llego|como los ubico|en que (mercado|puesto)|tienen local|puesto)\b/,
+    patron: /\b(donde (estan?|quedan?|los ubico|puedo ir|los encuentro)|direccion|como llego|como los ubico|en que (mercado|puesto|parte|lugar|sitio)|mercado central|tienen local|puesto)\b/,
   },
   {
     nombre: 'autenticidad',
-    patron: /\b(es original|son originales|es autentico|es chino|es falso|es puro|adulterado|garantia|certificado|registro sanitario|de donde (viene|lo traen)|confio)\b/,
+    patron: /\b(es original|son originales|es autentico|es chino|es falso|es puro|adulterado|garantia|certificado|registro sanitario|de donde (viene|lo traen)|confio|bamba|trucho|imitacion|pirata)\b/,
   },
 ];
 
@@ -131,7 +135,7 @@ export function detectarComparacion(textoNormalizado, productos, normalizar) {
  */
 export function cotizar(consultaCruda, productos) {
   const texto = String(consultaCruda).toLowerCase()
-    .normalize('NFD').replace(/[̀-ͯ]/g, '');
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
   // Filtro 1: unidades de medida, edad y precio NUNCA son cantidad de compra.
   // Sin esto, "la maca de 250 gramos" cotizaba 250 bolsas por S/ 6900, y
@@ -179,7 +183,7 @@ export function cotizar(consultaCruda, productos) {
   let mejorPuntos = 0;
   for (const p of productos) {
     const palabras = p.nombre.toLowerCase()
-      .normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
       .split(/[^a-z]+/).filter((w) => w.length > 3);
     const aciertos = palabras.filter((w) => texto.includes(w)).length;
     if (aciertos === 0) continue;
@@ -241,7 +245,7 @@ const RESPUESTAS = {
       ? 'Estamos atendiendo.'
       : `Ahorita estamos cerrados, pero te leo. Abrimos ${TIENDA.horario.texto}.`;
     return `¡Hola! Bienvenido a ${TIENDA.nombre}. ${h} ` +
-      '¿En qué te puedo ayudar? Cuéntame qué necesitas o qué te está molestando y te oriento.';
+      '¿Qué estás buscando? Cuéntame y te oriento al toque.';
   },
 
   despedida: () =>
@@ -261,13 +265,14 @@ const RESPUESTAS = {
       if (p.stock <= 0) continue;
       (porCategoria[p.categoria] ||= []).push(p);
     }
+    // Las categorías y desde cuánto, sin contar productos: cuántos hay en
+    // cada una es inventario, y no le suma nada a quien pregunta qué venden.
     const resumen = Object.entries(porCategoria)
       .map(([cat, ps]) => {
         const min = Math.min(...ps.map((p) => p.precio));
-        return `${cat} (${ps.length}, desde ${soles(min)})`;
+        return `${cat} (desde ${soles(min)})`;
       }).join(', ');
-    return `Tenemos ${productos.filter((p) => p.stock > 0).length} productos disponibles hoy: ` +
-      `${resumen}. Puedes verlos todos con foto y precio en la tienda, ` +
+    return `Trabajamos ${resumen}. Puedes verlos todos con foto y precio en la tienda, ` +
       'o dime qué buscas y te digo al toque si lo tengo.';
   },
 
@@ -286,8 +291,9 @@ const RESPUESTAS = {
     return `Sí trabajamos al por mayor. La escala es: ${esc}, ` +
       `${TIENDA.politicas.regateo.alcance}. ` +
       (TIENDA.comprobante.factura ? 'Damos factura con tu RUC. ' : '') +
-      `Dime qué producto y cuántas unidades y te paso el precio y cuántas tengo hoy. ` +
-      `Para pedidos grandes ${m.nota}, al ${TIENDA.whatsapp}.`;
+      // Antes: «te paso el precio y cuántas tengo hoy». El stock no se dice.
+      `Para pedidos grandes ${m.nota}, al ${TIENDA.whatsapp}. ` +
+      '¿Qué producto buscas y cuántas unidades? Te paso el precio y te digo si te lo entrego todo de una vez.';
   },
 
   horario: () => {
@@ -329,7 +335,10 @@ const RESPUESTAS = {
         : '') +
       'Si el producto te llegó en mal estado o vencido, eso sí te lo cambiamos sin problema, ' +
       `escríbenos al ${TIENDA.whatsapp} con tu código de pedido y una foto. ` +
-      'Y si simplemente no notaste efecto, cuéntame cómo lo tomaste: capaz la dosis o el momento del día no eran los adecuados.';
+      // Antes decía «capaz la dosis o el momento del día no eran los
+      // adecuados»: ajustar cuánto y cuándo tomar es una posología, justo lo
+      // que el asesor no puede dar. La conversación va a la dueña, en persona.
+      'Y si no notaste lo que esperabas, pásate por el local y lo conversamos con la dueña.';
   },
 
   autenticidad: () => TIENDA.politicas.garantiaOrigen +
@@ -373,7 +382,11 @@ export function responderIntencion(nombre, ctx = {}) {
 
 /**
  * Respuesta a una cotizacion por volumen.
- * Lo importante no es el precio: es decir cuantas hay HOY.
+ *
+ * Lo importante no es el precio: es decir si se entrega todo HOY. Sin decir
+ * cuantas hay: con «tengo 42» y «faltan 8» cualquiera lee el inventario
+ * pidiendo una cotizacion. La cantidad exacta que sale ya se confirma por
+ * WhatsApp, que es donde se cierra una venta de este tamaño.
  */
 export function responderCotizacion(c) {
   const p = c.producto;
@@ -388,17 +401,18 @@ export function responderCotizacion(c) {
 
   // El dato que ningun catalogo estatico te puede dar.
   const stock = c.faltan === 0
-    ? `Las tengo listas: hay ${p.stock} en almacén.`
-    : `Ahora mismo tengo ${p.stock} de ${p.nombre}, así que te puedo entregar ` +
-      `${c.disponible} de una vez y las otras ${c.faltan} en ${m.plazoReposicion}. ` +
-      `Si te sirve así, lo separamos.`;
+    ? `Las ${c.cantidad} te las puedo entregar de inmediato.`
+    : `Hoy no las tengo todas: una parte te la entrego de una vez y el resto ` +
+      `llega en ${m.plazoReposicion}. Te confirmo por WhatsApp cuántas salen ya ` +
+      `y lo separamos.`;
 
   const cierre = c.cantidad >= m.desde
     ? ` Para este volumen ${m.nota}, al ${TIENDA.whatsapp}.` +
       (TIENDA.comprobante.factura ? ' Va con factura si necesitas.' : '')
     : '';
 
-  return `${p.nombre} (${p.presentacion}).\n\n${precio}\n\n${stock}${cierre}`;
+  return `${p.nombre} (${p.presentacion}).\n\n${precio}\n\n${stock}${cierre}\n\n` +
+    '¿Lo recoges en el puesto o te lo mandamos?';
 }
 
 /** Respuesta comparativa entre dos productos del catalogo. */
