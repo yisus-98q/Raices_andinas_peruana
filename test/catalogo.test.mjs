@@ -104,7 +104,13 @@ describe('El asesor con un catálogo grande', () => {
     const casos = [
       ['me duele la cabeza', /romero|toronjil|menta|manzanilla|cabeza/i],
       ['no puedo dormir hace dias', /manzanilla|valeriana|toronjil|magnesio|tilo/i],
-      ['estoy con anemia', /hierro|beterraga|muicle|ortiga|quinua|polen/i],
+      // Antes decía «estoy con anemia». La anemia es un diagnóstico —se
+      // confirma con un análisis y se trata con hierro indicado—, así que ahora
+      // el asesor la deriva y no recomienda nada: eso se prueba en
+      // `asesor-salud.test.mjs`. Lo que aquí interesa es que el motor siga
+      // acertando el malestar cuando se lo cuentan sin nombrar la enfermedad,
+      // que es como llega la mayoría de las consultas.
+      ['me siento debil y sin fuerzas', /hierro|beterraga|muicle|ortiga|quinua|polen|maca/i],
       ['se me cae el cabello', /cola de caballo|ortiga|ungurahui|romero|biotina|colageno/i],
     ];
     for (const [consulta, esperado] of casos) {

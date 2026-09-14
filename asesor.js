@@ -51,13 +51,44 @@ const SINONIMOS = {
   'deporte': 'resistencia', 'embarazada': 'embarazo',
 };
 
-// Consultas que NO debe atender un asesor comercial. Se derivan a un profesional.
+/**
+ * Consultas que NO atiende un asesor comercial. Se derivan a un profesional.
+ *
+ * Un producto natural no puede promocionarse como que previene, trata o cura
+ * una enfermedad, y decir que tomar y cuanto es una posologia. Un asistente que
+ * recibe un diagnostico y devuelve un producto hace exactamente eso, por
+ * escrito y guardado en un servidor.
+ *
+ * Las cronicas son la parte que faltaba, y es la que mas llega al mostrador.
+ * No estan por prudencia legal: estan porque son justo las que se manejan con
+ * medicacion diaria que interactua. Yacon a alguien que se inyecta insulina, o
+ * hierba de San Juan a quien toma antidepresivos o anticonceptivos, es un dano
+ * posible y no un tecnicismo.
+ *
+ * Lo que NO entra aqui: descanso, digestion, energia, animo, defensas. Son
+ * categorias de bienestar y el asesor las responde con normalidad. La linea
+ * esta en nombrar una enfermedad, un medicamento o un embarazo.
+ */
 const DERIVAR = [
+  // Embarazo, lactancia y primera infancia.
   'embarazo', 'embarazada', 'gestando', 'lactancia', 'dando de lactar',
-  'cancer', 'tumor', 'quimioterapia', 'vih', 'sida', 'covid',
+  'bebe de', 'recien nacido', 'meses de edad',
+
+  // Cuadros graves y tratamientos que interactuan.
+  'cancer', 'tumor', 'quimioterapia', 'quimio', 'vih', 'sida', 'covid',
   'convulsion', 'epilepsia', 'infarto', 'derrame', 'trombosis',
-  'anticoagulante', 'warfarina', 'quimio', 'dialisis', 'trasplante',
-  'suicid', 'bebe de', 'recien nacido', 'meses de edad',
+  'anticoagulante', 'warfarina', 'dialisis', 'trasplante', 'suicid',
+
+  // Cronicas: se manejan con medicacion diaria.
+  'diabetes', 'diabetico', 'diabetica', 'insulina', 'metformina',
+  'hipertension', 'presion alta', 'hipertenso',
+  'gastritis', 'ulcera', 'colitis', 'reflujo', 'colon irritable',
+  'artritis', 'artrosis', 'reuma', 'osteoporosis',
+  'colesterol', 'trigliceridos',
+  'tiroides', 'hipotiroidismo', 'hipertiroidismo', 'levotiroxina',
+  'asma', 'anemia', 'higado graso', 'hepatitis', 'cirrosis',
+  'rinon', 'renal', 'prostata',
+  'depresion', 'antidepresivo', 'anticonceptivo', 'litio',
 ];
 
 const normalizar = (t) =>
@@ -67,6 +98,22 @@ const normalizar = (t) =>
     .replace(/[^a-z\s]/g, ' ')   // fuera digitos: "bajar 10 kilos" -> "bajar kilos"
     .replace(/\s+/g, ' ')
     .trim();
+
+/**
+ * El termino tiene que empezar palabra, no aparecer en cualquier sitio.
+ *
+ * Se comparaba con `includes` a secas y «tengo una necesidad» derivaba por
+ * SIDA: la palabra lleva «sida» dentro. A alguien que solo queria comprar se le
+ * respondia que fuera al medico. Con las cronicas el problema se multiplicaba
+ * —«asma» vive dentro de «plasma» y de «fantasma»—, asi que el arreglo va
+ * primero.
+ *
+ * Se ancla solo el principio: los terminos que son prefijo a proposito siguen
+ * funcionando («suicid» atrapa suicidio y suicidarse, «quimio» atrapa
+ * quimioterapia, «asma» atrapa asmatico).
+ */
+const DERIVAR_RE = new RegExp(
+  '\\b(' + DERIVAR.map((t) => normalizar(t).replace(/ /g, '\\s+')).join('|') + ')');
 
 const PALABRAS_VACIAS = new Set([
   'para', 'que', 'con', 'una', 'uno', 'los', 'las', 'del', 'por', 'mas',
@@ -279,9 +326,15 @@ const listar = (top) => top.map((t) =>
 
 function respuestaPlantilla(top, derivar, agotados, noTrabajamos, esClasicos) {
   if (derivar) {
+    // No termina en «anda al medico». Termina ofreciendo lo unico que la
+    // competencia no puede copiar: que la atienda ella, en persona. El limite
+    // legal se convierte asi en una visita al local en vez de una venta menos.
     return 'Por lo que me cuentas prefiero no recomendarte nada por mi cuenta: ' +
       'eso lo debe ver un medico o un nutricionista, porque algunos naturales ' +
-      'interactuan con medicamentos. Con gusto te atendemos cuando tengas su indicacion.';
+      'interactuan con medicamentos.\n\n' +
+      'Lo que si puedo es agendarte con la dueña, que lleva anos en esto y te ' +
+      'orienta con tu indicacion en la mano. Dejame tu nombre y que dia y hora ' +
+      'te queda comodo venir, y te lo aparto.';
   }
   if (noTrabajamos) {
     return `No trabajamos ${noTrabajamos}, asi que no te lo puedo ofrecer. ` +
@@ -313,7 +366,7 @@ const fichaProducto = (p, razones = []) => ({
 /** Punto unico de entrada. Nunca lanza: la tienda no se cae si la IA falla. */
 export async function asesorar(consulta, productos, buscarPedido = null) {
   const texto = normalizar(consulta);
-  const derivar = DERIVAR.some((t) => texto.includes(normalizar(t)));
+  const derivar = DERIVAR_RE.test(texto);
 
   // --- Capa 1: intenciones de negocio. Van ANTES que los productos.
   // Un cliente que reclama un pedido demorado no quiere un catalogo.
@@ -432,6 +485,8 @@ Reglas que no puedes romper:
    contar el uso tradicional y para que lo llevan los clientes.
 3. Cierra siempre recordando que son productos naturales y que ante un problema
    de salud hay que consultar a un profesional.
+3b. Nunca indiques dosis, cantidades diarias ni por cuanto tiempo tomar algo. Si
+   te lo piden, deriva: eso es una indicacion y no te corresponde darla.
 4. Menciona el origen del producto: es lo que nos diferencia de una farmacia.
 5. Maximo 90 palabras. Sin listas con vinetas, escribe corrido y natural.
 6. Precios en soles, tal como te los paso.
@@ -464,7 +519,10 @@ async function redactarConClaude(consulta, top, derivar, agotados, noTrabajamos,
     negocio || 'Productos disponibles que calzan:',
     negocio ? '' : catalogo,
     agotados.length ? '\nAgotados hoy (mencionalo si viene al caso): ' + agotados.join(', ') : '',
-    derivar ? '\nATENCION: el caso requiere derivar a un profesional de salud. No recomiendes productos.' : '',
+    derivar ? '\nATENCION: el caso menciona una enfermedad, un medicamento o un embarazo.'
+      + ' NO recomiendes ningun producto y NO indiques dosis.'
+      + ' Deriva a un medico o nutricionista, y despues ofrece agendar una atencion'
+      + ' presencial con la dueña: pide el nombre y que dia y hora le queda comodo venir.' : '',
     noTrabajamos ? `\nATENCION: el cliente pide ${noTrabajamos} y NO lo vendemos. Dilo de frente, sin rodeos, y ofrece orientarlo si cuenta que le pasa.` : '',
     esClasicos ? '\nNOTA: la consulta fue vaga. Estos no responden a un sintoma: son los mas pedidos del mostrador. Presentalos asi y pide que cuente mas.' : '',
   ].join('\n');
