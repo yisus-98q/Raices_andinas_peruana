@@ -1184,3 +1184,185 @@ img { max-width: 100%; display: block; }
   .encabezado-centrado .kicker::after, .tienda-cabeza .kicker::after,
   .cierre .kicker::after { width: 24px; }
 }
+
+/* ======================================================= FONDO DE ESTUDIO
+   Todas las imágenes de producto sobre blanco, enteras y centradas.
+
+   Las fotos llegan de fuentes distintas —propias, bancos libres, lo que suba la
+   dueña— y cada una trae su encuadre y su fondo. Recortadas con `cover` a
+   cuadros de colores, la grilla parecía un collage. Con el mismo blanco detrás,
+   `contain` y un margen parejo, se leen como un catálogo: lo que cambia es el
+   producto, no el marco. Las ilustraciones ya vienen con fondo blanco, así que
+   las dos clases de imagen conviven sin que se note cuál es cuál. */
+.tarjeta-figura {
+  background: #fff;
+  border-bottom: 1px solid var(--borde);
+}
+.tarjeta-figura img {
+  inset: 8%; width: 84%; height: 84%;
+  object-fit: contain; border-radius: 10px;
+}
+.tarjeta:hover .tarjeta-figura img { transform: scale(1.04); }
+/* La etiqueta de categoría, que antes se apoyaba en el color del fondo, se
+   dibuja sola sobre el blanco. */
+.tarjeta-cat { background: #fff; border: 1px solid var(--borde); color: var(--ocre); }
+
+/* La vitrina del hero se queda con `cover`: son fotos de ambiente, no de
+   estudio, y encogidas sobre blanco quedaban como estampitas flotando. */
+.vitrina-pieza img { background: #fff; }
+.vitrina-pieza figcaption { background: #fff; }
+
+.ficha-asesor img { object-fit: contain; background: #fff; padding: 6px; border-right: 1px solid var(--borde); }
+.linea-icono { background: #fff; }
+.linea-icono img { object-fit: contain; padding: 3px; }
+
+/* ============================================================== COMPACTO
+   La portada medía doce pantallas en una laptop y diecisiete en un celular.
+   Nadie baja tanto: lo que está al final —envíos, preguntas, la dirección—
+   es justo lo que se pregunta antes de comprar, y quedaba donde no se llega.
+
+   Se recorta el aire, no el contenido: menos relleno entre secciones, títulos
+   más pegados a su bajada y, en el celular, dos columnas donde las tarjetas
+   son cortas. */
+.seccion { padding: 80px 0; }
+.seccion-cabeza { margin-bottom: 36px; }
+.seccion-cabeza h2 { margin-top: 12px; }
+.seccion-cabeza p { margin-top: 12px; }
+.grande { font-size: clamp(2rem, 4.4vw, 3.6rem); }
+.cierre { padding: 90px 0; }
+.cierre p { margin-top: 16px; }
+.cierre-ctas { margin-top: 26px; }
+
+/* Sin epígrafe arriba, el titular del hero ya no necesita separarse de nada. */
+.hero-texto h1 { margin-top: 0; }
+
+/* El manifiesto a lo ancho: a 20 caracteres por línea eran seis renglones de
+   letra grande; a 30 son cuatro. */
+.manifiesto { padding: 64px 0; }
+.manifiesto p { max-width: 30ch; font-size: clamp(1.4rem, 2.8vw, 2.4rem); }
+.manifiesto-pie { margin-top: 26px; }
+
+/* Las tarjetas miden lo que su contenido. El alto mínimo de 330 px era de
+   orígenes y lo heredaban categorías y zonas: en el celular cada una quedaba
+   con dos tercios vacíos. */
+.tierra { min-height: 0; }
+/* Solo las de orígenes: categorías y zonas reusan .tierra con su propia medida. */
+.tierras .tierra { padding: 26px 24px 24px; }
+.tierras .tierra h3 { font-size: 23px; }
+.tierras .tierra .altura { margin-bottom: 14px; }
+.tierras .tierra-productos { margin-top: 16px; padding-top: 14px; }
+.paso-num { margin-bottom: 14px; }
+
+/* Las cifras del catálogo, entre el titular y las tarjetas. */
+.categorias-datos {
+  list-style: none; padding: 0; margin: -10px auto 30px;
+  display: flex; justify-content: center; gap: 12px 44px; flex-wrap: wrap;
+}
+.categorias-datos li { text-align: center; }
+.categorias-datos strong {
+  display: block; font-size: 26px; font-weight: 900; letter-spacing: -.03em;
+  color: var(--ocre); line-height: 1.1;
+}
+.categorias-datos span { font-size: 12.5px; color: var(--tinta-suave); }
+.categorias-ctas { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 30px; }
+.pregunta summary { padding-top: 17px; padding-bottom: 17px; }
+
+@media (max-width: 640px) {
+  .seccion { padding: 50px 0; }
+  .seccion-cabeza { margin-bottom: 26px; }
+  .manifiesto { padding: 44px 0; }
+  .cierre { padding: 58px 0; }
+
+  /* Orígenes y proceso: tarjetas más bajas. */
+  .tierras .tierra { padding: 20px 18px; }
+  .tierras .tierra-num { font-size: 60px; }
+  .tierras, .pasos { gap: 14px; }
+
+  /* Categorías de a dos: el nombre, cuántas hay y el enlace. Los ejemplos
+     se van —en 160 px de ancho eran cinco renglones por tarjeta— y el número
+     de fondo también, porque ya lo dice la línea de abajo. */
+  .categorias { gap: 10px; }
+  .categorias > * { flex: 0 1 calc(50% - 5px); }
+  .categoria { padding: 16px 14px; }
+  .categoria h3 { font-size: 16px; padding-right: 0; }
+  .categoria .altura { padding-right: 0; font-size: 10px; letter-spacing: .06em; margin-bottom: 0; }
+  .categoria .tierra-num, .categoria p { display: none; }
+  .categoria .tierra-productos { margin-top: 10px; padding-top: 8px; font-size: 12px; }
+
+  /* Cómo comprar de a dos, con el número al lado del título. */
+  .pasos.pasos-4 { grid-template-columns: 1fr 1fr; gap: 18px 12px; }
+  .pasos-4 .paso-num { width: 38px; height: 38px; font-size: 14px; margin-bottom: 8px; }
+  .pasos-4 .paso h3 { font-size: 16px; margin-bottom: 4px; }
+  .pasos-4 .paso p { font-size: 13px; }
+
+  /* Zonas de envío de a dos; el recojo y provincias ocupan la fila entera
+     porque su texto es más largo. */
+  .zonas { gap: 10px; }
+  .zonas > * { flex: 0 1 calc(50% - 5px); }
+  .zonas > :first-child, .zonas > :last-child { flex-basis: 100%; }
+  .zona { padding: 16px 14px; }
+  .zona h3 { font-size: 16px; }
+  .zona .altura { font-size: 10px; letter-spacing: .04em; margin-bottom: 6px; }
+  .zona p { font-size: 12.5px; }
+  .categorias-datos { gap: 10px 22px; margin-top: -4px; }
+  .categorias-datos strong { font-size: 21px; }
+}
+
+/* ============================================================ TIPOGRAFÍA
+   Los títulos de la portada en Fraunces, una serif de trazo orgánico.
+
+   Eran Segoe UI Black en mayúsculas, partidos en dos renglones: gritaban, y
+   cada título se comía el alto de media pantalla. En minúscula y con serif se
+   leen como una marca de productos naturales —no como un cartel de oferta— y
+   caben en una línea.
+
+   La fuente vive en /fonts y se precarga en el <head>: con el wifi del
+   mercado caído se ve igual, y `font-display: block` evita que el texto
+   aparezca primero en otra letra y salte a esta, que es justo el «cambio» que
+   no tiene que verse. Se limita a .portada: en la tienda y el panel mandan los
+   nombres de producto y los precios, y ahí la sans se lee mejor en tamaño
+   chico. */
+@font-face {
+  font-family: "Fraunces";
+  src: url("/fonts/fraunces-latin.woff2") format("woff2");
+  font-weight: 500 700;
+  font-style: normal;
+  font-display: block;
+}
+:root { --titulo: "Fraunces", Georgia, "Times New Roman", serif; }
+
+.portada .seccion h2,
+.portada .seccion h3,
+.portada .pregunta summary,
+.portada .manifiesto p {
+  font-family: var(--titulo);
+  text-transform: none;
+  font-weight: 600;
+  letter-spacing: -.015em;
+  font-variation-settings: "opsz" 72;
+}
+.portada .seccion h2 { line-height: 1.08; }
+.portada .grande { font-size: clamp(1.9rem, 3.6vw, 3.1rem); }
+.portada .cierre .enorme { font-size: clamp(2.6rem, 6vw, 4.8rem); }
+.portada .seccion h3 { line-height: 1.15; font-variation-settings: "opsz" 36; }
+.portada .pregunta summary { font-size: 19px; font-weight: 600; letter-spacing: -.005em; }
+/* El manifiesto ya era serif (Georgia); pasa a la misma familia que los títulos. */
+.portada .manifiesto p { font-weight: 500; line-height: 1.3; }
+
+/* ------------------------------------------------- nada se mueve al bajar
+   El estado final desde el primer cuadro: sin deslizamientos de entrada, con
+   el manifiesto entero encendido y la barra con su alto de siempre. */
+.revelar, .revelar.visto { opacity: 1; transform: none; transition: none; }
+.manifiesto .palabra { opacity: 1; transition: none; }
+.manifiesto .palabra.acento { color: var(--ocre); }
+.nav { transition: none; }
+/* Con la barra fija ya compacta (unos 96 px), el hero sube lo que ella bajó. */
+.hero { padding-top: 112px; }
+.tienda-cabeza { padding-top: 128px; }
+
+@media (max-width: 640px) {
+  .tienda-cabeza { padding-top: 100px; }
+  .portada .grande { font-size: clamp(1.7rem, 7.4vw, 2.2rem); }
+  .portada .pregunta summary { font-size: 16.5px; }
+  .hero { padding-top: 84px; }
+}

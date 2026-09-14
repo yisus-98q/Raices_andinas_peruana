@@ -75,21 +75,22 @@
     }, { passive: true });
   })();
 
-  // --------------------------------------------- revelado al hacer scroll
-  const observador = new IntersectionObserver((entradas) => {
-    for (const e of entradas) {
-      if (!e.isIntersecting) continue;
-      e.target.classList.add('visto');
-      observador.unobserve(e.target);          // una sola vez: no parpadea
-    }
-  }, { threshold: 0.16, rootMargin: '0px 0px -60px 0px' });
-
-  $$('.revelar').forEach((el) => observador.observe(el));
-
-  /** Las tarjetas del catálogo nacen después: hay que observarlas al vuelo. */
+  // ------------------------------------------------ nada cambia con el scroll
+  /**
+   * La página se ve igual en cualquier punto del recorrido.
+   *
+   * Antes cada sección entraba deslizándose al llegar a ella, las palabras del
+   * manifiesto se encendían de a una, los contadores subían desde cero y la
+   * barra se achicaba. Quien baja buscando el costo del envío ve cosas que se
+   * mueven y aparecen tarde, y se lee como una página que todavía está
+   * cargando. Todo queda en su estado final desde el primer cuadro.
+   *
+   * `revelarNuevos` se conserva porque app.js lo llama con las tarjetas que
+   * pinta después: ahora solo las marca como ya vistas.
+   */
+  $$('.revelar').forEach((el) => el.classList.add('visto'));
   window.revelarNuevos = (elementos) => elementos.forEach((el) => {
-    el.classList.add('revelar');
-    observador.observe(el);
+    el.classList.add('revelar', 'visto');
   });
 
   // ------------------------------------------ manifiesto palabra por palabra
@@ -108,72 +109,20 @@
     p.innerHTML = trozos.map((t) =>
       `<span class="palabra${t.acento ? ' acento' : ''}">${t.palabra}</span>`).join(' ');
 
-    const palabras = [...p.querySelectorAll('.palabra')];
-    if (quieto) { palabras.forEach((w) => w.classList.add('viva')); return; }
-
-    // El avance se ata al scroll: el texto se "enciende" mientras bajas.
-    let pendiente = false;
-    const actualizar = () => {
-      pendiente = false;
-      const caja = p.getBoundingClientRect();
-      const recorrido = innerHeight * 0.62;
-      const avance = (recorrido - caja.top) / (caja.height + recorrido * 0.5);
-      const cuantas = Math.round(Math.max(0, Math.min(1, avance)) * palabras.length);
-      palabras.forEach((w, i) => w.classList.toggle('viva', i < cuantas));
-    };
-    addEventListener('scroll', () => {
-      if (!pendiente) { pendiente = true; requestAnimationFrame(actualizar); }
-    }, { passive: true });
-    actualizar();
+    // Todas encendidas de entrada: ya no se atan al scroll.
+    p.querySelectorAll('.palabra').forEach((w) => w.classList.add('viva'));
   })();
 
   // ---------------------------------------------------------- contadores
-  (() => {
-    const vistos = new IntersectionObserver((entradas) => {
-      for (const e of entradas) {
-        if (!e.isIntersecting) continue;
-        const el = e.target;
-        vistos.unobserve(el);
-        const sufijo = el.dataset.sufijo || '';
-        if (quieto) {
-          el.textContent = Number(el.dataset.contar).toLocaleString('es-PE') + sufijo;
-          el.dataset.contado = '1';
-          continue;
-        }
+  // La cifra final desde el principio. `contado` le avisa a app.js que puede
+  // escribir el número del catálogo directo cuando llegue.
+  $$('[data-contar]').forEach((el) => {
+    el.textContent = Number(el.dataset.contar).toLocaleString('es-PE') + (el.dataset.sufijo || '');
+    el.dataset.contado = '1';
+  });
 
-        const inicio = performance.now();
-        const dura = 1300;
-        const paso = (ahora) => {
-          // La meta se relee cada cuadro: si el catálogo carga a mitad de la
-          // animación y trae otro número, el contador se reencamina solo.
-          const meta = Number(el.dataset.contar) || 0;
-          const t = Math.min(1, (ahora - inicio) / dura);
-          const suave = 1 - Math.pow(1 - t, 3);          // easeOutCubic
-          el.textContent = Math.round(meta * suave).toLocaleString('es-PE') + sufijo;
-          if (t < 1) requestAnimationFrame(paso);
-          else el.dataset.contado = '1';
-        };
-        requestAnimationFrame(paso);
-      }
-    }, { threshold: 0.5 });
-
-    $$('[data-contar]').forEach((el) => vistos.observe(el));
-  })();
-
-  // ------------------------------------------------------- nav al hacer scroll
-  (() => {
-    const nav = document.getElementById('nav');
-    if (!nav) return;
-    let pendiente = false;
-    addEventListener('scroll', () => {
-      if (pendiente) return;
-      pendiente = true;
-      requestAnimationFrame(() => {
-        pendiente = false;
-        nav.classList.toggle('encogida', scrollY > 40);
-      });
-    }, { passive: true });
-  })();
+  // La barra de arriba nace ya en su forma compacta (clase `encogida` en el
+  // HTML) y no cambia de alto ni de fondo al bajar.
 
   // ------------------------------------------------------- botón magnético
   (() => {

@@ -21,6 +21,9 @@
 <link rel="icon" type="image/png" sizes="64x64" href="/img/marca/favicon.png">
 <link rel="apple-touch-icon" href="/img/marca/apple-touch.png">
 <meta name="theme-color" content="#0b0a08">
+<!-- La fuente de los títulos se pide antes que el CSS la necesite: así el
+     texto se pinta ya con ella y no salta de una letra a otra al cargar. -->
+<link rel="preload" href="/fonts/fraunces-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/css/premium.css">
 <script type="application/ld+json">
 {
@@ -45,12 +48,12 @@
 }
 </script>
 </head>
-<body>
+<body class="portada">
 
 <canvas id="particulas"></canvas>
 
 <!-- ══════════════════════════════════════════════════════════ navegación -->
-<header class="nav" id="nav">
+<header class="nav encogida" id="nav">
   <div class="contenedor nav-fila">
     <a href="#inicio" class="marca">
       <img class="marca-sello" src="/img/marca/emblema.png" alt="" width="66" height="66">
@@ -85,7 +88,6 @@
 
   <div class="contenedor hero-inner">
     <div class="hero-texto">
-      <span class="kicker">Mercado Central · Desde 1998</span>
       <h1 class="enorme">
         <span>Lo que</span>
         <span class="contorno">la tierra</span>
@@ -166,7 +168,7 @@
   <div class="contenedor">
     <div class="seccion-cabeza revelar">
       <span class="kicker">De dónde viene</span>
-      <h2 class="grande">Tres pisos<br>ecológicos</h2>
+      <h2 class="grande">Tres pisos ecológicos</h2>
       <p>El Perú produce en tres mundos distintos a la vez. Cada uno da lo que
          el otro no puede, y eso se nota en lo que llega al mostrador.</p>
     </div>
@@ -209,7 +211,7 @@
   <div class="contenedor">
     <div class="seccion-cabeza revelar">
       <span class="kicker">Cómo trabajamos</span>
-      <h2 class="grande">Del productor<br>a tu casa</h2>
+      <h2 class="grande">Del productor a tu casa</h2>
     </div>
 
     <div class="pasos">
@@ -243,44 +245,20 @@
   <div class="contenedor">
     <div class="seccion-cabeza revelar">
       <span class="kicker">Qué encontrarás</span>
-      <h2 class="grande">Todo el puesto,<br>por categoría</h2>
+      <!-- El titular dice cuánto hay, no un eslogan. Las cifras las pone
+           app.js desde el catálogo; esto es el respaldo sin JavaScript. -->
+      <h2 class="grande" id="categorias-titulo">Nuestros productos</h2>
       <p id="categorias-bajada">Tónicos, cremas, hierbas, esencias, aceites y
-         superalimentos, cada uno con el lugar del que salió.</p>
+         superalimentos, cada uno con su lugar de origen. Toca una categoría para
+         ver sus productos, precios y stock en la tienda.</p>
     </div>
+    <ul class="categorias-datos revelar" id="categorias-datos" hidden></ul>
     <div class="categorias" id="lista-categorias"></div>
-  </div>
-</section>
 
-<!-- ═══════════════════════════════════════════════════ puerta a la tienda -->
-<!-- El catálogo, el asesor, el carrito y el seguimiento del pedido viven en
-     /tienda. Aquí quedan las puertas, con lo que hay detrás de cada una. -->
-<section class="seccion" id="tienda">
-  <div class="contenedor">
-    <div class="seccion-cabeza revelar">
-      <span class="kicker">La tienda</span>
-      <h2 class="grande">Pide desde<br>tu casa</h2>
-      <p>Lo que ves disponible es lo que hay en el puesto ahora. Pides en línea
-         y lo recoges en el local, o te lo llevamos.</p>
-    </div>
-
-    <div class="puertas">
-      <a class="tierra puerta revelar" data-retraso="1" href="/tienda#catalogo">
-        <span class="tierra-num">01</span>
-        <h3>El catálogo</h3>
-        <div class="altura">Stock real · con su origen</div>
-        <p>Filtra por categoría o busca por lo que necesitas —«para dormir»,
-           no solo «manzanilla»—. Cada ficha dice de dónde viene y cuánto queda.</p>
-        <div class="tierra-productos"><b>Ver los productos →</b></div>
-      </a>
-
-      <a class="tierra puerta revelar" data-retraso="2" href="/tienda#asesor">
-        <span class="tierra-num">02</span>
-        <h3>El asesor Raíz</h3>
-        <div class="altura">Inteligencia artificial</div>
-        <p>Cuéntale con tus palabras qué te pasa y te sugiere solo lo que hay en
-           tienda hoy. También responde por delivery, pagos y pedidos por mayor.</p>
-        <div class="tierra-productos"><b>Consultar al asesor →</b></div>
-      </a>
+    <!-- Las dos puertas a la tienda, que antes eran una sección aparte. -->
+    <div class="categorias-ctas revelar">
+      <a class="btn btn-primario" href="/tienda#catalogo">Ver todo el catálogo →</a>
+      <a class="btn btn-fantasma" href="/tienda#asesor">Pregúntale al asesor IA</a>
     </div>
   </div>
 </section>
@@ -290,7 +268,7 @@
   <div class="contenedor">
     <div class="seccion-cabeza revelar">
       <span class="kicker">Cómo comprar</span>
-      <h2 class="grande">Cuatro pasos,<br>sin registrarte</h2>
+      <h2 class="grande">Cuatro pasos, sin registrarte</h2>
       <p>No hace falta crear una cuenta ni una contraseña. Con tu nombre y tu
          teléfono basta para que el pedido quede registrado.</p>
     </div>
@@ -332,7 +310,7 @@
   <div class="contenedor">
     <div class="seccion-cabeza revelar">
       <span class="kicker">Envíos y recojo</span>
-      <h2 class="grande">¿Cuánto cuesta<br>y cuándo llega?</h2>
+      <h2 class="grande">¿Cuánto cuesta y cuándo llega?</h2>
       <p data-info="gratis">En Lima el envío es gratis en compras desde S/ 120.</p>
     </div>
 
@@ -353,7 +331,7 @@
   <div class="contenedor">
     <div class="seccion-cabeza revelar">
       <span class="kicker">Preguntas frecuentes</span>
-      <h2 class="grande">Antes de<br>comprar</h2>
+      <h2 class="grande">Antes de comprar</h2>
     </div>
 
     <div class="preguntas revelar">

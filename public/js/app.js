@@ -468,9 +468,25 @@
       </a>`;
     }).join('');
 
-    if ($('categorias-bajada')) {
-      $('categorias-bajada').textContent =
-        `${catalogo.length} productos en ${orden.length} categorías, cada uno con el lugar del que salió.`;
+    // El titular y las tres cifras de abajo salen del catálogo de hoy: cuánto
+    // hay, cuánto se puede pedir ya, de cuántos lugares viene y desde cuánto.
+    if ($('categorias-titulo')) {
+      $('categorias-titulo').innerHTML =
+        `${catalogo.length} productos en ${orden.length} categorías`;
+    }
+    const datos = $('categorias-datos');
+    if (datos) {
+      const disponibles = catalogo.filter((p) => p.stock > 0).length;
+      const lugares = new Set(catalogo.map((p) => p.origen).filter(Boolean)).size;
+      // Lo que se pesa se cotiza por 100 g: su precio no compite con el de un frasco.
+      const precios = catalogo.filter((p) => p.stock > 0 && !esGranel(p)).map((p) => p.precio);
+      datos.innerHTML = [
+        [disponibles, 'disponibles hoy'],
+        [lugares, 'lugares de origen'],
+        precios.length ? [soles(Math.min(...precios)), 'precio desde'] : null,
+      ].filter(Boolean).map(([cifra, rotulo]) =>
+        `<li><strong>${cifra}</strong><span>${rotulo}</span></li>`).join('');
+      datos.hidden = false;
     }
     if (window.revelarNuevos) window.revelarNuevos([...caja.children]);
   }

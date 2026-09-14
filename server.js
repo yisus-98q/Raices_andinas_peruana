@@ -57,6 +57,10 @@ const MIME = {
   '.ico': 'image/x-icon',
   '.txt': 'text/plain; charset=utf-8',
   '.xml': 'application/xml; charset=utf-8',
+  // La tipografía de los títulos va servida desde aquí y no desde Google
+  // Fonts: la demo tiene que verse igual con el wifi del mercado caído. Con
+  // `nosniff` activo, sin su tipo el navegador la rechaza.
+  '.woff2': 'font/woff2',
 };
 
 // Archivos donde se sustituye {{SITIO}} por el dominio real de tienda.config.
