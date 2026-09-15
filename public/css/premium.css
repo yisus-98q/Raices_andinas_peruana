@@ -111,11 +111,17 @@ img { max-width: 100%; display: block; }
 .nav-fila { display: flex; align-items: center; gap: 26px; }
 .marca { display: flex; align-items: center; gap: 14px; }
 .marca-sello { width: 66px; height: 66px; flex: none; display: block; }
-.marca-nombre { font-weight: 900; font-size: 17px; letter-spacing: -.02em; line-height: 1.1; }
-/* El nombre entra como imagen porque es la tipografía de la marca y ninguna
-   fuente del sistema la reproduce. El texto no se pierde: va en el alt, así que
-   un lector de pantalla sigue leyendo «Raíz Andina» donde antes leía el <div>. */
-.marca-logotipo { display: block; height: 48px; width: auto; }
+/* El nombre, en texto y no en imagen: el emblema sigue siendo el dibujo de la
+   marca, y al lado va «Raíz Andina» escrito en Fraunces, la letra de los
+   títulos. Se lee nítido a cualquier tamaño, se copia y lo encuentra el
+   buscador. Los colores son los del logotipo: café tierra y verde hoja. */
+.marca-nombre {
+  display: block; font-family: var(--titulo); font-weight: 600;
+  font-size: 27px; line-height: 1; letter-spacing: -.01em;
+  color: #3b2415; white-space: nowrap;
+}
+.marca-nombre em { font-style: normal; color: var(--verde); }
+.marca-nombre + .marca-bajada { margin-top: 4px; }
 .marca-bajada { font-size: 11px; letter-spacing: .18em; text-transform: uppercase; color: var(--tinta-suave); }
 .nav-enlaces { display: flex; gap: 26px; margin-left: 18px; }
 .nav-enlaces a { font-size: 13.5px; color: var(--tinta-suave); transition: color .2s; }
@@ -699,7 +705,7 @@ img { max-width: 100%; display: block; }
   /* Un escalón abajo: con el logotipo grande, el botón del carrito se salía de
      la fila en pantallas de 360 px. */
   .marca-sello { width: 50px; height: 50px; }
-  .marca-logotipo { height: 36px; }
+  .marca-nombre { font-size: 22px; }
   .nav { padding: 18px 0; }
   /* Y en la barra se va la bajada: a 360 px «Naturaleza con origen» partía en
      dos líneas y estiraba la barra de 107 a 140 px por una frase decorativa.
@@ -966,6 +972,70 @@ img { max-width: 100%; display: block; }
 .pestana:hover { color: var(--tinta); }
 .pestana.activo { background: var(--ocre); color: var(--papel); font-weight: 700; }
 
+/* ------------------------------------------------ checkout en tres pasos
+   Tus datos, entrega y confirmar (después del carrito), lado a lado: el carril corre de uno a otro
+   y toma el alto del paso a la vista. Antes era un solo formulario largo que
+   había que bajar entero dentro del panel. */
+/* Cuatro puntos: el carrito abre la tira (ver pasosCheckout en app.js). */
+.ck-pasos {
+  position: relative; display: grid; grid-template-columns: repeat(4, 1fr);
+  margin: 0 0 16px; padding: 0 0 12px; list-style: none;
+}
+/* La línea de fondo y la que avanza, detrás de los números. */
+.ck-pasos::before, .ck-pasos::after {
+  content: ""; position: absolute; top: 13px; left: calc(100% / 8); height: 2px; border-radius: 2px;
+}
+.ck-pasos::before { right: calc(100% / 8); background: var(--borde); }
+.ck-pasos::after {
+  width: calc((100% / 4) * var(--paso, 0)); background: var(--ocre);
+  transition: width .5s cubic-bezier(.65, 0, .25, 1);
+}
+.ck-pasos li { position: relative; z-index: 1; display: flex; justify-content: center; }
+.ck-pasos button {
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+  min-height: 44px; padding: 0 4px; border: 0; background: none;
+  font: inherit; font-size: 11.5px; font-weight: 600; color: var(--tinta-suave); cursor: pointer;
+}
+.ck-pasos button:disabled { cursor: default; opacity: .7; }
+.ck-pasos i {
+  width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center;
+  font-style: normal; font-size: 12.5px; font-weight: 800;
+  background: var(--papel-puro); border: 2px solid var(--borde); color: var(--tinta-suave);
+  transition: background .3s, border-color .3s, color .3s, transform .3s;
+}
+.ck-pasos li.actual i { border-color: var(--ocre); color: var(--ocre); transform: scale(1.08); }
+.ck-pasos li.actual button { color: var(--tinta); font-weight: 800; }
+.ck-pasos li.hecho i { background: var(--ocre); border-color: var(--ocre); color: var(--papel); }
+
+.ck-carril { overflow: hidden; transition: height .4s cubic-bezier(.65, 0, .25, 1); }
+.ck-pista {
+  display: flex; align-items: flex-start;
+  transition: transform .5s cubic-bezier(.65, 0, .25, 1);
+}
+.ck-diapo { flex: 0 0 100%; min-width: 0; transition: opacity .4s; }
+.ck-diapo[inert] { opacity: 0; }
+.ck-diapo .grupo-campos { margin-bottom: 4px; }
+
+/* El repaso del último paso: a nombre de quién y adónde, antes de confirmar. */
+.ck-repaso { display: grid; gap: 8px; margin-bottom: 14px; }
+.ck-repaso div {
+  display: grid; gap: 2px; padding: 11px 14px; border-radius: 12px;
+  border: 1px solid var(--borde); background: rgba(251, 249, 243, .6);
+}
+.ck-repaso span {
+  font-size: 10.5px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--ocre);
+}
+.ck-repaso b { font-size: 14px; color: var(--tinta); overflow-wrap: anywhere; }
+.ck-repaso small { font-size: 12.5px; color: var(--tinta-suave); overflow-wrap: anywhere; }
+.ck-diapo .resumen { margin-bottom: 12px; }
+
+.ck-botones { display: grid; grid-template-columns: 1fr 1.4fr; gap: 8px; }
+.ck-botones .btn { width: 100%; min-height: 48px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ck-pista, .ck-carril, .ck-diapo, .ck-pasos::after, .ck-pasos i { transition: none; }
+}
+
 .campo-doble { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 @media (max-width: 420px) { .campo-doble { grid-template-columns: 1fr; } }
 
@@ -1071,6 +1141,73 @@ img { max-width: 100%; display: block; }
 .p-recibido strong { display: block; color: var(--verde); margin-bottom: 4px; }
 .p-recibido span { font-size: 13.5px; color: var(--tinta-suave); }
 .p-nota { margin-top: 20px; font-size: 13px; color: var(--tinta-suave); opacity: .8; }
+
+/* ---------------------------------------------------------- la pasarela
+   Formulario y pedido lado a lado: al consultar, la pista corre hacia la
+   izquierda y entra el pedido. El panel que queda fuera se pliega (.oculto)
+   al terminar, para no dejar su alto como hueco. */
+.pasarela { overflow: hidden; margin: 0 -12px; padding: 0 12px 12px; }
+.pasarela-pista {
+  display: grid; grid-template-columns: 100% 100%; column-gap: 24px; align-items: start;
+  transition: transform .55s cubic-bezier(.65, 0, .25, 1);
+}
+.pasarela.ver-resultado .pasarela-pista { transform: translateX(calc(-100% - 24px)); }
+.pasarela-panel { min-width: 0; transition: opacity .45s ease; }
+.pasarela.ver-resultado #forma,
+.pasarela:not(.ver-resultado) #resultado { opacity: 0; }
+.pasarela-panel.oculto { height: 0; overflow: hidden; visibility: hidden; padding-block: 0; border-width: 0; }
+body.pagina .caja-seguimiento .pedido-estado { margin-top: 0; }
+/* Con el pedido a la vista, la explicación del formulario ya no hace falta. */
+.caja-seguimiento .bajada { transition: opacity .3s; }
+.caja-seguimiento.con-resultado .bajada { display: none; }
+
+.p-cabeza { align-items: center; padding-bottom: 14px; }
+.p-cabeza-codigo { flex: 1; min-width: 0; }
+.p-volver {
+  flex: none; width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center;
+  border: 1px solid var(--borde); background: var(--papel-puro); color: var(--tinta); cursor: pointer;
+  transition: border-color .15s, transform .12s;
+}
+.p-volver:hover { border-color: var(--ocre); color: var(--ocre); }
+.p-volver:active { transform: scale(.94); }
+.p-volver svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2.2; }
+
+/* Pestañas con una barra que se desliza bajo la elegida. */
+.p-pestanas {
+  position: relative; display: grid; grid-template-columns: repeat(3, 1fr);
+  margin: 14px 0 0; border-bottom: 1px solid var(--borde);
+}
+.p-pestanas::after {
+  content: ""; position: absolute; left: 0; bottom: -1px; width: calc(100% / 3); height: 2px;
+  background: var(--ocre); transform: translateX(calc(var(--tab, 0) * 100%));
+  transition: transform .35s cubic-bezier(.65, 0, .25, 1);
+}
+.p-pestanas button {
+  min-height: 44px; padding: 0 6px; border: 0; background: none; cursor: pointer;
+  font: inherit; font-size: 13.5px; font-weight: 600; color: var(--tinta-suave);
+}
+.p-pestanas button[aria-selected="true"] { color: var(--tinta); font-weight: 800; }
+
+/* Las diapositivas: se deslizan con el dedo y encajan una por una. */
+.p-carril {
+  display: grid; grid-auto-flow: column; grid-auto-columns: 100%; align-items: start;
+  overflow-x: auto; scroll-snap-type: x mandatory; overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+.p-carril::-webkit-scrollbar { display: none; }
+.p-diapo { scroll-snap-align: start; scroll-snap-stop: always; min-width: 0; padding-top: 4px; }
+.p-diapo .p-linea { margin: 18px 0 6px; }
+.p-diapo .p-linea li { padding-bottom: 16px; }
+.p-diapo .p-datos { border-top: 0; padding-top: 16px; }
+.p-diapo .p-items { margin-top: 10px; }
+.p-diapo .p-items tr:first-child td { border-top: 0; }
+.p-suma td { font-weight: 800; color: var(--tinta); border-top: 1.5px solid var(--tinta) !important; }
+.p-diapo .p-confirmar, .p-diapo .p-recibido { margin-top: 8px; }
+.p-diapo .p-nota { margin-top: 6px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pasarela-pista, .pasarela-panel, .p-pestanas::after { transition: none; }
+}
 
 /* Para qué sirve. Va justo debajo del origen y antes de la descripción porque
    es lo que la gente busca de verdad: no "manzanilla", sino "para dormir". */
@@ -1437,7 +1574,7 @@ img { max-width: 100%; display: block; }
 /* El logo un punto más chico: con el menú al lado, a 66 px la barra se volvía
    más alta que el propio menú. */
 :is(.portada, .tienda-pagina) .nav .marca-sello { width: 58px; height: 58px; }
-:is(.portada, .tienda-pagina) .nav .marca-logotipo { height: 42px; }
+:is(.portada, .tienda-pagina) .nav .marca-nombre { font-size: 25px; }
 /* Entre 981 y 1180 px el menú entero no entra al lado de la bajada del logo:
    se va la bajada, que es decorativa, antes que un ítem del menú. */
 @media (max-width: 1180px) {
@@ -1709,7 +1846,7 @@ img { max-width: 100%; display: block; }
 .pie p, .pie li { margin-bottom: 3px; line-height: 1.45; }
 .pie .marca { margin-bottom: 8px !important; }
 .pie .marca-sello { width: 50px; height: 50px; }
-.pie .marca-logotipo { height: 36px; }
+.pie .marca-nombre { font-size: 22px; }
 .pie-legal { margin-top: 20px; padding-top: 12px; }
 @media (max-width: 640px) {
   .pie { padding: 26px 0 14px; }
@@ -1738,6 +1875,125 @@ img { max-width: 100%; display: block; }
 .tienda-pagina .pastilla-carrito,
 .tienda-pagina #btn-asesor {
   min-height: 44px; display: inline-flex; align-items: center; justify-content: center;
+}
+
+/* ===================================================== CARRITO AL CENTRO
+   El carrito deja de ser un cajón pegado a la derecha y pasa a una ventana en
+   el medio de la pantalla: la vista va al centro, no a una esquina. Adentro,
+   Carrito · Tus datos · Entrega · Confirmar son diapositivas de una misma
+   tira: cada paso terminado sale por la izquierda y el siguiente entra por la
+   derecha (ver deslizarEtapa en app.js).
+
+   Los campos se aprietan: con 48 px de alto, rótulos a 7 px y grupos con
+   borde, «Tus datos» ya no entraba sin bajar. Quedan en 42 px con rótulo
+   pegado, y en pantalla ancha nombre/documento y celular/correo van de a dos. */
+.panel {
+  top: 50%; left: 50%; right: auto; bottom: auto;
+  transform: translate(-50%, -50%);
+  width: min(560px, calc(100% - 32px));
+  /* Alto fijo y no el del contenido: si la ventana cambiara de alto en cada
+     paso, además de deslizarse saltaría arriba y abajo. */
+  height: min(640px, calc(100svh - 40px));
+  border: 1px solid var(--borde); border-radius: 22px;
+  box-shadow: 0 30px 80px rgba(28, 42, 34, .28), 0 4px 14px rgba(28, 42, 34, .08);
+  overflow: hidden;
+  animation: aparecer-centro .32s cubic-bezier(.2, .8, .3, 1);
+}
+@keyframes aparecer-centro {
+  from { opacity: 0; transform: translate(-50%, -46%) scale(.97); }
+}
+.panel-cabeza { padding: 14px 20px; }
+.panel-cuerpo { position: relative; padding: 14px 20px; overflow-x: hidden; }
+.panel-pie { padding: 12px 20px 14px; }
+
+/* La diapositiva que sale: una copia del paso anterior, encima, que se va. */
+.etapa-saliente {
+  position: absolute; z-index: 2; margin: 0; overflow: hidden;
+  background: var(--papel-hondo); pointer-events: none;
+}
+
+/* Campos compactos, solo dentro del carrito. */
+.panel .grupo-campos { border: none; padding: 0; margin-bottom: 0; }
+.panel .grupo-campos h4 { margin-bottom: 10px; }
+.panel .pestanas { margin-bottom: 12px; }
+.panel .pestana { padding: 7px 8px; }
+.panel .campo { margin-bottom: 10px; }
+.panel .campo label { font-size: 11px; margin-bottom: 4px; }
+.panel .campo input, .panel .campo select { height: 42px; padding: 0 12px; font-size: 14px; border-radius: 10px; }
+.panel .campo select { padding-right: 34px; }
+.panel .campo textarea { padding: 9px 12px; font-size: 14px; min-height: 52px; }
+.panel .aviso-local, .panel .envio-aviso { padding: 10px 13px; margin-bottom: 12px; }
+.panel .ck-pasos { margin-bottom: 10px; padding-bottom: 6px; }
+.panel .ck-botones .btn { min-height: 44px; }
+.panel .casilla { padding: 10px 12px; margin-bottom: 4px; }
+.panel .resumen-fila { margin-bottom: 5px; }
+.panel .resumen-total { margin-top: 8px; padding-top: 8px; }
+.panel .panel-pie .resumen { padding-bottom: 8px; margin-bottom: 10px; }
+.panel .panel-pie .btn-bloque { min-height: 46px; padding-block: 0; }
+.panel .pie-nota { margin-top: 6px; }
+.panel .linea { padding: 11px 0; }
+.panel .exito { padding: 16px 8px; }
+
+.campo-par { display: grid; grid-template-columns: 1fr 1fr; gap: 0 10px; }
+@media (max-width: 520px) {
+  .campo-par { grid-template-columns: 1fr; }
+  /* A menos de 16 px el celular hace zoom al tocar el campo. */
+  .panel .campo input, .panel .campo select, .panel .campo textarea { font-size: 16px; }
+}
+
+/* En el celular la ventana llega casi a los bordes: 12 px de aire alrededor. */
+@media (max-width: 640px) {
+  .panel { width: calc(100% - 24px); height: calc(100svh - 24px); border-radius: 18px; }
+}
+
+/* ===================================================== TIENDA EN EL CELULAR
+   Medido a 390 px: cada tarjeta medía 560 px —foto cuadrada, descripción,
+   frase de uso tradicional y un botón de 52 px—, así que se veían dos
+   productos por pantalla; a 360 px la grilla caía a UNA columna y la página
+   pasaba de 32 000 px. Y la primera pantalla no entraba: las cinco sugerencias
+   del asesor iban una por renglón.
+
+   En el celular la tarjeta dice lo que decide la compra: foto, nombre, origen,
+   para qué sirve, precio y el botón. La descripción y la tradición siguen en
+   la pantalla grande; el asesor las cuenta si alguien pregunta. */
+@media (max-width: 640px) {
+  .tienda-pagina .grilla { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .tienda-pagina .tarjeta { border-radius: 14px; }
+  .tienda-pagina .tarjeta:hover { transform: none; }
+  .tienda-pagina .tarjeta-figura { aspect-ratio: 4 / 3; }
+  .tienda-pagina .tarjeta-cat { top: 7px; left: 7px; font-size: 8.5px; letter-spacing: .08em; padding: 3px 7px; }
+  .tienda-pagina .tarjeta-cuerpo { padding: 10px 10px 11px; gap: 4px; }
+  .tienda-pagina .tarjeta h3 {
+    font-size: 14.5px; line-height: 1.2;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .tienda-pagina .tarjeta-origen { font-size: 11px; }
+  .tienda-pagina .tarjeta-para {
+    font-size: 11.5px; font-weight: 600; color: var(--tinta-suave); margin: 0; flex: 1;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .tienda-pagina .tarjeta-desc, .tienda-pagina .tarjeta-tradicion { display: none; }
+  .tienda-pagina .tarjeta-pie { flex-wrap: wrap; align-items: baseline; gap: 0 6px; margin-top: 4px; }
+  .tienda-pagina .precio { font-size: 17px; }
+  .tienda-pagina .precio small { font-size: 10.5px; margin-top: 1px; }
+  .tienda-pagina .stock-nota { font-size: 10px; }
+  .tienda-pagina .tarjeta .agregar { margin-top: 6px; min-height: 44px; padding: 0 8px; font-size: 13.5px; }
+  .tienda-pagina .filtros { margin-bottom: 16px; }
+
+  /* La primera pantalla entera: el asesor más bajo y las sugerencias en una
+     tira que se arrastra de lado, como los filtros. */
+  .tienda-pagina .tienda-cabeza { margin-bottom: 14px; }
+  .tienda-pagina .seccion-tienda .asesor-caja { padding: 18px 16px; }
+  .tienda-pagina .asesor-cabeza { margin-bottom: 10px; }
+  .tienda-pagina .asesor-fila { gap: 8px; }
+  .tienda-pagina .sugerencias {
+    flex-wrap: nowrap; justify-content: flex-start; overflow-x: auto; scrollbar-width: none;
+    margin: 12px -16px 0; padding: 2px 16px 4px;
+    -webkit-mask-image: linear-gradient(90deg, #000 88%, transparent);
+    mask-image: linear-gradient(90deg, #000 88%, transparent);
+  }
+  .tienda-pagina .sugerencias::-webkit-scrollbar { display: none; }
+  .tienda-pagina .sugerencia { flex: none; white-space: nowrap; }
 }
 
 /* Laptop chica y tableta horizontal: las tres cifras del hero en una fila. */

@@ -13,7 +13,8 @@ import { asesorar } from './asesor.js';
 import {
   iniciarSesion, cerrarSesion, sesionDe, leerCookie,
   cookieSesion, cookieBorrada, asegurarUsuarioInicial, COOKIE, esAdmin,
-  esDelPuesto, esReparto,
+  esDelPuesto, esReparto, crearUsuario, correoValido, buscarUsuario,
+  cambiarNombre, cambiarCorreo, cambiarRol, cambiarClave,
 } from './auth.js';
 import { TIENDA, estaAbierto } from './tienda.config.js';
 import { consumir, CUOTAS } from './limites.js';
@@ -337,7 +338,36 @@ const Q = {
   insActividad: db.prepare(`INSERT INTO actividad_equipo
     (usuario, rol, accion, pedido_id, codigo, monto) VALUES (?,?,?,?,?,?)`),
   asignar: db.prepare('UPDATE pedidos SET repartidor = ? WHERE id = ?'),
+  // «Libre» incluye lo que quedó a nombre de quien ya no es motorizado (le
+  // cambiaron el papel): si no, esos pedidos se quedaban colgados.
+  asignarSiLibre: db.prepare(`UPDATE pedidos SET repartidor = ? WHERE id = ?
+    AND (repartidor = '' OR repartidor NOT IN (SELECT usuario FROM usuarios WHERE rol = 'reparto'))`),
   repartidores: db.prepare("SELECT usuario, nombre FROM usuarios WHERE rol = 'reparto' ORDER BY nombre"),
+  // El motorizado con menos pedidos abiertos a su nombre; a igual carga, el
+  // que se dio de alta primero.
+  menosCargado: db.prepare(`SELECT u.usuario FROM usuarios u WHERE u.rol = 'reparto'
+    ORDER BY (SELECT COUNT(*) FROM pedidos p WHERE p.repartidor = u.usuario
+              AND p.estado NOT IN ('entregado','anulado','devuelto')), u.id
+    LIMIT 1`),
+  // Lo que espera motorizado: sale a la calle, sigue sin salir y nadie lo
+  // soltó a mano (si el puesto lo desasignó, fue a propósito).
+  porRepartir: db.prepare(`SELECT id FROM pedidos p
+    WHERE canal != 'mostrador' AND modo_entrega != 'recojo'
+      AND estado IN ('pendiente','preparando')
+      AND (
+        -- Libre y nunca soltado a mano...
+        (repartidor = '' AND NOT EXISTS (SELECT 1 FROM actividad_equipo a
+                                         WHERE a.pedido_id = p.id AND a.accion = 'desasignado'))
+        -- ...o a nombre de alguien que ya no reparte: ese siempre se reparte.
+        OR (repartidor != '' AND repartidor NOT IN (SELECT usuario FROM usuarios WHERE rol = 'reparto')))
+    ORDER BY id`),
+  borrarUsuario: db.prepare("DELETE FROM usuarios WHERE usuario = ? AND rol IN ('vendedor','reparto')"),
+  // Un usuario corto que ya firmó algo, aunque la persona se haya eliminado.
+  enCaminoDe: db.prepare("SELECT codigo FROM pedidos WHERE repartidor = ? AND estado = 'enviado' ORDER BY id"),
+  firmaUsada: db.prepare(`SELECT 1 FROM actividad_equipo WHERE usuario = ?1
+    UNION SELECT 1 FROM pedidos WHERE repartidor = ?1 LIMIT 1`),
+  usuariosPanel: db.prepare(`SELECT usuario, email, nombre, rol, creado_en FROM usuarios
+    ORDER BY CASE rol WHEN 'admin' THEN 0 WHEN 'vendedor' THEN 1 WHEN 'reparto' THEN 2 ELSE 3 END, nombre`),
   usuarioPorNombre: db.prepare('SELECT usuario, nombre, rol FROM usuarios WHERE usuario = ?'),
   insAviso: db.prepare(`INSERT INTO avisos_cliente (pedido_id, evento, canal, estado, texto, detalle)
     VALUES (?,?,?,?,?,?)`),
@@ -874,6 +904,28 @@ function pedidoParaReparto(p) {
 const nombreRepartidor = (usuario) => (usuario ? Q.usuarioPorNombre.get(usuario)?.nombre || usuario : '');
 
 /**
+ * Reparte solo lo que espera motorizado.
+ *
+ * Antes cada pedido a domicilio entraba libre y alguien tenía que tomarlo o
+ * asignarlo: si nadie lo hacía, esperaba. Ahora cada uno va, al entrar, al
+ * motorizado con menos pedidos abiertos. Se llama al crear un pedido, al dar
+ * de alta un motorizado (se lleva lo que estaba esperando) y al arrancar.
+ *
+ * El puesto sigue pudiendo cambiarlo a mano, y lo que desasigna a propósito no
+ * se vuelve a repartir solo. No anota actividad: no es trabajo de nadie, y una
+ * fila más encima de «enviado» le borraba al motorizado su «en camino».
+ */
+function repartirLibres() {
+  let n = 0;
+  for (const { id } of Q.porRepartir.all()) {
+    const quien = Q.menosCargado.get();
+    if (!quien) break;
+    n += Q.asignarSiLibre.run(quien.usuario, id).changes;
+  }
+  return n;
+}
+
+/**
  * Registra y, si hay API configurada, envía un aviso al cliente.
  *
  * Nunca frena la operación que lo dispara: el pedido ya se creó o ya cambió de
@@ -1307,22 +1359,149 @@ async function api(req, res, url) {
   }
 
   /**
+   * Accesos del equipo, desde el panel.
+   *
+   * Hasta ahora un motorizado o alguien de mostrador solo se creaba por consola
+   * (`node clave.mjs --nuevo`), que la dueña no va a abrir. Desde aquí da de
+   * alta a quien vende y a quien reparte, y nada más: otro acceso de dueña ve
+   * costos, caja y respaldo, y eso no se regala desde un formulario.
+   */
+  if (metodo === 'GET' && ruta === '/api/admin/usuarios') {
+    if (!requiereAdmin(req, res)) return;
+    return json(res, 200, { usuarios: Q.usuariosPanel.all() });
+  }
+
+  if (metodo === 'POST' && ruta === '/api/admin/usuarios') {
+    if (!requiereAdmin(req, res)) return;
+    const cuerpo = await leerCuerpo(req);
+    const nombre = String(cuerpo.nombre || '').trim().replace(/\s+/g, ' ');
+    const correo = String(cuerpo.correo || '').trim().toLowerCase();
+    const clave = String(cuerpo.clave || '');
+    const rol = String(cuerpo.rol || '');
+    if (!['vendedor', 'reparto'].includes(rol)) {
+      return json(res, 400, { error: 'Desde el panel se crean accesos de ventas o de reparto.' });
+    }
+    if (nombre.length < 2 || nombre.length > 60) return json(res, 400, { error: 'Escribe el nombre de la persona.' });
+    if (!correoValido(correo)) return json(res, 400, { error: 'Ese correo no parece válido.' });
+    if (clave.length < 8) return json(res, 400, { error: 'La clave necesita al menos 8 caracteres.' });
+    if (clave.length > 200) return json(res, 400, { error: 'La clave es demasiado larga.' });
+    if (buscarUsuario(correo)) return json(res, 409, { error: 'Ese correo ya tiene un acceso.' });
+
+    // El usuario corto firma el kardex y la ruta: la primera palabra del
+    // nombre, sin tildes, y un número si ya hay otra persona con ese nombre.
+    // Tampoco el de alguien eliminado: heredaría sus entregas del día y lo
+    // que dejó firmado.
+    const base = (nombre.split(' ')[0].normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .toLowerCase().replace(/[^a-z0-9]/g, '') || 'equipo').slice(0, 16);
+    let usuario = base;
+    for (let i = 2; Q.usuarioPorNombre.get(usuario) || Q.firmaUsada.get(usuario); i++) usuario = base + i;
+
+    crearUsuario(usuario, correo, nombre, clave, rol);
+    // Un motorizado nuevo se lleva lo que estaba esperando reparto.
+    const repartidos = rol === 'reparto' ? repartirLibres() : 0;
+    const creado = Q.usuariosPanel.all().find((u) => u.usuario === usuario);
+    return json(res, 201, { usuario: creado, repartidos });
+  }
+
+  /**
+   * Editar o eliminar un acceso de ventas o reparto.
+   *
+   * La dueña no se edita ni se elimina desde aquí: un clic equivocado la dejaría
+   * fuera de su propio panel. Eso sigue en `node clave.mjs`.
+   */
+  const rutaUsuario = /^\/api\/admin\/usuarios\/([a-z0-9]{1,24})$/.exec(ruta);
+  if (rutaUsuario && (metodo === 'PATCH' || metodo === 'DELETE')) {
+    if (!requiereAdmin(req, res)) return;
+    const objetivo = Q.usuarioPorNombre.get(rutaUsuario[1]);
+    if (!objetivo) return json(res, 404, { error: 'Ese acceso no existe.' });
+    if (!['vendedor', 'reparto'].includes(objetivo.rol)) {
+      return json(res, 403, { error: 'El acceso de la dueña no se cambia desde el panel.' });
+    }
+
+    /**
+     * Un pedido en camino tiene el paquete —y quizá la plata— en manos de esa
+     * persona. Eliminarla, o sacarla del reparto, lo dejaba a nombre de nadie:
+     * ningún motorizado lo veía ni podía cerrarlo. Eso lo resuelve la dueña
+     * reasignándolo primero; el sistema no lo adivina.
+     */
+    const bloqueaEnCamino = () => {
+      const enCamino = objetivo.rol === 'reparto' ? Q.enCaminoDe.all(objetivo.usuario) : [];
+      if (!enCamino.length) return false;
+      json(res, 409, {
+        error: `${objetivo.nombre} tiene ${enCamino.length === 1 ? 'un pedido' : enCamino.length + ' pedidos'} en camino `
+          + `(${enCamino.map((p) => p.codigo).join(', ')}). Reasígnalo${enCamino.length === 1 ? '' : 's'} en «Vender hoy» antes.`,
+        en_camino: enCamino.map((p) => p.codigo),
+      });
+      return true;
+    };
+
+    if (metodo === 'DELETE') {
+      if (bloqueaEnCamino()) return;
+      // Las sesiones se van con él (ON DELETE CASCADE): deja de entrar ya.
+      // Lo que firmó —ventas, entregas, movimientos— queda en el historial.
+      Q.borrarUsuario.run(objetivo.usuario);
+      const repartidos = repartirLibres();   // sus pedidos abiertos pasan a otro
+      return json(res, 200, { ok: true, repartidos });
+    }
+
+    const cuerpo = await leerCuerpo(req);
+    const nombre = cuerpo.nombre === undefined ? null : String(cuerpo.nombre).trim().replace(/\s+/g, ' ');
+    const correo = cuerpo.correo === undefined ? null : String(cuerpo.correo).trim().toLowerCase();
+    const clave = String(cuerpo.clave || '');
+    const rol = cuerpo.rol === undefined ? null : String(cuerpo.rol);
+    if (rol !== null && !['vendedor', 'reparto'].includes(rol)) {
+      return json(res, 400, { error: 'El papel puede ser ventas o reparto.' });
+    }
+    if (nombre !== null && (nombre.length < 2 || nombre.length > 60)) {
+      return json(res, 400, { error: 'Escribe el nombre de la persona.' });
+    }
+    if (correo !== null && !correoValido(correo)) return json(res, 400, { error: 'Ese correo no parece válido.' });
+    if (clave && clave.length < 8) return json(res, 400, { error: 'La clave necesita al menos 8 caracteres.' });
+    if (clave.length > 200) return json(res, 400, { error: 'La clave es demasiado larga.' });
+    if (correo !== null) {
+      const otro = buscarUsuario(correo);
+      if (otro && otro.usuario !== objetivo.usuario) return json(res, 409, { error: 'Ese correo ya tiene un acceso.' });
+    }
+    if (rol === 'vendedor' && bloqueaEnCamino()) return;
+
+    if (nombre !== null) cambiarNombre(objetivo.usuario, nombre);
+    if (correo !== null) cambiarCorreo(objetivo.usuario, correo);
+    if (rol !== null) cambiarRol(objetivo.usuario, rol);
+    // Cambiar la clave cierra sus sesiones abiertas: tiene que volver a entrar.
+    if (clave) cambiarClave(objetivo.usuario, clave);
+    // Un motorizado que pasa a ventas suelta sus pedidos; uno nuevo en reparto
+    // se lleva lo que esperaba.
+    const repartidos = rol !== null && rol !== objetivo.rol ? repartirLibres() : 0;
+    const actual = Q.usuariosPanel.all().find((u) => u.usuario === objetivo.usuario);
+    return json(res, 200, { usuario: actual, repartidos });
+  }
+
+  /**
    * Asignar un pedido a un motorizado. Lo hace el puesto (la dueña o quien
    * atiende), no el reparto: repartir el trabajo es decisión de quien ve la
    * cola completa. Vacío = sin asignar.
    */
   if (metodo === 'PATCH' && /^\/api\/pedidos\/\d+\/repartidor$/.test(ruta)) {
-    const sesion = requierePuesto(req, res);
+    const sesion = requiereSesion(req, res);
     if (!sesion) return;
     const id = Number(ruta.split('/')[3]);
     const pedido = Q.pedido.get(id);
     if (!pedido) return json(res, 404, { error: 'Pedido no encontrado' });
+    const { repartidor = '' } = await leerCuerpo(req);
+    const usuario = String(repartidor || '').trim();
+    // El motorizado puede sumarse él mismo a un pedido libre, y nada más: no
+    // reparte a otros, no suelta lo suyo ni toma lo que ya lleva alguien.
+    if (esReparto(sesion) && (usuario !== sesion.usuario || pedido.repartidor)) {
+      return json(res, 403, {
+        error: pedido.repartidor && pedido.repartidor !== sesion.usuario
+          ? `Ese pedido ya lo lleva ${nombreRepartidor(pedido.repartidor)}.`
+          : 'Desde el reparto solo puedes tomar un pedido libre para ti.',
+      });
+    }
     if (!salePorReparto(pedido)) return json(res, 400, { error: 'Ese pedido no sale a reparto.' });
     if (['entregado', 'anulado', 'devuelto'].includes(pedido.estado)) {
       return json(res, 409, { error: `El pedido ya figura como ${pedido.estado}.` });
     }
-    const { repartidor = '' } = await leerCuerpo(req);
-    const usuario = String(repartidor || '').trim();
     if (usuario) {
       const u = Q.usuarioPorNombre.get(usuario);
       if (!u || u.rol !== 'reparto') {
@@ -1751,7 +1930,11 @@ async function api(req, res, url) {
 // Registra el pedido y descuenta stock en una sola transaccion:
 // o entra todo, o no entra nada. Es lo que evita vender lo que no hay.
 function crearPedido(res, body) {
-  const { cliente = {}, items = [], canal = 'web' } = body;
+  const { cliente = {}, items = [] } = body;
+  // Esta ruta es pública y solo la usa la tienda: el canal no se le pregunta
+  // al navegador. Aceptarlo dejaba crear un «mostrador» a domicilio que nadie
+  // asignaba, sin aviso al cliente y sumado a la caja del local.
+  const canal = 'web';
   const nombre = String(cliente.nombre || '').trim();
 
   /**
@@ -1920,6 +2103,9 @@ function crearPedido(res, body) {
     } catch (e) {
       console.warn('[comprobante] ' + e.message);
     }
+
+    // A domicilio: va solo al motorizado con menos carga.
+    repartirLibres();
 
     // El primer aviso al cliente: su pedido entró. Con API sale solo; en modo
     // manual queda listo en el panel para mandarlo de un toque.
@@ -2368,6 +2554,9 @@ createServer(async (req, res) => {
   // tests puedan levantar varios servidores a la vez sin chocar de puerto.
   const puerto = this.address().port;
   const inicial = asegurarUsuarioInicial();
+  // Lo que quedó esperando motorizado de antes de esta versión, o de un
+  // reinicio: se reparte al arrancar.
+  repartirLibres();
   console.log('ESCUCHANDO ' + puerto);
   console.log('\n  Raiz Andina  ->  http://localhost:' + puerto);
   console.log('  Panel admin  ->  http://localhost:' + puerto + '/admin.html');

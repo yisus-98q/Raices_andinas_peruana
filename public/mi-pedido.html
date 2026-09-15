@@ -21,7 +21,7 @@
     <a class="marca" href="/">
       <img class="marca-sello" src="/img/marca/emblema.png" alt="" width="66" height="66">
       <div>
-        <img class="marca-logotipo" src="/img/marca/logotipo.png" alt="Raíz Andina" width="105" height="48">
+        <span class="marca-nombre">Raíz <em>Andina</em></span>
         <div class="marca-bajada">Seguimiento de pedido</div>
       </div>
     </a>
@@ -40,7 +40,12 @@
     </p>
   </div>
 
-  <form class="asesor-caja" id="forma">
+  <!-- La pasarela: el formulario y el pedido van lado a lado y se desliza de
+       uno a otro. Antes el resultado se apilaba debajo del formulario y había
+       que bajar media página para leerlo. -->
+  <div class="pasarela" id="pasarela">
+  <div class="pasarela-pista">
+  <form class="asesor-caja pasarela-panel" id="forma">
     <div class="aviso aviso-error" id="error" hidden></div>
 
     <div class="campo-doble">
@@ -60,18 +65,13 @@
     </button>
   </form>
 
-  <section class="pedido-estado" id="resultado" hidden></section>
+  <section class="pedido-estado pasarela-panel oculto" id="resultado" aria-live="polite"></section>
+  </div>
+  </div>
 </div>
 </main>
-
-<footer class="pie">
-  <div class="contenedor">
-    <div class="pie-legal">
-      <span>© 2026 Raíz Andina · <a href="/tienda">Volver a la tienda</a></span>
-      <span>Los productos naturales no son medicamentos ni reemplazan un tratamiento médico.</span>
-    </div>
-  </div>
-</footer>
+<!-- Sin pie: con él la página medía más que la pantalla y obligaba a bajar
+     para nada. "Volver a la tienda" ya está en la cabecera. -->
 
 <script src="/js/mi-pedido.js"></script>
 </body>

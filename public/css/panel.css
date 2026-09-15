@@ -48,7 +48,20 @@ img { max-width: 100%; display: block; }
 
 .contenedor { width: 100%; max-width: var(--ancho); margin: 0 auto; padding: 0 24px; }
 
-.marca-nombre { font-weight: 800; font-size: 16px; letter-spacing: -.02em; }
+/* El nombre en texto, con la misma letra y colores que en la tienda (ver
+   premium.css). El panel no carga premium.css: la fuente se declara aquí. */
+@font-face {
+  font-family: "Fraunces";
+  src: url("/fonts/fraunces-latin.woff2") format("woff2");
+  font-weight: 500 700;
+  font-style: normal;
+  font-display: block;
+}
+.marca-nombre {
+  display: block; font-family: "Fraunces", Georgia, "Times New Roman", serif; font-weight: 600;
+  font-size: 25px; line-height: 1; letter-spacing: -.01em; color: #3b2415; white-space: nowrap;
+}
+.marca-nombre em { font-style: normal; color: var(--verde); }
 .marca-bajada {
   font-size: 10px; letter-spacing: .2em; text-transform: uppercase;
   color: var(--tinta-suave);
@@ -83,10 +96,9 @@ img { max-width: 100%; display: block; }
 .admin-cabecera .contenedor { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 .admin-cabecera h1 { font-size: 17px; }
 .marca-icono { width: 60px; height: 60px; flex: none; }
-.marca-logotipo { display: block; height: 42px; width: auto; }
-/* El h1 solo envuelve a la imagen: sin esto hereda el tamaño de fuente del
-   título y le suma un alto de línea que descuadra la cabecera. */
-.marca-titulo { font-size: 0; line-height: 0; margin: 0; }
+/* El h1 solo envuelve al nombre: sin márgenes ni alto de línea propios. */
+.marca-titulo { margin: 0; line-height: 1; }
+.marca-titulo + .marca-bajada { margin-top: 5px; }
 .admin-cabecera .acciones { margin-left: auto; display: flex; gap: 10px; align-items: center; }
 
 .pulso { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: var(--tinta-suave); }
@@ -132,7 +144,20 @@ img { max-width: 100%; display: block; }
 
 /* ---------------------------------------------------------------- bloques */
 .tarjetas-admin { display: grid; grid-template-columns: 1.4fr 1fr; gap: 20px; align-items: start; }
-@media (max-width: 1000px) { .tarjetas-admin { grid-template-columns: 1fr; } }
+/* Vender hoy: una columna por bloque, las que el rol tenga a la vista. Con
+   columnas automáticas y no tres fijas, al mostrador (sin comprobantes) le
+   quedan dos anchas en vez de dos y un hueco. */
+.tarjetas-admin.tres-columnas {
+  grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 16px;
+}
+/* En una columna de un tercio el buscador de pedidos va debajo del título. */
+.tres-columnas .bloque-cabeza, #bloque-clientes .bloque-cabeza { flex-wrap: wrap; }
+.tres-columnas .cabeza-derecha, #bloque-clientes .cabeza-derecha { flex: 1 1 100%; flex-wrap: nowrap; }
+.tres-columnas .cabeza-derecha .buscar-panel,
+#bloque-clientes .cabeza-derecha .buscar-panel { flex: 1; width: auto; min-width: 0; }
+@media (max-width: 1000px) {
+  .tarjetas-admin, .tarjetas-admin.tres-columnas { grid-template-columns: 1fr; grid-auto-flow: row; }
+}
 
 .bloque {
   background: var(--papel-puro);
@@ -168,6 +193,41 @@ img { max-width: 100%; display: block; }
   font-size: 12.5px; color: var(--tinta-suave); margin-top: 9px;
   padding-left: 13px; border-left: 2px solid var(--piedra);
 }
+
+/* Pedidos del puesto en filas: dos renglones por pedido y el resto al tocar. */
+.pedido-c { padding: 0; }
+.pedido-resumen {
+  list-style: none; cursor: pointer; display: grid; gap: 3px;
+  padding: 10px 26px 10px 8px; margin: 0 -8px; border-radius: 10px; position: relative;
+  transition: background .15s;
+}
+.pedido-resumen::-webkit-details-marker { display: none; }
+.pedido-resumen:hover { background: var(--humo); }
+.pedido-resumen:focus-visible { outline: 2px solid var(--ocre); outline-offset: -2px; }
+/* La flecha que dice «esto se abre». */
+.pedido-resumen::after {
+  content: ""; position: absolute; right: 10px; top: 50%; width: 7px; height: 7px;
+  border-right: 2px solid var(--tinta-suave); border-bottom: 2px solid var(--tinta-suave);
+  transform: translateY(-70%) rotate(45deg); transition: transform .2s;
+}
+.pedido-c[open] > .pedido-resumen::after { transform: translateY(-30%) rotate(225deg); }
+.pedido-c[open] > .pedido-resumen { background: var(--humo); }
+.pr-linea { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.pr-linea .pedido-total { font-size: 15px; white-space: nowrap; }
+.pr-linea .pedido-codigo { white-space: nowrap; font-size: 12px; }
+.pr-estado {
+  font-size: 9.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em;
+  padding: 2px 8px; border-radius: 999px; border: 1px solid transparent; white-space: nowrap;
+}
+.pr-sub { font-size: 12.5px; color: var(--tinta-suave); }
+.pr-sub b {
+  color: var(--tinta); font-weight: 600; flex: 0 1 auto; min-width: 0; max-width: 60%;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.pr-donde { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pr-donde::before { content: "· "; }
+.pedido-detalle { padding: 4px 0 14px; }
+.pedido-detalle .pedido-meta { margin-top: 2px; }
 
 .estado {
   font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .1em;
@@ -269,48 +329,152 @@ button.paso-reparto:active { transform: scale(.98); }
   .wa-falta { flex: 1 1 auto; justify-content: center; }
 }
 
-/* ---------------------------------------------- lo que usa en la calle
-   Llamar y cómo llegar: dos botones anchos, del alto de un pulgar. Van justo
-   debajo de la dirección, que es donde se mira cuando no se encuentra la casa. */
-.pedido-contacto { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 11px; }
-.contacto {
-  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
-  min-height: 44px; padding: 8px 10px; border-radius: 11px;
-  font-size: 13.5px; font-weight: 700; color: var(--tinta);
-  background: var(--papel-puro); border: 1px solid var(--borde);
-  transition: border-color .15s, transform .12s;
-}
-.contacto:hover { border-color: var(--verde); color: var(--verde); }
-.contacto:active { transform: scale(.97); }
-.contacto svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2; flex: none; }
-
-/* El monto: para el motorizado es lo que se cobra, no un total contable. */
-.pedido-cobrar { margin-left: auto; text-align: right; line-height: 1.15; }
-.pedido-cobrar small {
-  display: block; font-size: 10.5px; font-weight: 700; letter-spacing: .09em;
-  text-transform: uppercase; color: var(--terra);
-}
-.pedido-cobrar .pedido-total { margin-left: 0; font-size: 22px; }
-.pedido-cobrado small { color: var(--verde); }
 .cobro-dato { color: var(--verde); font-weight: 700; }
+.wa-hecho svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 2.6; flex: none; }
 
-/* Sus dos pasos. Salir en violeta —el color de «en camino» en todo el panel—
-   y entregar en verde; los dos llenos, porque son lo único que viene a tocar. */
-.pedido-reparto.solo-paso { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); }
-.paso-grande { min-height: 68px; font-size: 16px; font-weight: 800; }
-.paso-grande .paso-accion { display: inline-flex; align-items: center; gap: 8px; letter-spacing: -.01em; }
-.paso-salir { background: #5b45a8; color: #fff; }
-.paso-entregar { background: var(--verde); color: #fff; }
-.paso-grande .paso-siguiente { color: inherit; opacity: .85; font-weight: 600; }
-
-/* Separadores de la ruta: qué lleva, qué falta salir, qué ya cerró hoy. */
-.ruta-grupo {
-  padding: 14px 22px 6px; font-size: 11px; font-weight: 800; letter-spacing: .12em;
-  text-transform: uppercase; color: var(--tinta-suave); background: var(--papel-hondo);
-  border-top: 1px solid var(--borde);
+/* ------------------------------------------------ la ruta del motorizado
+   Tarjetas compactas en rejilla: una columna en el celular, varias en pantalla
+   ancha. Nada se estira a todo el ancho: los botones van a su medida y la
+   acción principal se alinea a la derecha. Sin emojis: íconos de trazo. */
+#lista-pedidos.ruta {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 12px; padding: 14px; align-content: start; background: var(--papel-hondo);
 }
-.ruta-grupo b { color: var(--tinta); }
-.pedido-hecho { opacity: .72; }
+.ruta-grupo {
+  grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; margin: 2px 2px -4px;
+  font-size: 10.5px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--tinta-suave);
+}
+.ruta-grupo b {
+  min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; display: inline-grid; place-items: center;
+  font-size: 11px; letter-spacing: 0; color: var(--papel-puro); background: var(--tinta-suave);
+}
+.ruta-grupo:first-child { margin-top: 0; }
+
+.rt {
+  --rt: var(--verde); --rt-halo: rgba(42, 107, 70, .35);
+  display: flex; flex-direction: column; min-width: 0;
+  padding: 12px 13px 11px; border-radius: 13px;
+  background: var(--papel-puro); border: 1px solid var(--borde);
+  box-shadow: inset 0 3px 0 var(--rt);
+  animation: rt-entra .35s ease-out both;
+}
+.rt-pendiente  { --rt: #8a5c0f; --rt-halo: rgba(217, 154, 43, .45); }
+.rt-preparando { --rt: #2f5f9e; --rt-halo: rgba(93, 145, 214, .45); }
+.rt-enviado    { --rt: #5b45a8; --rt-halo: rgba(146, 120, 214, .5); }
+.rt-cerrado { opacity: .78; box-shadow: none; }
+@keyframes rt-entra { from { opacity: 0; transform: translateY(6px); } }
+
+.rt-cabeza { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.rt-quien { min-width: 0; }
+.rt-codigo {
+  display: flex; align-items: center; gap: 6px;
+  font: 700 10.5px/1 Consolas, "SF Mono", monospace; letter-spacing: .03em; color: var(--tinta-suave);
+}
+.rt-libre {
+  font: 800 9.5px/1 var(--display); font-style: normal; letter-spacing: .1em; text-transform: uppercase;
+  padding: 3px 6px; border-radius: 999px; color: #8a5c0f; background: rgba(217, 154, 43, .18);
+}
+.rt-cliente {
+  margin: 4px 0 0; font-size: 14.5px; font-weight: 700; letter-spacing: -.01em; color: var(--tinta);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.rt-monto { flex: none; text-align: right; line-height: 1.1; }
+.rt-monto small {
+  display: block; font-size: 9.5px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--terra);
+}
+.rt-cerrado .rt-monto small { color: var(--verde); }
+.rt-monto strong { font-size: 16.5px; font-weight: 800; letter-spacing: -.02em; color: var(--tinta); }
+
+/* La secuencia: cuatro puntos sobre una línea. La línea se llena hasta el paso
+   actual, los puntos aparecen uno detrás de otro, el actual late y, en camino,
+   un punto viaja por el tramo que falta. */
+.rt-secuencia {
+  position: relative; display: grid; grid-template-columns: repeat(4, 1fr);
+  margin: 12px 0 2px; padding: 0; list-style: none;
+}
+.rt-secuencia::before, .rt-secuencia::after {
+  content: ""; position: absolute; top: 5px; left: 12.5%; height: 2px; border-radius: 2px;
+}
+.rt-secuencia::before { right: 12.5%; background: var(--piedra); }
+.rt-secuencia::after {
+  width: calc(75% * var(--avance)); background: var(--rt); transform-origin: left;
+  animation: rt-llena .8s .1s cubic-bezier(.3, .7, .2, 1) both;
+}
+.rt-secuencia li {
+  position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 5px;
+  font-size: 10px; font-weight: 600; color: var(--tinta-suave); text-align: center;
+}
+.rt-secuencia i {
+  width: 12px; height: 12px; border-radius: 50%; box-sizing: border-box;
+  background: var(--papel-puro); border: 2px solid var(--piedra);
+  animation: rt-punto .3s calc(var(--i) * .2s) ease-out both;
+}
+.rt-secuencia li.hecho i { background: var(--rt); border-color: var(--rt); }
+.rt-secuencia li.actual i {
+  background: var(--papel-puro); border: 3px solid var(--rt);
+  animation: rt-punto .3s calc(var(--i) * .2s) ease-out both, rt-late 1.8s calc(var(--i) * .2s + .4s) infinite;
+}
+.rt-secuencia li.actual span { color: var(--tinta); font-weight: 800; }
+.rt-viaje {
+  position: absolute; top: 3px; left: 62.5%; width: 6px; height: 6px; margin-left: -3px;
+  border-radius: 50%; background: var(--rt); z-index: 0;
+  animation: rt-viaja 2.2s 1s ease-in-out infinite;
+}
+@keyframes rt-llena { from { transform: scaleX(0); } }
+@keyframes rt-punto { from { transform: scale(0); } }
+@keyframes rt-late {
+  0% { box-shadow: 0 0 0 0 var(--rt-halo); }
+  70%, 100% { box-shadow: 0 0 0 7px transparent; }
+}
+@keyframes rt-viaja {
+  0% { left: 62.5%; opacity: 0; }
+  15% { opacity: 1; }
+  85% { opacity: 1; }
+  100% { left: 87.5%; opacity: 0; }
+}
+.rt-fuera {
+  margin: 10px 0 0; font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--terra);
+}
+
+.rt-dir { margin: 9px 0 0; font-size: 12.5px; line-height: 1.45; color: var(--tinta); }
+.rt-dir b { font-weight: 700; }
+.rt-extra { margin: 2px 0 0; font-size: 11.5px; line-height: 1.4; color: var(--terra); }
+.rt-items {
+  margin: 5px 0 0; font-size: 11.5px; line-height: 1.4; color: var(--tinta-suave);
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+
+.rt-acciones { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 10px; }
+.rt-btn, .rt .wa-aviso {
+  display: inline-flex; align-items: center; gap: 5px; height: 34px; padding: 0 10px;
+  border-radius: 9px; border: 1px solid var(--borde); background: var(--papel-puro);
+  font-size: 12px; font-weight: 600; color: var(--tinta); white-space: nowrap; cursor: pointer;
+  transition: border-color .15s, background .15s, transform .12s;
+}
+.rt .wa-aviso { min-height: 0; }
+.rt .wa-falta { color: #17804a; border-color: rgba(31, 143, 78, .5); }
+.rt .wa-hecho { color: var(--tinta-suave); background: var(--humo); }
+.rt-btn:hover { border-color: var(--rt); }
+.rt-btn:active, .rt .wa-aviso:active { transform: scale(.96); }
+.rt-btn svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; flex: none; }
+.rt-principal {
+  margin-left: auto; height: 36px; padding: 0 14px; border: 0;
+  font-size: 12.5px; font-weight: 700; color: #fff; background: var(--rt);
+}
+.rt-principal:hover { filter: brightness(1.08); }
+.rt-principal:disabled { opacity: .5; }
+.rt-tomar { color: #8a5c0f; background: rgba(217, 154, 43, .16); border: 1px solid rgba(217, 154, 43, .55); }
+.rt-cierre { margin-left: auto; font-size: 11.5px; font-weight: 700; color: var(--verde); }
+
+@media (max-width: 640px) {
+  #lista-pedidos.ruta { padding: 10px; gap: 10px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rt, .rt-secuencia::after, .rt-secuencia i, .rt-viaje { animation: none !important; }
+  .rt-viaje { display: none; }
+}
 
 /* El diálogo de cobro: el monto grande y un botón por medio de pago. */
 .dlg-cobro { width: min(420px, calc(100vw - 24px)); }
@@ -329,7 +493,7 @@ button.paso-reparto:active { transform: scale(.98); }
 @media (max-width: 640px) {
   body.rol-reparto .admin-cabecera { padding: 8px 0; }
   body.rol-reparto .marca-icono { width: 34px; height: 34px; }
-  body.rol-reparto .marca-logotipo { height: 24px; }
+  body.rol-reparto .marca-nombre { font-size: 17px; }
   body.rol-reparto .admin-cabecera .contenedor { gap: 8px; }
   body.rol-reparto .admin-cabecera .acciones .btn { padding: 9px 10px; }
   .ruta-grupo { padding: 12px 16px 6px; }
@@ -511,7 +675,7 @@ button.paso-reparto:active { transform: scale(.98); }
 }
 .caja-cabeza > * { position: relative; }
 .caja-cabeza .marca-icono { margin: 0 auto 16px; width: 78px; height: 78px; }
-.caja-cabeza .marca-logotipo { margin: 0 auto 8px; height: 54px; }
+.caja-cabeza .marca-nombre { margin: 0 auto 8px; font-size: 34px; }
 .caja-cabeza h1 { font-size: 21px; margin-bottom: 5px; }
 .caja-cabeza p { margin: 0; font-size: 13px; color: var(--tinta-suave); }
 .caja-cuerpo { padding: 6px 30px 28px; }
@@ -550,7 +714,7 @@ button.paso-reparto:active { transform: scale(.98); }
      Se va con el scroll y vuelve subiendo. */
   .admin-cabecera { position: static; padding: 12px 0; }
   .marca-icono { width: 44px; height: 44px; }
-  .marca-logotipo { height: 30px; }
+  .marca-nombre { font-size: 20px; }
   .admin-cabecera .marca-bajada { display: none; }
 
   /* 2. «Actualizado 10:15:56 a. m.» ocupaba media fila para decir algo que el
@@ -883,6 +1047,21 @@ button.paso-reparto:active { transform: scale(.98); }
 .cal-pie strong { color: var(--tinta); }
 .cal-mejor { color: var(--ocre); }
 
+/* En pantalla ancha el mes llena su columna: las semanas se reparten el alto
+   (cinco o seis, según el mes) en vez de medir por proporción, así que entra
+   entero y sin barra, y más grande. */
+@media (min-width: 641px) {
+  body.panel-fijo #calendario { display: flex; flex-direction: column; overflow: hidden; padding-bottom: 14px; }
+  body.panel-fijo .cal-rejilla {
+    flex: 1; min-height: 0;
+    grid-template-rows: auto; grid-auto-rows: minmax(0, 1fr); gap: 6px;
+  }
+  body.panel-fijo .dia-cal { aspect-ratio: auto; min-height: 0; padding: 7px 9px; border-radius: 10px; }
+  body.panel-fijo .dia-num { font-size: 13px; }
+  body.panel-fijo .dia-monto { font-size: clamp(11px, 1vw, 14px); }
+  body.panel-fijo .dia-cabeza { font-size: 12px; }
+}
+
 .btn-mini {
   background: var(--humo);
   border: 1px solid var(--borde);
@@ -961,38 +1140,14 @@ button.paso-reparto:active { transform: scale(.98); }
 }
 
 /* ------------------------------------------------------------- respaldo
-   El bloque entero se tiñe cuando el respaldo del día falta. Un aviso
-   pequeño dentro de un bloque igual a los demás no se ve; el borde sí. */
-.bloque-alerta { border-color: rgba(180, 85, 47, .45); }
-.bloque-alerta .bloque-cabeza h2 { color: var(--terra); }
-
-.btn-ancho { width: auto; padding: 0 11px; }
-
-.resp-aviso {
-  font-size: 12.5px;
-  border-radius: 8px;
-  padding: 9px 11px;
-  margin: 8px 0;
-  line-height: 1.45;
+   Un botón de la cabecera con un punto de estado: verde, el de hoy está
+   hecho; terracota, falta. Faltando, el botón entero toma el borde terracota:
+   un punto solo no se ve desde la silla. */
+.resp-punto {
+  width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--verde);
 }
-.resp-aviso.bien { background: rgba(42, 107, 70, .14); color: var(--tinta); }
-.resp-aviso.grave { background: rgba(180, 85, 47, .16); color: var(--tinta); }
-.resp-aviso.tibio { background: rgba(42, 107, 70, .12); color: var(--tinta); }
-.resp-nota { font-size: 11.5px; color: var(--tinta-suave); margin: 6px 0; line-height: 1.5; }
-.resp-nota code {
-  font-family: ui-monospace, "Consolas", monospace;
-  font-size: 11px;
-  word-break: break-all;
-}
-.resp-lista { border-top: 1px solid var(--borde); margin-top: 10px; padding-top: 6px; }
-.resp-fila {
-  display: flex;
-  justify-content: space-between;
-  font-size: 12px;
-  padding: 4px 0;
-  color: var(--tinta-suave);
-}
-.resp-peso { color: var(--tinta); }
+.btn-respaldo.resp-pendiente { border-color: rgba(180, 85, 47, .55); color: var(--terra); }
+.btn-respaldo.resp-pendiente .resp-punto { background: var(--terra); animation: latido 2.2s ease-in-out infinite; }
 
 /* ------------------------------------------- el panel entra en la pantalla
    Un área se ve entera, sin desplazar la página.
@@ -1125,9 +1280,65 @@ button.paso-reparto:active { transform: scale(.98); }
 #bloque-resumen .bloque-cabeza { border-bottom: none; padding: 4px 0 14px; }
 #bloque-resumen .bloque-cuerpo { padding: 0; }
 #bloque-resumen .kpis { margin-bottom: 0; }
-/* En el área que reparte su alto, los indicadores miden lo que miden y el
-   equipo se queda con el resto. */
+/* En el área que reparte su alto, el sobrante se divide 2 a 5 entre los
+   indicadores y el equipo, y cada tarjeta se estira hasta llenar su parte.
+   Antes los indicadores medían lo justo y el equipo se quedaba con todo el
+   resto: sus tarjetas arriba y media pantalla de caja blanca vacía debajo. */
 body.panel-fijo #bloque-resumen { flex: none; }
+@media (min-width: 641px) {
+  /* Con tope: en una pantalla de 1080 px de alto, estirar sin límite dejaba
+     indicadores de 270 px con una cifra sola en el medio. */
+  body.panel-fijo #bloque-resumen { flex: 2 0 auto; max-height: 250px; }
+  body.panel-fijo #bloque-equipo { flex: 5 1 auto; }
+
+  body.panel-fijo #bloque-resumen .bloque-cuerpo { display: flex; overflow: visible; }
+  body.panel-fijo #bloque-resumen .kpis { flex: 1; grid-auto-rows: 1fr; }
+  body.panel-fijo #bloque-resumen .kpi { display: flex; flex-direction: column; justify-content: center; }
+  /* «S/ 190,093.30» en una línea: partido en dos se leía como dos cifras. */
+  body.panel-fijo #bloque-resumen .kpi-valor { white-space: nowrap; }
+
+  body.panel-fijo #bloque-equipo .bloque-cuerpo { display: flex; padding-top: 16px; }
+  /* Una sola fila, siempre, y sin barra de desplazamiento: las tarjetas se
+     reparten el ancho que haya, sean cuatro o siete. Con una quinta persona
+     la tarjeta caía a un segundo renglón cortado; con un ancho mínimo, en una
+     laptop chica aparecía una barra para arrastrar de lado. */
+  body.panel-fijo .equipo {
+    flex: 1; grid-template-columns: none; grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr); grid-template-rows: minmax(max-content, 1fr);
+    gap: 10px;
+  }
+  body.panel-fijo #bloque-equipo .bloque-cuerpo { overflow-x: hidden; }
+  /* Las cifras a su alto; lo que sobra queda entre ellas y la última
+     actividad, que baja al pie. Estirarlas hasta 130 px contaba como alto
+     mínimo de la tarjeta y la empujaba fuera del área. */
+  body.panel-fijo .eq-datos { grid-auto-rows: minmax(64px, auto); align-content: start; }
+  body.panel-fijo .eq-dato { display: flex; flex-direction: column; justify-content: center; }
+  body.panel-fijo .eq-dato strong { font-size: clamp(17px, 2.3vh, 19px); }
+  body.panel-fijo .eq-pie { margin-top: auto; }
+  /* Con cinco o más tarjetas en la fila cada una queda en unos 190 px y
+     «S/ 717.20» no entraba en su casilla: la cifra baja un escalón. */
+  body.panel-fijo .eq-tarjeta { container-type: inline-size; padding-inline: 12px; }
+  /* Con `body.panel-fijo` delante: estas reglas van antes que las de la
+     tarjeta en la hoja y, con el mismo peso, perdían contra ellas. */
+  @container (max-width: 200px) {
+    body.panel-fijo .eq-dato { padding: 7px 8px; }
+    body.panel-fijo .eq-dato strong { font-size: 14.5px; }
+    body.panel-fijo .eq-dato span { font-size: 10.5px; }
+  }
+  /* Más angosta todavía (muchas personas o laptop chica): las cifras van una
+     debajo de otra en vez de dos por renglón, y el avatar se achica. */
+  @container (max-width: 140px) {
+    body.panel-fijo .eq-datos { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+    body.panel-fijo .eq-avatar { width: 30px; height: 30px; font-size: 11px; }
+    body.panel-fijo .eq-cabeza { gap: 7px; }
+    body.panel-fijo .eq-cabeza strong { font-size: 13px; }
+    body.panel-fijo .eq-rol { font-size: 9.5px; letter-spacing: .04em; }
+  }
+  /* Los cuatro indicadores también en una fila: a 1024 px el cuarto caía
+     debajo y el tope de alto lo cortaba. */
+  body.panel-fijo #bloque-resumen .kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+  body.panel-fijo #bloque-resumen .kpi-valor { font-size: clamp(19px, 2.3vw, 32px); }
+}
 
 /* ------------------------------------------------------ tu equipo hoy
    Una tarjeta por persona: quién es, qué hizo hoy y a qué hora fue lo último.
@@ -1183,6 +1394,96 @@ body.panel-fijo #bloque-resumen { flex: none; }
   .equipo { grid-template-columns: 1fr; }
 }
 
+/* ------------------------------------------------------ accesos del equipo
+   El papel se elige con dos tarjetas que dicen qué hace cada uno, no con un
+   desplegable de palabras sueltas: «vendedor» no le dice a la dueña que esa
+   persona no va a ver la ganancia. Mismos colores de rol que «Tu equipo hoy». */
+.forma-usuario { padding-top: 14px; }
+.rol-opciones { border: 0; margin: 0 0 14px; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.rol-opciones legend {
+  font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--tinta-suave); margin-bottom: 7px; padding: 0;
+}
+.rol-opcion {
+  display: flex; gap: 10px; align-items: flex-start; cursor: pointer;
+  border: 1px solid var(--borde); border-radius: 12px; padding: 12px;
+  background: rgba(251, 249, 243, .6); transition: border-color .16s, background .16s;
+}
+.rol-opcion input { margin: 3px 0 0; accent-color: var(--ocre); flex: none; }
+.rol-opcion strong { display: block; font-size: 14px; }
+.rol-opcion small { display: block; font-size: 12px; line-height: 1.35; color: var(--tinta-suave); margin-top: 2px; }
+.rol-opcion:has(input:checked) { border-color: var(--ocre); background: rgba(42, 107, 70, .07); }
+.rol-opcion:has(input:focus-visible) { outline: 2px solid var(--ocre); outline-offset: 2px; }
+
+.fila-usuario {
+  --rol: var(--verde);
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 0; border-bottom: 1px solid var(--borde);
+}
+.fila-usuario:last-child { border-bottom: none; }
+.us-vendedor { --rol: var(--miel); }
+.us-reparto { --rol: var(--terra); }
+.us-avatar {
+  flex: none; width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center;
+  background: color-mix(in srgb, var(--rol) 14%, white); color: var(--rol);
+  font-size: 12.5px; font-weight: 800;
+}
+.us-info { flex: 1; min-width: 0; }
+.us-info strong { display: block; font-size: 14px; }
+.us-info span { display: block; font-size: 12px; color: var(--tinta-suave); overflow-wrap: anywhere; }
+.us-rol {
+  font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--rol);
+  border: 1px solid color-mix(in srgb, var(--rol) 40%, transparent); border-radius: 999px; padding: 3px 10px;
+}
+/* Mitad y mitad: con la lista en la columna angosta de siempre, los botones
+   de cada fila partían el correo en dos renglones. */
+@media (min-width: 1001px) {
+  #area-equipo > .tarjetas-admin { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+}
+.fila-usuario.editando { background: rgba(42, 107, 70, .06); border-radius: 10px; }
+.us-acciones { display: flex; gap: 6px; flex: none; }
+/* `.btn-mini` nace cuadrado (26 × 26, para las flechas del calendario): con
+   texto adentro cortaba «Editar» a «Edita». */
+.us-acciones .btn-mini { width: auto; height: 32px; padding: 0 12px; font-size: 12.5px; font-weight: 600; }
+.btn-peligro:hover { border-color: var(--terra); color: var(--terra); }
+.usuario-botones { display: flex; gap: 10px; }
+.usuario-botones .btn-bloque { flex: 1; }
+
+/* Las pestañas de Equipo solo existen en el celular. */
+.equipo-pestanas { display: none; }
+@media (max-width: 640px) {
+  .equipo-pestanas {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 4px; margin-bottom: 12px;
+    border: 1px solid var(--borde); border-radius: 12px; background: var(--papel-puro);
+  }
+  .equipo-pestanas button {
+    min-height: 44px; border-radius: 9px; font: inherit; font-size: 13.5px; font-weight: 700;
+    color: var(--tinta-suave); background: none; border: 0; cursor: pointer;
+  }
+  .equipo-pestanas button.activa { background: var(--ocre); color: var(--papel); }
+  /* Por defecto la lista; con .ver-nuevo, el formulario. */
+  #area-equipo:not(.ver-nuevo) > .tarjetas-admin > div:first-child,
+  #area-equipo.ver-nuevo > .tarjetas-admin > div:last-child { display: none; }
+  #area-equipo .bloque { margin-bottom: 0; }
+
+  /* Formulario apretado: papel de a dos; correo y clave, uno por renglón (de a
+     dos no entraba ni el correo ni el rótulo de la clave). */
+  #bloque-nuevo-usuario .bloque-cabeza { padding: 12px 16px; gap: 2px; }
+  .forma-usuario { padding-top: 10px; }
+  .rol-opciones { grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+  .rol-opcion { padding: 9px; gap: 7px; }
+  .rol-opcion small { font-size: 11px; }
+  #forma-usuario .campo { margin-bottom: 10px; }
+  #forma-usuario .campo input { padding: 10px 12px; font-size: 16px; }
+  #forma-usuario .campo-doble { grid-template-columns: 1fr; gap: 0; }
+
+  /* Cada fila: persona y papel arriba, los botones debajo, alineados con el
+     nombre. */
+  .fila-usuario { flex-wrap: wrap; row-gap: 8px; }
+  .us-acciones { width: 100%; padding-left: 50px; }
+  .us-acciones .btn-mini { height: 40px; padding: 0 18px; }
+}
+
 @media (max-width: 640px) {
   /* En el celular la barra se acuesta: una tira de secciones que se arrastra
      de lado, arriba del contenido. La línea de descripción se va —no cabe— y
@@ -1201,6 +1502,55 @@ body.panel-fijo #bloque-resumen { flex: none; }
   }
   .area-tab span { display: none; }
   .area-tab.activa { border-left-color: transparent; border-bottom-color: var(--ocre); }
+}
+
+/* ===================================================== PANEL EN EL CELULAR
+   Lo que se veía en un teléfono de 390 px:
+   - la cabecera con seis botones en dos filas, unos 110 px antes del
+     contenido: ahora van en UNA tira que se arrastra de lado, como las áreas;
+   - los cuatro indicadores de a uno, 540 px de alto: ahora de a dos;
+   - «Tu equipo hoy» en cuatro tarjetas apiladas dentro de una caja con su
+     propio scroll —un scroll dentro del scroll de la página—: ahora es una
+     tira de tarjetas que se desliza de lado, una por pantalla. */
+@media (max-width: 640px) {
+  .admin-cabecera { padding: 10px 0 8px; }
+  .admin-cabecera .contenedor { row-gap: 8px; }
+  .admin-cabecera .acciones {
+    flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none;
+    width: calc(100% + 32px); margin: 0 -16px; padding: 2px 16px;
+    -webkit-mask-image: linear-gradient(90deg, #000 88%, transparent);
+    mask-image: linear-gradient(90deg, #000 88%, transparent);
+  }
+  .admin-cabecera .acciones::-webkit-scrollbar { display: none; }
+  .admin-cabecera .acciones .btn { flex: none; padding: 9px 13px; font-size: 12.5px; }
+  .admin-cabecera .quien { flex: none; }
+
+  .areas { margin-bottom: 12px; }
+
+  #bloque-resumen .bloque-cabeza { padding: 0 0 10px; }
+  .kpis { grid-template-columns: 1fr 1fr; gap: 10px; margin: 0; }
+  .kpi { padding: 13px 13px 12px; border-radius: 14px; }
+  .kpi-etiqueta { font-size: 9.5px; letter-spacing: .1em; }
+  .kpi-valor { font-size: clamp(16px, 4.8vw, 22px); white-space: nowrap; margin-top: 6px; }
+  .kpi .kpi-nota { font-size: 11px; line-height: 1.35; margin-top: 4px; }
+
+  #bloque-equipo .bloque-cuerpo, #lista-usuarios { max-height: none; }
+  #bloque-equipo .bloque-cuerpo { padding: 12px 0 14px; }
+  .equipo {
+    grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 84%;
+    overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none;
+    padding: 2px 16px 4px; scroll-padding-inline: 16px; gap: 10px;
+  }
+  .equipo::-webkit-scrollbar { display: none; }
+  .eq-tarjeta { scroll-snap-align: start; }
+
+  /* Las listas largas conservan su scroll, pero a la altura de la pantalla:
+     con 560 px fijos la caja quedaba más alta que lo visible y el dedo no
+     sabía si movía la lista o la página. */
+  #lista-pedidos, #lista-comprobantes { max-height: 68svh; }
+  .area { margin-bottom: 24px; }
+  .tarjetas-admin { gap: 14px; }
+  .tarjetas-admin > div > .bloque { margin-bottom: 14px; }
 }
 
 

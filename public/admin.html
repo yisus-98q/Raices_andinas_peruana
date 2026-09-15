@@ -15,7 +15,7 @@
   <div class="contenedor">
     <img class="marca-icono" src="/img/marca/emblema.png" alt="" width="60" height="60">
     <div>
-      <h1 class="marca-titulo"><img class="marca-logotipo" src="/img/marca/logotipo.png" alt="Raíz Andina" width="92" height="42"></h1>
+      <h1 class="marca-titulo"><span class="marca-nombre">Raíz <em>Andina</em></span></h1>
       <div class="marca-bajada">Panel interno · Mercado Central</div>
     </div>
     <div class="acciones">
@@ -23,7 +23,10 @@
       <span class="quien" id="quien"></span>
       <button class="btn btn-claro" id="btn-qr">QR de la tienda</button>
       <button class="btn btn-claro" id="btn-ruta">Imprimir ruta</button>
-      <button class="btn btn-claro" id="btn-refrescar">Actualizar</button>
+      <!-- El respaldo, como botón: el punto dice si el de hoy está hecho. -->
+      <button class="btn btn-claro btn-respaldo" id="btn-respaldar" hidden>
+        <i class="resp-punto" id="resp-punto"></i><span id="resp-texto">Respaldar</span>
+      </button>
       <a class="btn btn-claro" href="/tienda" id="btn-tienda">Ver tienda</a>
       <button class="btn btn-claro" id="btn-salir">Salir</button>
     </div>
@@ -40,8 +43,9 @@
 
     <div class="areas-cuerpo">
       <div class="area area-ancha" id="area-resumen">
-        <section class="bloque" id="bloque-resumen">
-          <div class="bloque-cabeza"><h2>Resumen del día</h2></div>
+        <!-- Sin título: la barra del costado ya dice «Resumen · Cómo va el día»,
+             y el renglón que ocupaba lo aprovechan los indicadores. -->
+        <section class="bloque" id="bloque-resumen" aria-label="Resumen del día">
           <div class="bloque-cuerpo">
             <div class="kpis" id="kpis"></div>
           </div>
@@ -60,8 +64,11 @@
         </section>
       </div>
 
+      <!-- Tres columnas, una por tarea: cobrar en el local, despachar lo que
+           entró y el papel. Apiladas, la venta y los pedidos se quedaban con
+           media altura cada uno. -->
       <div class="area" id="area-vender" hidden>
-        <div class="tarjetas-admin">
+        <div class="tarjetas-admin tres-columnas">
           <div>
             <section class="bloque" id="bloque-mostrador">
                         <div class="bloque-cabeza">
@@ -76,6 +83,9 @@
                           <div id="mos-carrito"></div>
                         </div>
                       </section>
+          </div>
+
+          <div>
             <section class="bloque" id="bloque-pedidos">
                         <div class="bloque-cabeza">
                           <h2>Pedidos recientes</h2>
@@ -157,6 +167,15 @@
                         </div>
                         <div class="bloque-cuerpo" id="calendario"></div>
                       </section>
+          </div>
+
+          <!-- El calendario tiene la columna para él solo, a toda la altura:
+               compartida con Clientes quedaba con la última semana cortada. -->
+          <div>
+            <section class="bloque" id="bloque-top">
+                        <div class="bloque-cabeza"><h2>Más vendidos</h2></div>
+                        <div class="bloque-cuerpo"><table class="tabla-top"><tbody id="lista-top"></tbody></table></div>
+                      </section>
             <section class="bloque" id="bloque-clientes">
                         <div class="bloque-cabeza">
                           <h2>Clientes</h2>
@@ -170,19 +189,77 @@
                         <div class="bloque-cuerpo" id="lista-clientes"></div>
                       </section>
           </div>
+        </div>
+      </div>
+
+      <!-- Accesos del equipo: solo la dueña, y solo ventas o reparto. -->
+      <div class="area" id="area-equipo" hidden>
+        <!-- En el celular las dos secciones van en pestañas, una por pantalla,
+             en vez de apiladas: el formulario empujaba la lista 900 px abajo. -->
+        <div class="equipo-pestanas" id="equipo-pestanas">
+          <button type="button" class="activa" data-vista="lista">Quién entra</button>
+          <button type="button" data-vista="nuevo" id="pestana-nuevo">+ Nuevo acceso</button>
+        </div>
+        <div class="tarjetas-admin">
+          <div>
+            <section class="bloque" id="bloque-nuevo-usuario">
+              <div class="bloque-cabeza">
+                <h2 id="titulo-usuario">Nuevo acceso</h2>
+                <span class="kpi-nota" id="nota-usuario">entra al panel con su correo</span>
+              </div>
+              <div class="bloque-cuerpo">
+                <form id="forma-usuario" class="forma-usuario" autocomplete="off">
+                  <div class="aviso aviso-error" id="usuario-error" hidden></div>
+
+                  <fieldset class="rol-opciones">
+                    <legend>¿Qué hace?</legend>
+                    <label class="rol-opcion">
+                      <input type="radio" name="rol" value="reparto" checked>
+                      <span><strong>Reparto</strong>
+                        <small>Ve su ruta del día, marca entregado y cobra. Los pedidos a domicilio le llegan solos.</small></span>
+                    </label>
+                    <label class="rol-opcion">
+                      <input type="radio" name="rol" value="vendedor">
+                      <span><strong>Ventas</strong>
+                        <small>Cobra en el local y despacha pedidos, sin ver costos ni ganancia.</small></span>
+                    </label>
+                  </fieldset>
+
+                  <div class="campo">
+                    <label for="u-nombre">Nombre</label>
+                    <input id="u-nombre" maxlength="60" required placeholder="Lucho Mamani">
+                  </div>
+                  <div class="campo-doble">
+                    <div class="campo">
+                      <label for="u-correo">Correo</label>
+                      <input id="u-correo" type="email" maxlength="120" required
+                             placeholder="lucho@raizandina.pe" autocomplete="off">
+                    </div>
+                    <div class="campo">
+                      <label for="u-clave" id="lbl-u-clave">Clave</label>
+                      <input id="u-clave" type="text" minlength="8" maxlength="200" required
+                             placeholder="mínimo 8 caracteres" autocomplete="new-password">
+                    </div>
+                  </div>
+                  <div class="usuario-botones">
+                    <button class="btn btn-claro" type="button" id="cancelar-usuario" hidden>Cancelar</button>
+                    <button class="btn btn-primario btn-bloque" type="submit" id="guardar-usuario">
+                      Crear acceso
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </section>
+          </div>
 
           <div>
-            <section class="bloque" id="bloque-top">
-                        <div class="bloque-cabeza"><h2>Más vendidos</h2></div>
-                        <div class="bloque-cuerpo"><table class="tabla-top"><tbody id="lista-top"></tbody></table></div>
-                      </section>
-            <section class="bloque" id="bloque-respaldo">
-                        <div class="bloque-cabeza">
-                          <h2>Respaldo</h2>
-                          <button class="btn-mini btn-ancho" id="btn-respaldar">Respaldar ahora</button>
-                        </div>
-                        <div class="bloque-cuerpo" id="respaldo"></div>
-                      </section>
+            <section class="bloque" id="bloque-usuarios">
+              <div class="bloque-cabeza">
+                <h2>Quién entra al panel</h2>
+                <span class="kpi-nota" id="conteo-usuarios"></span>
+              </div>
+              <div class="bloque-cuerpo" id="lista-usuarios"></div>
+            </section>
           </div>
         </div>
       </div>

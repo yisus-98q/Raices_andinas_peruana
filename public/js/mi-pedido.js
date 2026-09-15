@@ -59,23 +59,81 @@
       ultimo = d;
       pintar(d);
     } catch (e) {
+      // Si ya se está viendo el pedido (confirmar recepción), el error se dice
+      // ahí mismo: el formulario quedó fuera de la vista.
+      if (enResultado) return alert(e.message);
       error.textContent = e.message;
       error.hidden = false;
-      $('resultado').hidden = true;
     } finally {
       boton.disabled = false;
       boton.textContent = 'Ver mi pedido';
     }
   }
 
+  /**
+   * La pasarela: formulario y pedido van lado a lado, y se pasa de uno a otro
+   * deslizando. El panel que no se ve se pliega al terminar el movimiento, para
+   * que su alto no deje un hueco debajo del que sí se ve.
+   */
+  let enResultado = false;
+  const reduceMovimiento = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function deslizar(alResultado) {
+    const pasarela = $('pasarela');
+    const entra = alResultado ? $('resultado') : $('forma');
+    const sale = alResultado ? $('forma') : $('resultado');
+    enResultado = alResultado;
+    entra.classList.remove('oculto');
+    entra.removeAttribute('inert');
+    sale.setAttribute('inert', '');
+    void pasarela.offsetWidth; // que el navegador vea el panel antes de moverlo
+    pasarela.classList.toggle('ver-resultado', alResultado);
+    document.querySelector('.caja-seguimiento').classList.toggle('con-resultado', alResultado);
+
+    const plegar = () => { if (enResultado === alResultado) sale.classList.add('oculto'); };
+    if (reduceMovimiento) plegar();
+    else setTimeout(plegar, 560);
+
+    // En el celular, que el pedido quede a la vista sin buscarlo.
+    const arriba = pasarela.getBoundingClientRect().top;
+    if (arriba < 0 || arriba > innerHeight * .5) {
+      scrollTo({ top: scrollY + arriba - 16, behavior: reduceMovimiento ? 'auto' : 'smooth' });
+    }
+    if (!alResultado) $('f-codigo').focus({ preventScroll: true });
+  }
+
+  /** Estado, detalle y productos: diapositivas de lado, con pestañas. */
+  function prepararCarril() {
+    const carril = $('carril');
+    const pestanas = [...document.querySelectorAll('.p-pestanas [data-ir]')];
+    const marcar = (n) => {
+      pestanas.forEach((b, i) => b.setAttribute('aria-selected', String(i === n)));
+      document.querySelector('.p-pestanas').style.setProperty('--tab', n);
+    };
+    pestanas.forEach((b, i) => {
+      b.onclick = () => {
+        carril.scrollTo({ left: i * carril.clientWidth, behavior: reduceMovimiento ? 'auto' : 'smooth' });
+        marcar(i);
+      };
+    });
+    let tic;
+    carril.addEventListener('scroll', () => {
+      clearTimeout(tic);
+      tic = setTimeout(() => marcar(Math.round(carril.scrollLeft / carril.clientWidth)), 60);
+    }, { passive: true });
+  }
+
   function pintar(d) {
     const fuera = FUERA[d.estado];
     const indice = PASOS.findIndex(([e]) => e === d.estado);
+    const doc = d.tipoComprobante === 'factura' ? 'Factura' : 'Boleta';
 
-    $('resultado').hidden = false;
     $('resultado').innerHTML = `
       <div class="p-cabeza">
-        <div>
+        <button type="button" class="p-volver" id="btn-volver" aria-label="Buscar otro pedido" title="Buscar otro pedido">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+        </button>
+        <div class="p-cabeza-codigo">
           <span class="p-etiqueta">Pedido</span>
           <strong class="p-codigo">${esc(d.codigo)}</strong>
         </div>
@@ -85,6 +143,14 @@
         </div>
       </div>
 
+      <div class="p-pestanas" role="tablist" style="--tab:0">
+        <button type="button" role="tab" data-ir="0" aria-selected="true">Estado</button>
+        <button type="button" role="tab" data-ir="1" aria-selected="false">Detalle</button>
+        <button type="button" role="tab" data-ir="2" aria-selected="false">Productos</button>
+      </div>
+
+      <div class="p-carril" id="carril">
+      <div class="p-diapo" role="tabpanel" aria-label="Estado">
       ${fuera ? `
         <div class="p-fuera">
           <strong>${esc(fuera[0])}</strong>
@@ -102,12 +168,15 @@
               </div>
             </li>`).join('')}
         </ol>`}
+      ${pieDeAccion(d)}
+      </div>
 
+      <div class="p-diapo" role="tabpanel" aria-label="Detalle">
       <div class="p-datos">
         <div><span>Fecha</span><b>${esc(String(d.fecha).slice(0, 16))}</b></div>
         <div><span>Entrega en</span><b>${esc(d.entrega || '—')}</b></div>
         <div><span>Dirección</span><b>${esc(d.direccion)}</b></div>
-        ${d.comprobante ? `<div><span>${d.tipoComprobante === 'factura' ? 'Factura' : 'Boleta'}</span>
+        ${d.comprobante ? `<div><span>${doc}</span>
           <b>${esc(d.comprobante)}</b></div>` : ''}
       </div>
 
@@ -122,7 +191,9 @@
           </a>
         </div>`;
       })() : ''}
+      </div>
 
+      <div class="p-diapo" role="tabpanel" aria-label="Productos">
       <table class="p-items">
         <tbody>
           ${d.items.map((i) => `
@@ -135,13 +206,20 @@
             <td></td><td>Envío</td>
             <td class="d">${d.envio > 0 ? soles(d.envio) : 'Gratis'}</td>
           </tr>
+          <tr class="p-suma">
+            <td></td><td>Total</td>
+            <td class="d">${soles(d.total)}</td>
+          </tr>
         </tbody>
       </table>
+      </div>
+      </div>`;
 
-      ${pieDeAccion(d)}`;
-
+    prepararCarril();
+    $('btn-volver').onclick = () => deslizar(false);
     const btn = $('btn-recibido');
     if (btn) btn.onclick = confirmarRecepcion;
+    if (!enResultado) deslizar(true);
   }
 
   /**

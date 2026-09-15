@@ -102,6 +102,7 @@
    *                    del cliente que llama preguntando por su boleta.
    *   3. INVENTARIO  — qué hay, qué falta y por qué cambió.
    *   4. EL NEGOCIO  — cómo viene la cosa, y que exista una copia.
+   *   5. EQUIPO      — quién entra al panel: dar de alta a quien vende o reparte.
    *
    * La lista de ids está aquí y no leída del DOM a propósito: agregar una
    * sección obliga a decidir en qué área vive, en vez de que quede invisible
@@ -115,7 +116,9 @@
     { id: 'area-inventario', nombre: 'Inventario', hace: 'Qué hay y qué falta',
       bloques: ['bloque-stock', 'bloque-movimientos', 'bloque-cambios', 'bloque-catalogo'] },
     { id: 'area-negocio', nombre: 'El negocio', hace: 'Cómo viene la cosa',
-      bloques: ['bloque-calendario', 'bloque-clientes', 'bloque-top', 'bloque-respaldo'] },
+      bloques: ['bloque-calendario', 'bloque-top', 'bloque-clientes'] },
+    { id: 'area-equipo', nombre: 'Equipo', hace: 'Accesos de ventas y reparto',
+      bloques: ['bloque-nuevo-usuario', 'bloque-usuarios'] },
   ];
 
   /** Un área sin ningún bloque visible para este rol no se ofrece. */
@@ -298,7 +301,7 @@
       const soloDuena = (ruta, vacio) => (esDueno ? pedir(ruta) : vacio);
 
       const [resumen, pedidos, movimientos, productos, comprobantes,
-        cal, clientes, cambios, resp, reparto] = await Promise.all([
+        cal, clientes, cambios, resp, reparto, accesos] = await Promise.all([
         delPuesto('/api/admin/resumen', null),
         pedir('/api/pedidos'),
         soloDuena('/api/admin/movimientos', []),
@@ -309,7 +312,9 @@
         esDueno ? pedir('/api/admin/cambios') : [],
         esDueno ? pedir('/api/admin/respaldos') : null,
         delPuesto('/api/admin/repartidores', null),
+        soloDuena('/api/admin/usuarios', null),
       ]);
+      if (accesos) pintarUsuarios(accesos.usuarios);
       if (reparto) repartidores = reparto.repartidores;
       ultimosPedidos = pedidos;
       ultimosProductos = productos;
@@ -358,6 +363,9 @@
         $('btn-tienda').hidden = true;
       }
 
+      // Nace escondido en el HTML: así ventas y reparto no lo ven ni un instante.
+      $('btn-respaldar').hidden = !esDueno;
+
       const papel = esDueno ? '' : esReparto ? ' · reparto' : ' · mostrador';
       $('quien').textContent = s.nombre + papel;
 
@@ -365,7 +373,7 @@
         // El respaldo y el alta de fichas son del dueño. Se quitan del todo en
         // vez de dejarlos deshabilitados: un boton apagado invita a preguntar
         // por que, y la respuesta no le sirve a quien esta atendiendo.
-        $('bloque-respaldo').hidden = true;
+        $('btn-respaldar').hidden = true;
         $('abrir-alta').hidden = true;
       }
 
@@ -593,7 +601,6 @@
    * queriendo la otra. El reparto directamente no la tiene.
    */
   function pieDePedido(p, deshacer = []) {
-    if (esReparto) return pieDelReparto(p);
     const paso = PASO_PEDIDO[p.estado];
     const estado = `<span class="paso-ahora"><i></i>${p.estado}</span>`;
 
@@ -617,46 +624,94 @@
       ${deshacer.length ? `<div class="pedido-deshacer">${deshacer.join('')}</div>` : ''}`;
   }
 
+  /** El recorrido que ve el motorizado, en el mismo orden que el cliente. */
+  const SECUENCIA = [
+    ['pendiente', 'Recibido'], ['preparando', 'Preparado'], ['enviado', 'En camino'], ['entregado', 'Entregado'],
+  ];
+
   /**
-   * El pie del motorizado: sus dos pasos y nada más.
-   *
-   * Preparar el pedido es trabajo del puesto; el motorizado sale y entrega.
-   * Antes su botón decía «tocar: en preparación» y lo hacía pasar por un paso
-   * que no es suyo. «Entregado» no se marca de un toque: abre el cobro, que
-   * además de registrar cómo pagó el cliente es la confirmación contra el
-   * toque accidental —que le mandaría al cliente un «ya está contigo» falso—.
+   * En qué va el pedido, dibujado como secuencia: los pasos hechos se llenan
+   * uno tras otro, el actual late y, en camino, un punto recorre el tramo que
+   * falta. Reemplaza al «Es de tu ruta», que decía de quién era y no en qué iba.
+   * Solo se anima cuando cambia: el refresco repinta únicamente si hay algo
+   * distinto, así que no vuelve a arrancar cada 15 s.
    */
-  function pieDelReparto(p) {
-    let paso;
-    if (p.estado === 'pendiente' || p.estado === 'preparando') {
-      paso = `<button class="paso-reparto paso-grande paso-salir" data-estado="enviado" data-id="${p.id}">
-          <span class="paso-accion">🛵 Salgo a entregar</span>
-          <span class="paso-siguiente">${p.estado === 'preparando' ? 'lo están preparando' : 'aún sin preparar'}</span>
-        </button>`;
-    } else if (p.estado === 'enviado') {
-      paso = `<button class="paso-reparto paso-grande paso-entregar" data-entregar="${p.id}">
-          <span class="paso-accion">✓ Entregado</span>
-          <span class="paso-siguiente">cobrar ${soles(p.total)}</span>
-        </button>`;
-    } else if (p.estado === 'entregado' && !p.cobro) {
-      // El cliente confirmó «ya lo recibí» antes de que se anotara el cobro:
-      // queda el botón para registrarlo, o esa plata no figura por rendir.
-      paso = `<button class="paso-reparto paso-grande paso-entregar" data-entregar="${p.id}">
-          <span class="paso-accion">💵 Registrar cobro</span>
-          <span class="paso-siguiente">el cliente ya confirmó · ${soles(p.total)}</span>
-        </button>`;
-    } else {
-      paso = `<span class="paso-reparto paso-cerrado e-${p.estado}">
-          <span class="paso-ahora"><i></i>${p.estado}</span>
-          <span class="paso-siguiente">${p.cobro ? `cobrado: ${NOMBRE_COBRO[p.cobro] || escapar(p.cobro)}` : 'entrega cerrada'}</span>
-        </span>`;
-    }
+  function secuencia(p) {
+    const actual = SECUENCIA.findIndex(([e]) => e === p.estado);
+    if (actual < 0) return `<p class="rt-fuera">${p.estado === 'devuelto' ? 'Devuelto' : 'Anulado'}</p>`;
     return `
-      ${entregaDe(p)}
-      <div class="pedido-reparto solo-paso">
-        ${paso}
-        <div class="comprobante-reparto">${comprobanteDe(p)}</div>
-      </div>`;
+      <ol class="rt-secuencia" style="--avance:${actual / (SECUENCIA.length - 1)}" aria-label="Estado: ${SECUENCIA[actual][1]}">
+        ${SECUENCIA.map(([, nombre], i) => `
+          <li class="${i < actual ? 'hecho' : i === actual ? 'actual' : ''}" style="--i:${i}"><i></i><span>${nombre}</span></li>`).join('')}
+        ${p.estado === 'enviado' ? '<b class="rt-viaje" aria-hidden="true"></b>' : ''}
+      </ol>`;
+  }
+
+  const ICONO_DOC = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>';
+
+  /**
+   * La tarjeta del motorizado. Compacta: en el celular caben dos o tres a la
+   * vista, y en pantalla ancha se acomodan en columnas en vez de estirarse.
+   *
+   * Los botones van a su ancho natural. La acción principal es una sola y
+   * cambia con el estado:
+   * - libre: «Tomar pedido», para sumarse él mismo sin esperar a que el
+   *   puesto lo asigne;
+   * - suyo por salir: «Salgo a entregar»;
+   * - en camino: «Entregado», que abre el cobro (y con eso confirma: un toque
+   *   accidental le mandaría al cliente un «ya está contigo» falso);
+   * - entregado sin cobro —el cliente confirmó primero—: «Registrar cobro».
+   */
+  function tarjetaReparto(p) {
+    const abierto = !CERRADOS.includes(p.estado);
+    const libre = !p.repartidor;
+    const cobrado = p.cobro ? NOMBRE_COBRO[p.cobro] || escapar(p.cobro) : '';
+
+    let principal = '';
+    if (abierto && libre) {
+      principal = `<button class="rt-btn rt-principal rt-tomar" data-tomar="${p.id}">Tomar pedido</button>`;
+    } else if (p.estado === 'pendiente' || p.estado === 'preparando') {
+      principal = `<button class="rt-btn rt-principal" data-estado="enviado" data-id="${p.id}">Salgo a entregar</button>`;
+    } else if (p.estado === 'enviado') {
+      principal = `<button class="rt-btn rt-principal" data-entregar="${p.id}">Entregado</button>`;
+    } else if (p.estado === 'entregado' && !p.cobro) {
+      principal = `<button class="rt-btn rt-principal" data-entregar="${p.id}">Registrar cobro</button>`;
+    } else if (cobrado) {
+      principal = `<span class="rt-cierre">Cobrado · ${cobrado}</span>`;
+    }
+
+    const cmp = ultimosComprobantes.find((c) => c.pedido_id === p.id);
+    const extra = [p.referencia && `Ref: ${escapar(p.referencia)}`, p.nota && `Nota: ${escapar(p.nota)}`]
+      .filter(Boolean).join(' · ');
+
+    return `
+      <article class="rt rt-${p.estado}${abierto ? '' : ' rt-cerrado'}">
+        <header class="rt-cabeza">
+          <div class="rt-quien">
+            <span class="rt-codigo">${escapar(p.codigo)}${libre && abierto ? '<em class="rt-libre">Libre</em>' : ''}</span>
+            <h3 class="rt-cliente">${escapar(p.cliente_nombre)}</h3>
+          </div>
+          <div class="rt-monto">
+            <small>${cobrado ? 'Cobrado' : abierto ? 'Cobrar' : 'Total'}</small>
+            <strong>${soles(p.total)}</strong>
+          </div>
+        </header>
+
+        ${secuencia(p)}
+
+        <p class="rt-dir">${escapar(p.cliente_dir)}${p.distrito ? ` · <b>${escapar(p.distrito)}</b>` : ''}</p>
+        ${extra ? `<p class="rt-extra">${extra}</p>` : ''}
+        <p class="rt-items">${p.items.map((i) => `${i.cantidad} × ${escapar(i.nombre)}`).join(' · ')}</p>
+
+        <div class="rt-acciones">
+          ${abierto ? `
+          <a class="rt-btn" href="tel:${escapar(telLlamar(p.cliente_tel))}" title="Llamar a ${escapar(p.cliente_nombre)}">${ICONO_TEL}Llamar</a>
+          <a class="rt-btn" href="${escapar(enlaceMapa(p))}" target="_blank" rel="noopener">${ICONO_MAPA}Mapa</a>` : ''}
+          ${libre ? '' : pastillasAviso(p)}
+          ${cmp ? `<a class="rt-btn rt-doc" href="/comprobante.html?id=${cmp.id}" title="${escapar(cmp.numero)}">${ICONO_DOC}${p.tipo_comprobante === 'factura' ? 'Factura' : 'Boleta'}</a>` : ''}
+          ${principal}
+        </div>
+      </article>`;
   }
 
   const NOMBRE_COBRO = {
@@ -699,7 +754,7 @@
           <div class="dlg-cuerpo">
             <p class="cobro-monto">${escapar(p.cliente_nombre)} · a cobrar<strong>${soles(p.total)}</strong></p>
             <div class="cobro-opciones">
-              <button value="efectivo">💵 Efectivo</button>
+              <button value="efectivo">Efectivo</button>
               <button value="yape">Yape</button>
               <button value="plin">Plin</button>
               <button value="transferencia">Transferencia</button>
@@ -727,11 +782,44 @@
    * desde el teléfono de quien lo tenga en la mano.
    */
   function entregaDe(p) {
+    const avisos = pastillasAviso(p);
+
+    // Un pedido cerrado que nadie tenía asignado —los de antes de esta función—
+    // no necesita decir «sin asignar»: ya no hay nada que repartir.
+    if (!salePorReparto(p) || (CERRADOS.includes(p.estado) && !p.repartidor)) {
+      return avisos ? `<div class="pedido-entrega"><div class="wa-avisos">${avisos}</div></div>` : '';
+    }
+
+    const quien = !CERRADOS.includes(p.estado) && repartidores.length
+      ? `
+        <label class="asignar">
+          <span>Lo lleva</span>
+          <select data-asignar="${p.id}">
+            <option value="">sin asignar</option>
+            ${repartidores.map((r) => `<option value="${escapar(r.usuario)}"${
+              r.usuario === p.repartidor ? ' selected' : ''}>${escapar(r.nombre)}</option>`).join('')}
+          </select>
+        </label>`
+      : p.repartidor_nombre
+        ? `<span class="asignado">Lo lleva <b>${escapar(p.repartidor_nombre)}</b></span>`
+        : `<span class="asignado asignado-libre">${repartidores.length ? 'Sin asignar' : 'Sin motorizados: crea un acceso de reparto'}</span>`;
+
+    return `
+      <div class="pedido-entrega">
+        ${quien}
+        ${avisos ? `<div class="wa-avisos">${avisos}</div>` : ''}
+      </div>`;
+  }
+
+  const ICONO_OK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>';
+
+  /** Los avisos de WhatsApp de un pedido: hechos, en envío o por mandar. */
+  function pastillasAviso(p) {
     const lista = p.avisos || [];
     const anulado = p.estado === 'anulado' || p.estado === 'devuelto';
-    const avisos = lista.map((a, i) => {
+    return lista.map((a, i) => {
       if (a.estado === 'enviado' || a.estado === 'enviado_manual') {
-        return `<span class="wa-aviso wa-hecho" title="${a.canal === 'api' ? 'Lo mandó el sistema' : `Lo mandó ${escapar(a.enviado_por)}`}">✓ ${escapar(a.nombre)}</span>`;
+        return `<span class="wa-aviso wa-hecho" title="${a.canal === 'api' ? 'Lo mandó el sistema' : `Lo mandó ${escapar(a.enviado_por)}`}">${ICONO_OK}${escapar(a.nombre)}</span>`;
       }
       if (a.estado === 'enviando') {
         return `<span class="wa-aviso wa-enviando">enviando: ${escapar(a.nombre)}…</span>`;
@@ -748,50 +836,27 @@
                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.3-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.7 11.8 11.8 0 0 0 4.5 4c1.7.7 2.3.8 3.2.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.2-1.2-.1-.1-.3-.2-.5-.3Z"/></svg>
                  ${fallo ? 'Reintentar' : 'Avisar'}: ${escapar(a.nombre)}</a>`;
     }).join('');
-
-    // Un pedido cerrado que nadie tenía asignado —los de antes de esta función—
-    // no necesita decir «sin asignar»: ya no hay nada que repartir.
-    if (!salePorReparto(p) || (CERRADOS.includes(p.estado) && !p.repartidor)) {
-      return avisos ? `<div class="pedido-entrega"><div class="wa-avisos">${avisos}</div></div>` : '';
-    }
-
-    let quien;
-    if (!esReparto && !CERRADOS.includes(p.estado) && repartidores.length) {
-      quien = `
-        <label class="asignar">
-          <span>🛵 Lo lleva</span>
-          <select data-asignar="${p.id}">
-            <option value="">sin asignar</option>
-            ${repartidores.map((r) => `<option value="${escapar(r.usuario)}"${
-              r.usuario === p.repartidor ? ' selected' : ''}>${escapar(r.nombre)}</option>`).join('')}
-          </select>
-        </label>`;
-    } else if (esReparto) {
-      quien = p.repartidor === miUsuario
-        ? '<span class="asignado asignado-mio">🛵 Es de tu ruta</span>'
-        : '<span class="asignado asignado-libre">🛵 Sin asignar · al moverlo pasa a tu nombre</span>';
-    } else {
-      quien = p.repartidor_nombre
-        ? `<span class="asignado">🛵 Lo lleva <b>${escapar(p.repartidor_nombre)}</b></span>`
-        : `<span class="asignado asignado-libre">🛵 ${repartidores.length ? 'Sin asignar' : 'Sin motorizados: crea un acceso de reparto'}</span>`;
-    }
-
-    return `
-      <div class="pedido-entrega">
-        ${quien}
-        ${avisos ? `<div class="wa-avisos">${avisos}</div>` : ''}
-      </div>`;
   }
+
+  /** Los pedidos que el puesto tiene desplegados: sobreviven al refresco de 15 s. */
+  const pedidosAbiertos = new Set();
 
   function pintarPedidos() {
     const q = filtro.trim().toLowerCase();
-    const lista = ultimosPedidos.filter((p) => coincide(p, q));
+    /**
+     * Sin las ventas del local. Ya tienen su caja al lado y su comprobante, y
+     * mezcladas llenaban la lista de ventas que no hay que despachar. Buscando
+     * sí aparecen: una venta del local se anula desde aquí, y se llega a ella
+     * por el código de la boleta o el nombre del cliente.
+     */
+    const base = q ? ultimosPedidos : ultimosPedidos.filter((p) => p.canal !== 'mostrador');
+    const lista = base.filter((p) => coincide(p, q));
 
-    $('conteo-pedidos').textContent = !ultimosPedidos.length ? ''
-      : q ? `${lista.length} de ${ultimosPedidos.length}`
-      : `${ultimosPedidos.length} en total`;
+    $('conteo-pedidos').textContent = !base.length ? ''
+      : q ? `${lista.length} encontrados`
+      : `${base.length} en total`;
 
-    if (!ultimosPedidos.length) {
+    if (!base.length) {
       return pintar('lista-pedidos',
         '<div class="vacio">Aún no hay pedidos. Genera uno desde la tienda.</div>');
     }
@@ -812,13 +877,15 @@
       ? [...lista].sort((a, b) => grupoDe(a) - grupoDe(b))
       : lista;
     const cuantos = [0, 1, 2].map((g) => orden.filter((p) => grupoDe(p) === g).length);
+    // La ruta va en rejilla: tarjetas compactas que se acomodan en columnas.
+    $('lista-pedidos').classList.toggle('ruta', esReparto);
 
     pintar('lista-pedidos', orden.map((p, i) => {
       const items = p.items.map((i) => `${i.cantidad} × ${escapar(i.nombre)}`).join(' · ');
       const g = grupoDe(p);
       const separador = esReparto && (i === 0 || grupoDe(orden[i - 1]) !== g)
-        ? `<div class="ruta-grupo">${GRUPOS[g]} · <b>${cuantos[g]}</b></div>` : '';
-      const abierto = !CERRADOS.includes(p.estado);
+        ? `<div class="ruta-grupo">${GRUPOS[g]} <b>${cuantos[g]}</b></div>` : '';
+      if (esReparto) return separador + tarjetaReparto(p);
 
       /**
        * Lo que deshace una venta. Solo el puesto, nunca el reparto.
@@ -835,22 +902,31 @@
         }
       }
 
-      // Al motorizado el monto le dice cuánto cobrar, o cómo ya se cobró.
-      const monto = !esReparto
-        ? `<span class="pedido-total">${soles(p.total)}</span>`
-        : p.cobro
-          ? `<span class="pedido-cobrar pedido-cobrado"><small>Cobrado · ${NOMBRE_COBRO[p.cobro] || escapar(p.cobro)}</small><span class="pedido-total">${soles(p.total)}</span></span>`
-          : `<span class="pedido-cobrar"><small>${abierto ? 'Cobrar' : 'Total'}</small><span class="pedido-total">${soles(p.total)}</span></span>`;
-
-      return `${separador}
-      <div class="pedido${esReparto && !abierto ? ' pedido-hecho' : ''}">
-        <div class="pedido-fila">
-          <span class="pedido-codigo">${escapar(p.codigo)}</span>
-          ${p.canal === 'mostrador' ? '<span class="canal">en el local</span>' : ''}
-          ${p.canal !== 'mostrador' && p.modo_entrega === 'recojo'
-            ? '<span class="canal canal-recojo">pasa a recoger</span>' : ''}
-          ${monto}
-        </div>
+      /**
+       * Una fila por pedido: código, en qué va y cuánto; debajo, quién, adónde
+       * y a qué hora. Todo lo demás —datos, productos, quién lo lleva, avisos,
+       * el botón que lo avanza, la boleta, anular— se despliega al tocarla.
+       * Antes cada pedido era una ficha de 450 px y en la columna cabían uno y
+       * medio; ahora la cola entera se lee de un vistazo.
+       */
+      const destino = p.canal === 'mostrador' ? 'en el local'
+        : p.modo_entrega === 'recojo' ? 'pasa a recoger'
+        : escapar(p.distrito || p.cliente_dir || '');
+      const lleva = salePorReparto(p) && p.repartidor_nombre ? ` · ${escapar(p.repartidor_nombre)}` : '';
+      return `
+      <details class="pedido pedido-c" data-pedido="${p.id}"${pedidosAbiertos.has(p.id) ? ' open' : ''}>
+        <summary class="pedido-resumen">
+          <span class="pr-linea">
+            <span class="pedido-codigo">${escapar(p.codigo)}</span>
+            <span class="pr-estado e-${p.estado}">${p.estado}</span>
+            <span class="pedido-total">${soles(p.total)}</span>
+          </span>
+          <span class="pr-linea pr-sub">
+            <b>${escapar(p.razon_social || p.cliente_nombre)}</b>
+            <span class="pr-donde">${destino}${lleva} · ${horaCorta(p.creado_en)}</span>
+          </span>
+        </summary>
+        <div class="pedido-detalle">
         <div class="pedido-meta">
           <b>${escapar(p.razon_social || p.cliente_nombre)}</b>
           ${p.num_doc ? `· ${escapar(p.tipo_doc)} ${escapar(p.num_doc)}` : ''}
@@ -865,19 +941,15 @@
           <br>${soloFecha(p.creado_en)} ${horaCorta(p.creado_en)}
           ${p.costo_envio > 0 ? ` · envío ${soles(p.costo_envio)}` : ''}
           ${p.nota ? '<br><b>Nota:</b> ' + escapar(p.nota) : ''}
-          ${!esReparto && p.cobro ? `<br><span class="cobro-dato">Cobrado: ${NOMBRE_COBRO[p.cobro] || escapar(p.cobro)}</span>` : ''}
+          ${p.cobro ? `<br><span class="cobro-dato">Cobrado: ${NOMBRE_COBRO[p.cobro] || escapar(p.cobro)}</span>` : ''}
         </div>
-        ${esReparto && abierto ? `
-        <div class="pedido-contacto">
-          <a class="contacto" href="tel:${escapar(telLlamar(p.cliente_tel))}">${ICONO_TEL} Llamar</a>
-          <a class="contacto" href="${escapar(enlaceMapa(p))}" target="_blank" rel="noopener">${ICONO_MAPA} Cómo llegar</a>
-        </div>` : ''}
         <div class="pedido-items">${items}</div>
 
         <!-- El pie: en qué va el pedido y el papel del cliente. Va al final y
              en grande: arriba compite con el código y el total. -->
         ${pieDePedido(p, deshacer)}
-      </div>`;
+        </div>
+      </details>`;
     }).join(''));
   }
 
@@ -1242,9 +1314,12 @@
   const kb = (b) => `${Math.round(b / 1024).toLocaleString('es-PE')} KB`;
 
   /**
-   * Estado del respaldo, a la vista y sin tener que buscarlo. Un respaldo que
-   * hay que ir a comprobar es un respaldo que nadie comprueba: se avisa aqui
-   * cuando el del dia no esta, y cuando esta en el mismo disco que la base.
+   * El respaldo, como un botón de la cabecera y no como un bloque entero.
+   *
+   * Un respaldo que hay que ir a comprobar es un respaldo que nadie comprueba,
+   * así que el estado sigue a la vista, pero en un punto: verde si el de hoy
+   * está hecho, terracota si no. El detalle —última copia, carpeta, si está en
+   * el mismo disco que la base— va en la ayuda del botón.
    */
   function pintarRespaldo(r) {
     const u = r.ultimo;
@@ -1255,44 +1330,26 @@
     const local = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     const alDia = Boolean(u) && (u.fecha === local || u.fecha === hoy);
 
-    $('bloque-respaldo').classList.toggle('bloque-alerta', !alDia);
-
-    const aviso = !u
-      ? '<div class="resp-aviso grave">Todavía no hay ningún respaldo. Pulsa «Respaldar ahora».</div>'
-      : !alDia
-        ? `<div class="resp-aviso grave">El último respaldo es del ${escapar(u.fecha)}.
-             Hoy no se ha hecho ninguno.</div>`
-        : `<div class="resp-aviso bien">Al día. Último: ${escapar(u.fecha)} · ${kb(u.bytes)}</div>`;
-
+    const b = $('btn-respaldar');
+    b.classList.toggle('resp-pendiente', !alDia);
     // Una copia en el mismo disco salva de un borrado por error, no de que se
-    // lleven la laptop. Decirlo es la diferencia entre estar respaldado y
-    // creerlo.
-    const fuera = r.fuera_del_disco
-      ? '<div class="resp-nota">Se guarda fuera de este disco. Correcto.</div>'
-      : `<div class="resp-aviso tibio">Está en el mismo disco que la base. Ante un robo
-           o una avería se perdería con ella. Hay que apuntar el respaldo a un
-           pendrive o disco externo.</div>`;
-
-    pintar('respaldo', `
-      ${aviso}
-      ${fuera}
-      <div class="resp-nota">Carpeta: <code>${escapar(r.carpeta)}</code></div>
-      ${r.respaldos.length ? `
-        <div class="resp-lista">
-          ${r.respaldos.slice(0, 7).map((x) => `
-            <div class="resp-fila">
-              <span>${escapar(x.fecha)}</span>
-              <span class="resp-peso">${kb(x.bytes)}</span>
-            </div>`).join('')}
-        </div>
-        <div class="resp-nota">${r.respaldos.length} copia(s) · se guardan las
-          últimas ${r.se_guardan}</div>` : ''}`);
+    // lleven la laptop. Decirlo es la diferencia entre estar respaldado y creerlo.
+    b.title = [
+      !u ? 'Todavía no hay ningún respaldo.'
+        : alDia ? `Al día. Último: ${u.fecha} · ${kb(u.bytes)}.`
+        : `El último respaldo es del ${u.fecha}: hoy no se ha hecho ninguno.`,
+      r.fuera_del_disco ? 'Se guarda fuera de este disco.'
+        : 'Ojo: está en el mismo disco que la base; conviene un pendrive o disco externo.',
+      `${r.respaldos.length} copia(s), se guardan las últimas ${r.se_guardan}.`,
+      'Toca para respaldar ahora.',
+    ].join('\n');
+    if (!b.disabled) $('resp-texto').textContent = alDia ? 'Respaldo al día' : 'Respaldar';
   }
 
   async function respaldarAhora() {
     const b = $('btn-respaldar');
     b.disabled = true;
-    b.textContent = 'Respaldando…';
+    $('resp-texto').textContent = 'Respaldando…';
     try {
       const r = await fetch('/api/admin/respaldos', { method: 'POST' });
       const j = await r.json();
@@ -1302,13 +1359,136 @@
       avisar('No se pudo respaldar: sin conexión con el servidor');
     } finally {
       b.disabled = false;
-      b.textContent = 'Respaldar ahora';
       cargar();
     }
   }
 
+  // ------------------------------------------------------ accesos del equipo
+  /**
+   * Quién entra al panel: nombre, con qué correo y qué papel tiene. Ventas y
+   * reparto se editan y se eliminan desde aquí; la dueña no, para que un clic
+   * equivocado no la deje fuera de su propio panel.
+   */
+  let ultimosUsuarios = [];
+  /** El usuario corto del acceso que se está editando, o null si es un alta. */
+  let editandoUsuario = null;
+
+  function pintarUsuarios(usuarios) {
+    ultimosUsuarios = usuarios;
+    $('conteo-usuarios').textContent = `${usuarios.length} acceso${usuarios.length === 1 ? '' : 's'}`;
+    const PAPEL = { admin: 'Dueña', vendedor: 'Ventas', reparto: 'Reparto' };
+    pintar('lista-usuarios', usuarios.map((u) => {
+      const delEquipo = u.rol === 'vendedor' || u.rol === 'reparto';
+      return `
+      <div class="fila-usuario us-${escapar(u.rol)}${u.usuario === editandoUsuario ? ' editando' : ''}">
+        <span class="us-avatar">${escapar(iniciales(u.nombre))}</span>
+        <div class="us-info">
+          <strong>${escapar(u.nombre)}</strong>
+          <span>${escapar(u.email || u.usuario)}</span>
+        </div>
+        <span class="us-rol">${PAPEL[u.rol] || escapar(u.rol)}</span>
+        ${delEquipo ? `
+        <div class="us-acciones">
+          <button class="btn-mini" data-editar-usuario="${escapar(u.usuario)}">Editar</button>
+          <button class="btn-mini btn-peligro" data-eliminar-usuario="${escapar(u.usuario)}">Eliminar</button>
+        </div>` : ''}
+      </div>`;
+    }).join('') || '<div class="vacio">Todavía no hay accesos.</div>');
+  }
+
+  /** En el celular, qué pestaña de Equipo se ve: la lista o el formulario. */
+  function verEquipo(vista) {
+    $('area-equipo').classList.toggle('ver-nuevo', vista === 'nuevo');
+    for (const b of $('equipo-pestanas').children) b.classList.toggle('activa', b.dataset.vista === vista);
+  }
+
+  /** El mismo formulario sirve para dar de alta y para editar. */
+  function modoFormularioUsuario(u) {
+    editandoUsuario = u ? u.usuario : null;
+    $('pestana-nuevo').textContent = u ? 'Editando' : '+ Nuevo acceso';
+    verEquipo(u ? 'nuevo' : 'lista');
+    $('forma-usuario').reset();
+    $('usuario-error').hidden = true;
+    $('titulo-usuario').textContent = u ? `Editar a ${u.nombre}` : 'Nuevo acceso';
+    $('nota-usuario').textContent = u ? 'los cambios valen desde su próximo clic' : 'entra al panel con su correo';
+    $('guardar-usuario').textContent = u ? 'Guardar cambios' : 'Crear acceso';
+    $('cancelar-usuario').hidden = !u;
+    $('lbl-u-clave').textContent = u ? 'Clave nueva (opcional)' : 'Clave';
+    $('u-clave').required = !u;
+    $('u-clave').placeholder = u ? 'vacía = no se cambia' : 'mínimo 8 caracteres';
+    if (u) {
+      $('u-nombre').value = u.nombre;
+      $('u-correo').value = u.email || '';
+      const radio = document.querySelector(`#forma-usuario [name="rol"][value="${u.rol}"]`);
+      if (radio) radio.checked = true;
+      $('u-nombre').focus();
+    }
+    // Repintar la lista marca la fila que se edita.
+    $('lista-usuarios').dataset.firma = '';
+    pintarUsuarios(ultimosUsuarios);
+  }
+
+  async function eliminarAcceso(usuario) {
+    const u = ultimosUsuarios.find((x) => x.usuario === usuario);
+    if (!u) return;
+    const papel = u.rol === 'reparto' ? ' Sus pedidos abiertos pasan a otro motorizado.' : '';
+    if (!confirm(`¿Eliminar el acceso de ${u.nombre}? Ya no podrá entrar al panel.${papel}\n\nLo que vendió o entregó queda en el historial.`)) return;
+    try {
+      const r = await fetch('/api/admin/usuarios/' + encodeURIComponent(usuario), { method: 'DELETE' });
+      if (r.status === 401) return alLogin();
+      const j = await r.json();
+      if (!r.ok) return avisar(j.error);
+      if (editandoUsuario === usuario) modoFormularioUsuario(null);
+      avisar(`Acceso de ${u.nombre} eliminado`
+        + (j.repartidos ? ` · ${j.repartidos} pedido(s) pasaron a otro motorizado` : ''));
+      await cargar();
+    } catch {
+      avisar('No se pudo eliminar: sin conexión con el servidor.');
+    }
+  }
+
+  async function crearAcceso(e) {
+    e.preventDefault();
+    const err = $('usuario-error');
+    const boton = $('guardar-usuario');
+    err.hidden = true;
+    const cuerpo = {
+      nombre: $('u-nombre').value,
+      correo: $('u-correo').value,
+      clave: $('u-clave').value,
+      rol: document.querySelector('#forma-usuario [name="rol"]:checked')?.value,
+    };
+    const editando = editandoUsuario;
+    boton.disabled = true;
+    try {
+      const r = await fetch(editando ? '/api/admin/usuarios/' + encodeURIComponent(editando) : '/api/admin/usuarios', {
+        method: editando ? 'PATCH' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(cuerpo),
+      });
+      if (r.status === 401) return alLogin();
+      const j = await r.json();
+      if (!r.ok) {
+        err.textContent = j.error;
+        err.hidden = false;
+        return;
+      }
+      modoFormularioUsuario(null);
+      const repartidos = j.repartidos ? ` · se repartieron ${j.repartidos} pedido(s)` : '';
+      avisar(editando
+        ? `Cambios guardados: ${j.usuario.nombre}${cuerpo.clave ? ' · clave nueva, tiene que volver a entrar' : ''}${repartidos}`
+        : `Acceso creado: ${j.usuario.nombre} entra con ${j.usuario.email}${repartidos}`);
+      await cargar();
+    } catch {
+      err.textContent = 'No se pudo crear: sin conexión con el servidor.';
+      err.hidden = false;
+    } finally {
+      boton.disabled = false;
+    }
+  }
+
   // ------------------------------------------------- calendario de ventas
-  const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio',
+  const MESES =['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio',
     'agosto', 'setiembre', 'octubre', 'noviembre', 'diciembre'];
   const DIAS_SEMANA = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
 
@@ -1693,6 +1873,25 @@
       return;
     }
 
+    // El motorizado se suma él mismo a un pedido libre.
+    const btnTomar = e.target.closest('[data-tomar]');
+    if (btnTomar) {
+      btnTomar.disabled = true;
+      try {
+        const r = await fetch(`/api/pedidos/${btnTomar.dataset.tomar}/repartidor`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ repartidor: miUsuario }),
+        });
+        if (r.status === 401) return alLogin();
+        const datos = await r.json().catch(() => ({ error: 'El servidor no respondió bien' }));
+        avisar(r.ok ? `${datos.codigo}: ahora es tuyo` : datos.error);
+      } catch {
+        avisar('Sin conexión: no se pudo tomar el pedido');
+      }
+      return cargar();
+    }
+
     const btnEntregar = e.target.closest('[data-entregar]');
     if (btnEntregar) {
       const p = ultimosPedidos.find((x) => x.id === Number(btnEntregar.dataset.entregar));
@@ -1870,11 +2069,36 @@
 
 
   $('btn-respaldar').onclick = respaldarAhora;
+  // `toggle` no burbujea: se escucha en captura. Recuerda qué pedidos quedaron
+  // desplegados para que el refresco no los cierre.
+  $('lista-pedidos').addEventListener('toggle', (e) => {
+    const d = e.target.closest?.('[data-pedido]');
+    if (!d) return;
+    const id = Number(d.dataset.pedido);
+    if (d.open) pedidosAbiertos.add(id); else pedidosAbiertos.delete(id);
+  }, true);
+
+  $('forma-usuario').onsubmit = crearAcceso;
+  $('cancelar-usuario').onclick = () => modoFormularioUsuario(null);
+  $('equipo-pestanas').onclick = (e) => {
+    const b = e.target.closest('[data-vista]');
+    if (b) verEquipo(b.dataset.vista);
+  };
+  $('lista-usuarios').onclick = (e) => {
+    const editar = e.target.closest('[data-editar-usuario]');
+    if (editar) {
+      modoFormularioUsuario(ultimosUsuarios.find((u) => u.usuario === editar.dataset.editarUsuario));
+      return;
+    }
+    const eliminar = e.target.closest('[data-eliminar-usuario]');
+    if (eliminar) eliminarAcceso(eliminar.dataset.eliminarUsuario);
+  };
 
   $('mes-antes').onclick = () => moverMes(-1);
   $('mes-despues').onclick = () => moverMes(1);
 
-  $('btn-refrescar').onclick = cargar;
+  // Sin botón «Actualizar»: el panel se refresca solo cada 15 s y al volver a
+  // la pestaña, así que el botón no hacía nada que no pasara igual.
   $('areas').onclick = (e) => {
     const b = e.target.closest('[data-area]');
     if (b) mostrarArea(b.dataset.area);

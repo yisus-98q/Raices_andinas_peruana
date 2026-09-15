@@ -140,9 +140,18 @@ node respaldo.mjs --listar                         # ver qué copias hay
 node respaldo.mjs --restaurar tienda-2026-09-11.db # volver a una (servidor parado)
 ```
 
-El panel lo muestra en el bloque **Respaldo**, y se pone en rojo si hoy no se
-hizo ninguno. Un respaldo que hay que ir a comprobar es un respaldo que nadie
-comprueba.
+En el panel ya no es un bloque: es **un botón en la cabecera**, solo para la
+dueña. Un respaldo que hay que ir a buscar a una sección es un respaldo que
+nadie comprueba; en la cabecera se ve siempre.
+
+| Estado | Cómo se ve |
+|---|---|
+| Hecho | Punto verde y **«Respaldo al día»** |
+| Falta | Dice **«Respaldar»**, el borde y el punto se ponen terracota y el punto late |
+
+Al pasar el cursor, el `title` del botón da los detalles: cuándo fue el último
+respaldo, si las copias están fuera del disco y cuántas hay. **Al tocarlo,
+respalda** en ese momento.
 
 **Apúntalo fuera del disco.** Por defecto las copias quedan en
 `data/respaldos/`, al lado de la base: eso salva de un borrado por error, pero
@@ -150,8 +159,7 @@ no de que se lleven la laptop. Con `RESPALDO_DIR` va a un pendrive o disco
 externo, y el panel deja de avisar:
 
 ```bash
-RESPALDO_DIR=E:
-espaldos npm start
+RESPALDO_DIR=E:\respaldos npm start
 ```
 
 Se guardan las últimas **14** copias (`RESPALDO_DIAS` lo cambia); cada una pesa
@@ -250,6 +258,63 @@ kardex y la bitácora. En un movimiento de stock se lee mejor
 `Ingreso de mercadería (rosa)` que `(rosa@raizandina.pe)`. Para entrar sirven
 los dos, pero el correo es el camino natural cuando haya recuperación de
 contraseña.
+
+### Equipo: los accesos se dan, se editan y se quitan desde el panel
+
+`node clave.mjs --nuevo` sigue funcionando, pero la dueña no va a abrir una
+consola para darle acceso al motorizado que empieza mañana. El área **Equipo**
+del panel, que **solo ve la dueña**, lo resuelve con un formulario:
+
+| Campo | Regla |
+|---|---|
+| Papel | **Ventas** (`vendedor`) o **Reparto** (`reparto`). Nada más |
+| Nombre | De 2 a 60 caracteres |
+| Correo | Válido y sin acceso previo (409 si ya tiene uno) |
+| Clave | Al menos 8 caracteres |
+
+**Desde ahí no se crea otra dueña.** Un acceso `admin` ve costos, caja y
+respaldo, y eso no se regala desde un formulario: para ascender a alguien sigue
+estando `node clave.mjs --rol`. El servidor rechaza cualquier otro papel con
+400, aunque el botón no exista.
+
+El **usuario corto** —el que firma el kardex y la ruta— se arma solo: la primera
+palabra del nombre, sin tildes y en minúsculas, con un número si ya existe
+(*Rosa Quispe* → `rosa`; la segunda Rosa → `rosa2`). Con eso también puede
+entrar, además del correo. Tampoco se reusa **la firma de alguien eliminado**:
+si `rosa` ya figura en la actividad del equipo o como motorizado de algún
+pedido, la nueva Rosa es `rosa2`. Si no, heredaría las entregas del día y todo
+lo que la anterior dejó firmado.
+
+Al dar de alta a un motorizado, **se lleva de inmediato lo que esperaba
+reparto** (ver *Asignación automática* en el panel del repartidor); la
+respuesta dice cuántos pedidos recibió.
+
+#### Editar y eliminar
+
+Cada acceso de ventas o reparto tiene **Editar** y **Eliminar** en la lista.
+Editar abre el mismo formulario del alta, ya lleno; Eliminar pide confirmación.
+
+| | Qué pasa |
+|---|---|
+| **Nombre, correo** | Se cambian. Correo que ya usa otra persona → 409 |
+| **Papel** | Ventas ↔ reparto. Si cambia, se reparten los pedidos libres: el motorizado que pasa a ventas suelta los suyos y el que entra a reparto se lleva lo que esperaba. **No pasa a ventas si tiene pedidos en camino** (409, ver abajo) |
+| **Clave** | Vacía = no se toca. Una nueva **cierra sus sesiones abiertas**: tiene que volver a entrar |
+| **Usuario corto** | **No cambia nunca**: es la firma del kardex y de la ruta |
+| **Eliminar** | Deja de entrar en ese momento (sus sesiones se borran en cascada), sus pedidos pendientes pasan a otro motorizado y lo que firmó —ventas, entregas, movimientos— **queda en el historial**. **No se puede con pedidos en camino** (409) |
+
+**Con pedidos en camino, primero se reasignan.** Eliminar a un motorizado o
+pasarlo a ventas mientras tiene pedidos `enviado` responde 409: *«Juan tiene 2
+pedidos en camino (RA-…, RA-…). Reasígnalos en «Vender hoy» antes.»*, con los
+códigos también en `en_camino`. Antes se permitía, y el pedido quedaba a nombre
+de alguien que ya no existía: ningún motorizado lo veía ni podía tomarlo, y solo
+el puesto podía rescatarlo, si se daba cuenta. Un pedido en camino tiene el
+paquete —y quizá la plata del cobro— en manos de esa persona: eso lo resuelve la
+dueña, no el sistema. Cambiar el nombre, el correo o la clave de alguien en ruta
+sigue permitido.
+
+**La dueña no se edita ni se elimina desde el panel** (403): un clic equivocado
+la dejaría fuera de su propio panel. Eso sigue en `node clave.mjs`. Un acceso
+que no existe responde 404.
 
 > **Antes de una demo real, edita `tienda.config.js`.** Ahí están dirección,
 > horario, zonas de reparto en Lima **y envío a provincia**, medios de pago,
@@ -432,6 +497,12 @@ corresponden a cada uno. Así los nombres salen naturales —*Maca Negra en
 cápsulas*— y no aparecen disparates como *Jabón en gotas*. La semilla del
 generador es fija: dos ejecuciones dan exactamente el mismo catálogo.
 
+> **Uña de Gato y Muña, con ñ.** La semilla de `db.js` las traía como *Una de
+> Gato* y *Muna*, y así salían en la tienda y en la boleta. La semilla ya está
+> corregida, y una migración al arrancar renombra `UNG-001` y `MUN-001` en las
+> bases ya sembradas, **solo si el nombre sigue siendo el de la semilla**: si la
+> dueña lo cambió a mano desde el panel, se respeta lo suyo.
+
 #### El stock tampoco es al azar plano
 
 Lo era —`entre(0, 60)` contra un mínimo de 5 a 15— y con eso **uno de cada seis
@@ -563,6 +634,55 @@ se escribe mal un distrito en `tienda.config.js`, esa zona nunca se aplicaría.
 
 > El validador de RUC detectó que el RUC de ejemplo que tenía la configuración
 > (`20512345678`) **no era válido**. Ahora es `20512345671`, que sí pasa.
+
+**El canal del pedido también lo fija el servidor.** Todo lo que entra por
+`POST /api/pedidos` es `web`; la venta de mostrador tiene su propia ruta, con
+sesión. Antes el canal se leía del cuerpo de la petición, que es público: un
+pedido a domicilio mandado con `canal: 'mostrador'` no se asignaba a ningún
+motorizado, no se podía asignar a mano, no mandaba la confirmación por WhatsApp
+y el resumen lo sumaba como venta del local.
+
+#### El carrito en cuatro pasos
+
+El carrito ya no es un cajón lateral con un formulario largo debajo: es una
+**ventana centrada** con cuatro pasos que se deslizan de lado.
+
+| Paso | Qué pide |
+|---|---|
+| **1 · Carrito** | Cantidades, envío gratis que falta, total |
+| **2 · Tus datos** | Boleta (DNI) o factura (RUC), nombre, documento, celular, correo |
+| **3 · Entrega** | Local o domicilio; con domicilio, ubigeo, dirección y referencia. La nota, en los dos |
+| **4 · Confirmar** | Repaso de lo escrito, total con IGV y el permiso de WhatsApp (sin marcar) |
+
+- La tira de arriba muestra dónde va. Lo que ya pasó se puede tocar para
+  volver; **lo que viene, no**: para avanzar hay que pulsar *Siguiente*, que
+  revisa el paso (nombre, documento de 8 u 11 dígitos, celular, ubigeo,
+  dirección). El servidor vuelve a validar todo igual.
+- Solo el paso a la vista recibe foco: los otros quedan `inert`, así que el
+  tabulador no salta a un campo escondido ni corre el carril a mitad de camino.
+- El carril toma el alto del paso visible, sin huecos, y los campos van
+  compactos, de a dos por fila donde caben.
+- Con `prefers-reduced-motion` no hay deslizamiento: el paso cambia sin animar.
+- **Lo escrito se conserva mientras dura la compra.** Antes, volver al carrito
+  para subir una unidad —o cerrar la ventana y reabrirla— rehacía el formulario
+  vacío: nombre, documento, celular, ubigeo, dirección, nota y la casilla de
+  WhatsApp, todo otra vez. Justo cuando la tienda responde «no alcanza, baja la
+  cantidad», que obliga a volver al carrito. Ahora cada repintado guarda un
+  borrador y lo restaura; el ubigeo, en cascada (departamento → provincia →
+  distrito), porque cada lista se llena con la anterior. El borrador vive **solo
+  en memoria**: no va a `localStorage`, no sobrevive a recargar la página y
+  **se borra al registrar el pedido**, para que los datos de una compra no
+  aparezcan en la siguiente.
+- Mientras se registra el pedido, *Atrás* y la tira quedan deshabilitados:
+  saltar de paso en ese momento dejaba el error de un pedido rechazado en una
+  pantalla que ya no estaba a la vista.
+
+#### «¿Dónde va lo mío?» sin pie
+
+La página de seguimiento (`mi-pedido.html`) ya no lleva pie. Con él medía más
+que la pantalla y obligaba a bajar para nada; *Ir a la tienda* ya está en la
+cabecera. El formulario y el resultado van lado a lado y la página se desliza
+de uno a otro.
 
 #### El código de pedido que se repetía
 
@@ -822,6 +942,35 @@ y la semilla, y falla si vuelve a entrar una enfermedad o una dosis.
 > corre sola: los textos del proveedor suelen traer claims. Conviene pasar el
 > test sobre la base cargada antes de publicar.
 
+#### Lo que se toma y lo que se frota
+
+A *"cuánta muña tomo al día"* el asesor ofrecía la **Esencia de Muña para
+difusor**: tiene *muña* en el nombre y la etiqueta de digestión, así que
+calificaba igual que la hierba seca. A quien pregunta qué tomar no se le puede
+poner delante algo que no se toma.
+
+Ahora, si la consulta habla de tomar (*tomo*, *tomar*, *beber*, *infusión*,
+*mate*, *agua de tiempo*, o pregunta la dosis) y **no nombra** una esencia, una
+crema o un difusor, lo de uso externo sale de la búsqueda:
+
+| Cuenta como uso externo | Ejemplos |
+|---|---|
+| Categorías *Esencias*, *Cremas*, *Cuidado personal* | Esencia de Lavanda, Crema de Árnica, Jabón de Azufre |
+| Nombre con *esencia*, *difusor*, *roll-on*, *aceite esencial*, *crema*, *jabón*, *bálsamo*, *gel*, *madera* | Muña · aceite esencial, Bálsamo de Copaiba |
+| *Aceites* sin la etiqueta `cocina` | Copaiba, Ricino, Jojoba (se quedan Sacha Inchi, Oliva y Coco) |
+
+| Consulta | Antes | Ahora |
+|---|---|---|
+| *"cuánta muña tomo al día"* | Muña · **Esencia de Muña para difusor** · … | Muña · Muña en sachets · Muña en filtrantes, y la forma de uso del envase |
+| *"esencia de muña para el difusor"* | Esencia de Muña para difusor | igual: la nombró |
+| *"se puede tomar el aceite de copaiba"* | Aceite de Copaiba, sin más | los de copaiba **con** «Ojo: … son de uso externo, no se toman» |
+
+Si al quitar lo externo no queda nada —el último caso—, se busca en todo el
+catálogo: responder «no trabajamos aceite de copaiba» sería falso. Lo que cambia
+es que la respuesta avisa antes de que alguien se tome lo que apareció en la
+lista. El aviso va en la respuesta por reglas; la redacción con Claude no lo
+recibe.
+
 #### Dos magnesios que tapaban a la valeriana
 
 A *"no puedo dormir y ando con mucho estrés"* el asesor contestaba así:
@@ -910,6 +1059,12 @@ medida, edad o precio (`ml`, `gramos`, `años`, `soles`), y que haya intención 
 compra — un envase pegado a la cifra (*"50 bolsas"*) o un verbo (*"quiero"*,
 *"necesito"*, *"cuánto me sale"*).
 
+Cuando la cifra nombra un producto genérico, varias fichas empatan. *"30 frascos
+de miel"* cotizaba la **Miel con Propóleo** —relleno de demostración— en vez de la **Miel de Abeja Multifloral** del negocio. El desempate
+ahora va en este orden: el envase que dijo (*frascos*), lo del negocio antes que
+el relleno, el stock y, al final, el precio más bajo. Es el mismo criterio del
+asesor: lo inventado nunca pasa por delante de lo que está en el almacén.
+
 ### Imágenes: tres niveles de respaldo
 
 Cada tarjeta intenta cargar, en este orden:
@@ -954,6 +1109,25 @@ UPDATE productos SET imagen = '/img/fotos/mi-maca.jpg' WHERE sku = 'MAC-001';
 
 `node verificar-imagenes.mjs` comprueba que ninguna ilustración se salga del lienzo
 ni quede descentrada — útil cuando no puedes abrir el navegador para mirarlas.
+
+### El nombre de la marca, en texto
+
+En las siete páginas —portada, tienda, seguimiento, login, panel, créditos e
+imágenes— el nombre ya no es la imagen `logotipo.png`: es texto.
+
+```html
+<span class="marca-nombre">Raíz <em>Andina</em></span>
+```
+
+Fraunces 600, *Raíz* en café `#3b2415` y *Andina* en verde. Como texto se ve
+nítido a cualquier tamaño y en pantallas de alta densidad, lo leen los
+lectores de pantalla y los buscadores, y no es una descarga más. El **emblema**
+sigue siendo imagen: es un dibujo, no un nombre. `panel.css` declara su propio
+`@font-face` de Fraunces, porque el panel no carga la hoja de la tienda.
+
+La excepción es **la hoja impresa del QR** (`imprimirQr`), que conserva la
+imagen: se arma en una ventana aparte con sus propios estilos en línea, sin las
+hojas de la tienda ni del panel, y en blanco y negro para cualquier impresora.
 
 ### La decisión de diseño que sostiene la demo
 
@@ -1039,6 +1213,47 @@ puesto—, **asignados a él o sin asignar**. Lo cerrado de días anteriores ya 
 le aparece: el servidor lo compara con `pedidos.cerrado_en`, que se llena al
 entregar, anular o devolver. El historial completo lo sigue viendo el puesto.
 
+### Asignación automática
+
+Antes cada pedido a domicilio entraba **libre** y alguien tenía que tomarlo o
+asignarlo; si nadie lo hacía, esperaba. Ahora el servidor lo reparte solo
+(`repartirLibres()` en `server.js`):
+
+- **A quién:** al motorizado con **menos pedidos abiertos** a su nombre
+  (pendiente, en preparación o en camino). A igual carga, al que se dio de alta
+  primero. La carga se recalcula pedido por pedido, así que diez pedidos
+  esperando se reparten parejo y no caen todos en el mismo.
+- **Cuándo:** al entrar un pedido, **al dar de alta un motorizado** (se lleva lo
+  que estaba esperando) y **al arrancar el servidor** (lo que quedó sin
+  asignar de antes).
+- **Qué entra:** solo lo que sale a la calle y sigue sin salir: pendiente o en
+  preparación, sin motorizado. **Nunca** una venta de mostrador ni un recojo en
+  el local.
+- **Lo que se suelta a mano no vuelve solo.** Si el puesto le quita el
+  motorizado a un pedido, fue a propósito: ese pedido queda libre hasta que
+  alguien lo asigne o un motorizado lo tome. Esa excepción vale solo mientras
+  el pedido siga sin nadie: si después se asignó a alguien que dejó el reparto,
+  se reparte igual.
+- **El puesto sigue mandando.** Puede cambiar el motorizado de cualquier pedido
+  abierto desde el panel. La asignación automática solo escribe sobre pedidos
+  sin nadie, así que nunca le pisa un cambio hecho a mano.
+- **Si un motorizado deja de serlo** —se elimina o pasa a ventas—, sus pedidos
+  pendientes o en preparación cuentan como libres y se reparten entre los que
+  siguen en reparto. Desde el panel ocurre al instante. Si el papel se cambia
+  por consola (`node clave.mjs --rol pepe vendedor`), ocurre en el siguiente
+  reparto automático: al entrar un pedido, al dar de alta un motorizado o al
+  reiniciar. Antes quedaban a su nombre, colgados, hasta que alguien los
+  cambiara a mano.
+- **Lo que va en camino no se reparte solo.** El panel no deja eliminar ni
+  pasar a ventas a quien tiene pedidos `enviado` (409): se reasignan a mano
+  primero. La consola (`clave.mjs`) no hace esa revisión, así que conviene usar
+  el panel.
+- **Sin motorizados dados de alta**, no pasa nada: los pedidos quedan libres,
+  como antes.
+
+No anota actividad a nombre de nadie: no es trabajo de una persona, y una fila
+de más encima de «enviado» le borraba al motorizado su «en camino».
+
 ### El flujo en la calle
 
 1. **🛵 Salgo a entregar.** Pasa el pedido de pendiente o preparación a
@@ -1100,11 +1315,112 @@ desaparecer el monto de su cuenta aunque el billete siguiera en su bolsillo.
 | | Dueña (`admin`) | Mostrador (`vendedor`) | Reparto (`reparto`) |
 |---|---|---|---|
 | Pedidos | Todos, con historial | Todos, con historial | Su ruta: lo suyo y lo libre, lo cerrado solo de hoy |
-| Asignar motorizado | Sí | Sí | No (se autoasigna al salir) |
+| Asignar motorizado | Lo hace el sistema; puede cambiarlo | Lo hace el sistema; puede cambiarlo | No: toma un pedido libre para sí, nada más |
+| Dar accesos (área Equipo) | Ventas y reparto | No | No |
 | Mover el pedido | Todos los estados | Todos los estados | Salir y entregar, solo hacia adelante |
 | Cobro al entregar | Ve «Cobrado: …» | Ve «Cobrado: …» | Lo registra, también después de que el cliente confirmó |
 | Efectivo por rendir | Sí, por motorizado | No | No |
 | Llamar / Cómo llegar | No | No | Sí, en pedidos abiertos |
+
+---
+
+## El panel en la pantalla y en el celular
+
+El panel se ordena en cinco áreas —**Resumen**, **Vender hoy**, **Inventario**,
+**El negocio** y **Equipo**— y cada papel ve solo las que tienen algo para él.
+
+**No hay botón «Actualizar».** El panel se refresca solo cada 15 s y también al
+volver a la pestaña. Con la pestaña oculta no consulta al servidor.
+
+### En pantalla ancha
+
+- **Resumen del día** reparte el alto de la pantalla entre los indicadores y
+  *Tu equipo hoy*, en proporción 2 a 5, y cada tarjeta se estira hasta llenar su
+  parte. Antes los indicadores medían lo justo y debajo del equipo quedaba media
+  pantalla de caja vacía. Los indicadores tienen tope (250 px): en un monitor de
+  1080 px, sin tope, quedaba una cifra sola en medio de un cuadro enorme.
+- **El resumen ya no lleva título.** «Resumen del día» repetía lo que dice la
+  pestaña del área, y ese renglón ahora es de los indicadores. La sección
+  conserva su `aria-label` para los lectores de pantalla.
+- **Tu equipo hoy va siempre en una sola fila.** Con cinco personas o más, la
+  fila se desliza de lado en vez de partirse en dos. Con cinco tarjetas cada
+  una mide unos 190 px, y una *container query* baja las cifras a 14,5 px para
+  que quepan sin cortarse.
+- **Vender hoy** va en **tres columnas**: venta en el local · pedidos recientes ·
+  comprobantes. Son columnas automáticas, una por bloque visible: al mostrador,
+  que no ve comprobantes, le quedan dos anchas en vez de dos y un hueco. Por
+  debajo de 1000 px vuelven a apilarse.
+- **El negocio** va en dos columnas. **El calendario tiene una para él solo**, a
+  toda la altura: las semanas se reparten el alto (`grid-auto-rows: 1fr`), sin
+  `aspect-ratio` ni barra de desplazamiento, y los números van más grandes.
+  **Más vendidos** y **Clientes** van en la otra, con el buscador de clientes
+  debajo del título.
+- **Respaldo** ya no ocupa un bloque en *El negocio*: es el botón de la cabecera
+  (ver *Respaldo*).
+
+### Pedidos recientes: una fila por pedido
+
+En el puesto (dueña y mostrador), cada pedido es **una fila que se despliega**
+(`<details>`), no una tarjeta abierta: en una columna de un tercio caben muchos
+más pedidos a la vista.
+
+| Renglón | Qué muestra |
+|---|---|
+| Arriba | Código · estado · total |
+| Abajo | Cliente · distrito, o «pasa a recoger» / «en el local» · motorizado · hora |
+
+Al tocar la fila se abre lo de siempre: datos del cliente, productos, quién lo
+lleva, avisos de WhatsApp, el botón para avanzar, la boleta y anular o
+devolver. **Lo que está abierto sigue abierto después del refresco de 15 s**;
+si no, el panel lo cerraría en la mano de quien lo está leyendo.
+
+**Las ventas del mostrador ya no salen en la lista.** Se cobraron y se
+entregaron en el momento: no hay nada que despachar, y llenaban la columna de
+pedidos que sí esperan. **Aparecen al buscar**, por código o por nombre, para
+poder anular una venta del local.
+
+La ruta del repartidor no cambió: sigue en tarjetas, con sus botones grandes.
+
+### En el celular (hasta 640 px)
+
+Medido en un teléfono de 390 px:
+
+| Qué | Antes | Ahora |
+|---|---|---|
+| Cabecera | Seis botones en dos filas, ~110 px antes del contenido | **Una sola tira** que se desliza de lado |
+| Áreas | Barra lateral | Tira de pestañas arriba del contenido, solo el nombre |
+| Indicadores | De a uno, 540 px de alto | **De a dos** |
+| *Tu equipo hoy* | Cuatro tarjetas apiladas en una caja con su propio scroll | **Tarjetas que se deslizan de lado**, una por pantalla |
+| Listas de pedidos y comprobantes | 560 px fijos, más altas que lo visible | **Como máximo el 68 % del alto de la pantalla** |
+| Equipo | — | **Dos pestañas: «Quién entra» y «+ Nuevo acceso»**. *Editar* abre la del formulario; correo y clave van uno por renglón y todo entra en una pantalla |
+
+Lo de las listas importa más de lo que parece: con una lista más alta que la
+pantalla, el dedo no sabe si está moviendo la lista o la página.
+
+En pantalla ancha, Equipo va en dos columnas iguales: quién entra y el
+formulario.
+
+## La tienda en el celular
+
+Hasta 640 px de ancho, la tienda se rearma para mirar productos con el pulgar:
+
+- **La grilla va siempre en dos columnas.** Antes, a 360 px, caía a una, y cada
+  producto ocupaba una pantalla entera.
+- **La tarjeta muestra lo que decide la compra:** foto 4:3, nombre en dos
+  líneas, origen, para qué sirve en dos líneas, precio y un botón de 44 px, el
+  mínimo cómodo para un dedo. La descripción y el uso tradicional se ocultan
+  en el celular.
+- **Las sugerencias del asesor van en una tira** que se arrastra de lado, en
+  vez de apilarse.
+
+Medido:
+
+| Ancho | Alto de la página antes | Ahora |
+|---|---|---|
+| 390 px | 16 000 px | 9 700 px |
+| 360 px | 32 000 px | 9 500 px |
+
+Se ven cuatro productos por pantalla y la primera pantalla entra completa.
 
 ---
 
@@ -1123,6 +1439,12 @@ desaparecer el monto de su cuenta aunque el billete siguiera en su bolsillo.
 | `POST` | `/api/pedidos` | Registra pedido y descuenta stock **en una transacción** |
 | `GET` | `/api/pedidos` | 🔒 Pedidos con sus ítems (trae datos del cliente) |
 | `PATCH` | `/api/pedidos/:id/estado` | 🔒 Avanza estado; `anulado` devuelve el stock |
+| `PATCH` | `/api/pedidos/:id/repartidor` | 🔒 Cambia o quita el motorizado (el reparto solo toma uno libre para sí) |
+| `GET` | `/api/admin/repartidores` | 🔒 Motorizados, para el selector de asignación |
+| `GET` | `/api/admin/usuarios` | 🔒 Dueña: accesos del equipo |
+| `POST` | `/api/admin/usuarios` | 🔒 Dueña: `{nombre, correo, clave, rol}` con `rol` `vendedor` o `reparto` → 201 con `repartidos` |
+| `PATCH` | `/api/admin/usuarios/:usuario` | 🔒 Dueña: cambia nombre, correo, papel o clave (vacía = no se toca). 403 con la dueña, 404 si no existe, 409 si el correo es de otro |
+| `DELETE` | `/api/admin/usuarios/:usuario` | 🔒 Dueña: elimina un acceso de ventas o reparto; sus pedidos pendientes pasan a otro → `repartidos` |
 | `POST` | `/api/stock` | 🔒 Reposición o ajuste manual, con motivo y responsable |
 | `GET` | `/api/admin/resumen` | 🔒 KPIs, bajo stock, más vendidos |
 | `GET` | `/api/admin/movimientos` | 🔒 Kardex de las últimas 60 operaciones |
@@ -1153,7 +1475,9 @@ Honestidad con el cliente sobre el alcance de esta demo:
 
 1. **HTTPS y cookie `Secure`** — obligatorio antes de publicar fuera de la laptop.
 2. **Pasarela de pago** — el pedido queda registrado, el cobro es contra entrega.
-3. **Respaldo de la base** — copiar `data/tienda.db` a diario.
+3. **Respaldo fuera de la laptop** — la copia diaria ya se hace sola (ver
+   *Respaldo*), pero por defecto queda en el mismo disco. Hay que apuntar
+   `RESPALDO_DIR` a un disco externo o sacarla a la nube.
 4. **Fotos reales de producto** — 12 de los 24 productos con foto ya son del
    negocio; las otras 12 son de banco libre y el resto del catálogo va con
    ilustración. Las que falten entran con `importar-fotos.mjs`.

@@ -101,9 +101,19 @@ describe('El puesto reparte el trabajo', () => {
     assert.equal((await asignar(duena, p.id, 'lucho')).estado, 400);
   });
 
-  test('el motorizado no se reparte pedidos', async () => {
+  test('el motorizado toma un pedido libre para sí, y nada más', async () => {
     const p = await nuevoPedido();
-    assert.equal((await asignar(lucho, p.id, 'lucho')).estado, 403);
+    // Entra asignado solo: el puesto lo suelta para que quede libre.
+    assert.equal((await asignar(duena, p.id, '')).estado, 200);
+    // No se lo da a otro.
+    assert.equal((await asignar(lucho, p.id, 'pepe')).estado, 403);
+    // Sí se lo toma.
+    const tomado = await asignar(lucho, p.id, 'lucho');
+    assert.equal(tomado.estado, 200, JSON.stringify(tomado.json));
+    assert.equal(tomado.json.repartidor, 'lucho');
+    // Pepe ya no puede quitárselo, y Lucho no lo suelta desde el reparto.
+    assert.equal((await asignar(pepe, p.id, 'pepe')).estado, 403);
+    assert.equal((await asignar(lucho, p.id, '')).estado, 403);
   });
 
   test('vacío lo deja sin asignar', async () => {
@@ -128,6 +138,7 @@ describe('Cada motorizado ve lo suyo', () => {
     dePepe = await nuevoPedido();
     await asignar(duena, dePepe.id, 'pepe');
     libre = await nuevoPedido();
+    await asignar(duena, libre.id, '');
   });
 
   test('lo de otro no le aparece; lo libre sí', async () => {
@@ -256,4 +267,58 @@ describe('Cada motorizado ve lo suyo', () => {
     assert.ok((await codigosDe(duena)).includes(viejo.codigo));
   });
 
+});
+
+describe('El pedido a domicilio se asigna solo', () => {
+  const abiertosDe = async (usuario) => (await duena.pedir('/api/pedidos')).json
+    .filter((p) => p.repartidor === usuario && !['entregado', 'anulado', 'devuelto'].includes(p.estado)).length;
+
+  test('entra a nombre del motorizado con menos pedidos abiertos', async () => {
+    const [l, p] = [await abiertosDe('lucho'), await abiertosDe('pepe')];
+    const esperado = p < l ? 'pepe' : 'lucho';   // a igual carga, el primero en darse de alta
+    const nuevo = await nuevoPedido();
+    const enLista = (await duena.pedir('/api/pedidos')).json.find((x) => x.id === nuevo.id);
+    assert.equal(enLista.repartidor, esperado);
+    // Y el siguiente va al otro si con este quedaron parejos o lo pasó.
+    const otro = await nuevoPedido();
+    const [l2, p2] = [await abiertosDe('lucho'), await abiertosDe('pepe')];
+    assert.ok(Math.abs(l2 - p2) <= Math.max(1, Math.abs(l - p)),
+      `la carga se desparejó: lucho ${l2}, pepe ${p2} (pedido ${otro.codigo})`);
+  });
+
+  test('lo que se recoge en el puesto no se asigna', async () => {
+    const p = await nuevoPedido({
+      cliente: { nombre: 'Rosa Huamán', telefono: '956231447', tipo_doc: 'DNI', num_doc: '45678912' },
+      entrega: 'recojo',
+    });
+    const enLista = (await duena.pedir('/api/pedidos')).json.find((x) => x.id === p.id);
+    assert.equal(enLista.repartidor, '');
+  });
+
+  test('la tienda no elige el canal: siempre entra como web y se asigna', async () => {
+    const p = await nuevoPedido({ canal: 'mostrador' });
+    const enLista = (await duena.pedir('/api/pedidos')).json.find((x) => x.id === p.id);
+    assert.equal(enLista.canal, 'web');
+    assert.ok(['lucho', 'pepe'].includes(enLista.repartidor), `quedó sin asignar: «${enLista.repartidor}»`);
+  });
+
+  test('lo de un motorizado que cambió de papel vuelve a repartirse', async () => {
+    alta('tito', 'tito@raizandina.pe', 'Tito', 'claveDeTito001', 'reparto');
+    const p = await nuevoPedido();
+    assert.equal((await asignar(duena, p.id, 'tito')).estado, 200);
+    const r = spawnSync(process.execPath, ['clave.mjs', '--rol', 'tito', 'vendedor'],
+      { cwd: RAIZ, env: { ...process.env, DB_PATH: srv.dbPath }, encoding: 'utf8' });
+    assert.equal(r.status, 0, r.stdout + r.stderr);
+    await nuevoPedido();   // repartir corre al entrar un pedido
+    const enLista = (await duena.pedir('/api/pedidos')).json.find((x) => x.id === p.id);
+    assert.ok(['lucho', 'pepe'].includes(enLista.repartidor), `sigue colgado a «${enLista.repartidor}»`);
+  });
+
+  test('lo que el puesto soltó a propósito no vuelve a asignarse solo', async () => {
+    const p = await nuevoPedido();
+    assert.equal((await asignar(duena, p.id, '')).estado, 200);
+    await nuevoPedido();
+    const enLista = (await duena.pedir('/api/pedidos')).json.find((x) => x.id === p.id);
+    assert.equal(enLista.repartidor, '');
+  });
 });

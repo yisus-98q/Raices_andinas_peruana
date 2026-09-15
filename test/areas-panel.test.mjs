@@ -41,9 +41,9 @@ const areasDelJs = [...fuenteAreas.matchAll(/id: '(area-[^']+)'/g)].map((m) => m
 const bloquesDelJs = [...fuenteAreas.matchAll(/'(bloque-[^']+)'/g)].map((m) => m[1]);
 
 describe('Cada bloque vive en un área', () => {
-  test('el panel tiene sus cuatro áreas', () => {
+  test('el panel tiene sus cinco áreas', () => {
     assert.deepEqual(areasDelHtml,
-      ['area-resumen', 'area-vender', 'area-inventario', 'area-negocio']);
+      ['area-resumen', 'area-vender', 'area-inventario', 'area-negocio', 'area-equipo']);
     assert.deepEqual(areasDelJs, areasDelHtml,
       'las áreas del HTML y las de AREAS no coinciden');
   });
@@ -76,7 +76,7 @@ describe('Cada bloque vive en un área', () => {
     // doce bloques encima hasta que el JavaScript termina de cargar.
     const conHidden = [...html.matchAll(/<div class="area[^"]*" id="([^"]+)"([^>]*)>/g)]
       .map(([, , resto]) => resto.includes('hidden'));
-    assert.deepEqual(conHidden, [false, true, true, true]);
+    assert.deepEqual(conHidden, [false, true, true, true, true]);
   });
 });
 

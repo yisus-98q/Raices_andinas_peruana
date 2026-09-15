@@ -588,9 +588,19 @@
     if (etapa === 'exito') { etapa = 'carrito'; ultimoPedido = null; }
   }
 
+  let etapaPintada = '';
   function pintarPanel() {
     const cuerpo = $('cuerpo-carrito');
     const pie = $('pie-carrito');
+    // El deslizamiento solo al cambiar de etapa: sumar una unidad al carrito
+    // también repinta, y no tiene que moverse todo por eso. Al abrir el
+    // carrito (etapaPintada vacía) tampoco: ahí ya aparece la ventana entera.
+    const cambioDeEtapa = etapa !== etapaPintada;
+    // Lo escrito se guarda antes de repintar: volver al carrito a subir una
+    // cantidad, o cerrar y reabrir, rehacía el formulario vacío.
+    guardarBorrador();
+    if (cambioDeEtapa && etapaPintada) deslizarEtapa(cuerpo);
+    etapaPintada = etapa;
 
     if (etapa === 'exito' && ultimoPedido) {
       cuerpo.innerHTML = `
@@ -634,7 +644,7 @@
     }
 
     if (etapa === 'carrito') {
-      cuerpo.innerHTML = barraEnvio(total()) + lineas.map((l) => {
+      cuerpo.innerHTML = pasosCheckout(-1) + barraEnvio(total()) + lineas.map((l) => {
         const img = imagenDe(l.prod);
         const tope = l.cantidad >= maximoDe(l.prod);
         return `
@@ -702,10 +712,16 @@
       return;
     }
 
-    // etapa === 'datos'
+    // etapa === 'datos': tres pasos que se deslizan de lado.
+    pasoCheckout = 0;
     cuerpo.innerHTML = `
+      ${pasosCheckout(0)}
+
       <div class="aviso aviso-error" id="error-forma" hidden></div>
 
+      <div class="ck-carril" id="ck-carril">
+      <div class="ck-pista" id="ck-pista">
+      <div class="ck-diapo">
       <div class="grupo-campos">
         <h4>¿A nombre de quién va el comprobante?</h4>
         <div class="pestanas" id="tipo-doc">
@@ -713,24 +729,30 @@
           <button type="button" class="pestana" data-doc="RUC">Factura · RUC</button>
         </div>
 
+        <div class="campo-par">
         <div class="campo"><label for="f-nombre" id="lbl-nombre">Nombre y apellido</label>
           <input id="f-nombre" autocomplete="name" placeholder="María Quispe" maxlength="120"></div>
 
         <div class="campo"><label for="f-doc" id="lbl-doc">DNI</label>
           <input id="f-doc" inputmode="numeric" maxlength="11" placeholder="8 dígitos"></div>
+        </div>
 
         <div class="campo" id="campo-razon" hidden>
           <label for="f-razon">Razón social</label>
           <input id="f-razon" placeholder="Comercial Los Andes S.A.C." maxlength="120"></div>
 
+        <div class="campo-par">
         <div class="campo"><label for="f-tel">Celular</label>
           <input id="f-tel" inputmode="tel" autocomplete="tel" placeholder="9XX XXX XXX" maxlength="15"></div>
 
         <div class="campo"><label for="f-email" id="lbl-email">Correo (opcional)</label>
           <input id="f-email" type="email" inputmode="email" autocomplete="email"
-                 placeholder="para enviarte el comprobante" maxlength="120"></div>
+                 placeholder="para el comprobante" maxlength="120"></div>
+        </div>
+      </div>
       </div>
 
+      <div class="ck-diapo" inert>
       <div class="grupo-campos">
         <h4>${hayRecojo() ? '¿Cómo lo recibes?' : '¿Dónde te lo dejamos?'}</h4>
         ${hayRecojo() ? `
@@ -754,10 +776,12 @@
           <div class="campo"><label for="f-dist">Distrito</label>
             <select id="f-dist" disabled><option value="">—</option></select></div>
 
+          <div class="campo-par">
           <div class="campo"><label for="f-dir">Dirección</label>
-            <input id="f-dir" autocomplete="street-address" placeholder="Av. Los Álamos 234, dpto. 302" maxlength="200"></div>
+            <input id="f-dir" autocomplete="street-address" placeholder="Av. Los Álamos 234" maxlength="200"></div>
           <div class="campo"><label for="f-ref">Referencia (opcional)</label>
-            <input id="f-ref" placeholder="Frente al parque, portón verde" maxlength="200"></div>
+            <input id="f-ref" placeholder="Frente al parque" maxlength="200"></div>
+          </div>
 
           <div class="envio-aviso" id="envio-calculado" hidden></div>
         </div>
@@ -766,6 +790,12 @@
              como "dejar con el portero". -->
         <div class="campo"><label for="f-nota">Nota para el pedido (opcional)</label>
           <textarea id="f-nota" placeholder="Ej: dejar con el portero" maxlength="300"></textarea></div>
+      </div>
+      </div>
+
+      <div class="ck-diapo" inert>
+        <div class="ck-repaso" id="ck-repaso"></div>
+        <div class="resumen" id="resumen-final"></div>
 
         <!-- Sin marcar por defecto: un permiso que viene puesto no es permiso. -->
         <label class="casilla" for="f-wa">
@@ -773,17 +803,171 @@
           <span>Quiero recibir por WhatsApp la confirmación y el aviso cuando mi pedido salga y llegue.</span>
         </label>
       </div>
-
-      <div class="resumen" id="resumen-final"></div>`;
+      </div>
+      </div>`;
 
     pie.innerHTML = `
-      <button class="btn btn-primario btn-bloque" id="btn-confirmar">Confirmar pedido</button>
-      <button class="btn btn-secundario btn-bloque" style="margin-top:8px" id="btn-volver">Volver al carrito</button>`;
+      <div class="ck-botones">
+        <button class="btn btn-secundario" id="btn-atras">Volver</button>
+        <button class="btn btn-primario" id="btn-siguiente">Siguiente</button>
+      </div>`;
 
-    $('btn-volver').onclick = () => { etapa = 'carrito'; pintarPanel(); };
-    $('btn-confirmar').onclick = confirmar;
+    $('btn-atras').onclick = () => {
+      if (pasoCheckout === 0) { etapa = 'carrito'; direccionPanel = -1; pintarPanel(); } else irAPaso(pasoCheckout - 1);
+    };
+    $('btn-siguiente').onclick = () => {
+      if (pasoCheckout === 2) return confirmar();
+      const falta = revisarPaso(pasoCheckout);
+      if (falta) return mostrarError(falta);
+      irAPaso(pasoCheckout + 1);
+    };
+    document.querySelector('.ck-pasos').onclick = (e) => {
+      const b = e.target.closest('[data-paso]');
+      if (!b || b.disabled) return;
+      const n = Number(b.dataset.paso);
+      if (n < 0) { etapa = 'carrito'; direccionPanel = -1; pintarPanel(); } else irAPaso(n);
+    };
+    // El carril toma el alto del paso a la vista: sin esto, el paso corto
+    // heredaba el alto del largo y dejaba un hueco que había que bajar.
+    const pista = $('ck-pista');
+    if ('ResizeObserver' in window) new ResizeObserver(ajustarAlto).observe(pista);
+    ajustarAlto();
     aplicarModoEntrega();
     prepararFormulario();
+  }
+
+  // ------------------------------------------------ pasos que se deslizan
+  let pasoCheckout = 0;
+  /** 1 = avanza (entra desde la derecha), -1 = retrocede. */
+  let direccionPanel = 1;
+  const sinMovimiento = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /**
+   * La tira de pasos, con el carrito como el primero: todo el pedido se lee
+   * como una sola presentación. `paso` es el del formulario (0 a 2); -1 es
+   * el carrito. Lo que ya pasó se puede tocar para volver; lo que viene, no.
+   */
+  function pasosCheckout(paso) {
+    const nombres = ['Carrito', 'Tus datos', 'Entrega', 'Confirmar'];
+    const actual = paso + 1;
+    return `
+      <ol class="ck-pasos" style="--paso:${actual}" aria-label="Pasos del pedido">
+        ${nombres.map((nombre, i) => `
+        <li class="${i < actual ? 'hecho' : i === actual ? 'actual' : ''}">
+          <button type="button" data-paso="${i - 1}" ${i > actual ? 'disabled' : ''}><i>${i + 1}</i>${nombre}</button>
+        </li>`).join('')}
+      </ol>`;
+  }
+
+  /**
+   * Cambio de etapa como diapositiva: el paso terminado sale entero hacia un
+   * lado y el nuevo entra desde el otro. Se llama ANTES de reemplazar el
+   * contenido: copia lo que se ve, la pone encima y la anima hacia afuera
+   * mientras el contenido nuevo entra.
+   */
+  function deslizarEtapa(cuerpo) {
+    const dir = direccionPanel;
+    direccionPanel = 1;
+    if (sinMovimiento() || !cuerpo.animate || !cuerpo.firstElementChild) return;
+
+    const copia = cuerpo.cloneNode(true);
+    // Sin ids repetidos ni campos alcanzables en la copia.
+    copia.removeAttribute('id');
+    copia.querySelectorAll('[id]').forEach((el) => el.removeAttribute('id'));
+    copia.setAttribute('inert', '');
+    copia.setAttribute('aria-hidden', 'true');
+    copia.classList.add('etapa-saliente');
+    Object.assign(copia.style, {
+      top: cuerpo.offsetTop + 'px', left: cuerpo.offsetLeft + 'px',
+      width: cuerpo.offsetWidth + 'px', height: cuerpo.offsetHeight + 'px',
+    });
+    const arriba = cuerpo.scrollTop;
+    cuerpo.parentNode.appendChild(copia);
+    copia.scrollTop = arriba;
+
+    const curva = { duration: 460, easing: 'cubic-bezier(.65,0,.25,1)' };
+    copia.animate([
+      { transform: 'translateX(0)', opacity: 1 },
+      { transform: `translateX(${-dir * 100}%)`, opacity: .2 },
+    ], curva).addEventListener('finish', () => copia.remove());
+
+    cuerpo.scrollTop = 0;
+    requestAnimationFrame(() => cuerpo.animate([
+      { transform: `translateX(${dir * 100}%)` },
+      { transform: 'translateX(0)' },
+    ], { ...curva, duration: 440 }));
+  }
+
+  function ajustarAlto() {
+    const carril = $('ck-carril');
+    const diapo = carril?.querySelectorAll('.ck-diapo')[pasoCheckout];
+    if (diapo) carril.style.height = diapo.offsetHeight + 'px';
+  }
+
+  function mostrarError(texto) {
+    const err = $('error-forma');
+    err.textContent = texto;
+    err.hidden = false;
+    err.scrollIntoView({ block: 'nearest', behavior: sinMovimiento() ? 'auto' : 'smooth' });
+  }
+
+  function irAPaso(n) {
+    pasoCheckout = n;
+    $('error-forma').hidden = true;
+    const diapos = document.querySelectorAll('.ck-diapo');
+    // Solo el paso a la vista recibe foco: tabular a un campo de otro paso
+    // corría el carril a mitad de camino.
+    diapos.forEach((d, i) => d.toggleAttribute('inert', i !== n));
+    $('ck-carril').scrollLeft = 0;
+    $('ck-pista').style.transform = `translateX(${-n * 100}%)`;
+    // La tira abre con el carrito: el paso n del formulario es el punto n + 1.
+    const pasos = document.querySelector('.ck-pasos');
+    pasos.style.setProperty('--paso', n + 1);
+    [...pasos.children].forEach((li, i) => {
+      li.className = i < n + 1 ? 'hecho' : i === n + 1 ? 'actual' : '';
+      li.querySelector('button').disabled = i > n + 1;
+    });
+    $('btn-atras').textContent = n === 0 ? 'Volver' : 'Atrás';
+    $('btn-siguiente').textContent = n === 2 ? 'Confirmar pedido' : 'Siguiente';
+    if (n === 2) pintarRepaso();
+    ajustarAlto();
+    $('cuerpo-carrito').scrollTo({ top: 0, behavior: sinMovimiento() ? 'auto' : 'smooth' });
+  }
+
+  /**
+   * Lo mínimo para no dejar avanzar con un paso vacío. El servidor valida de
+   * verdad (documento, ubigeo, teléfono): esto solo evita llegar al final y
+   * enterarse ahí de que faltaba el nombre.
+   */
+  function revisarPaso(n) {
+    const v = (id) => ($(id)?.value || '').trim();
+    if (n === 0) {
+      const ruc = tipoDoc() === 'RUC';
+      if (v('f-nombre').length < 3) return 'Escribe tu nombre.';
+      if (v('f-doc').length !== (ruc ? 11 : 8)) return ruc ? 'El RUC tiene 11 dígitos.' : 'El DNI tiene 8 dígitos.';
+      if (ruc && v('f-razon').length < 3) return 'Falta la razón social.';
+      if (v('f-tel').replace(/\D/g, '').length < 9) return 'Escribe tu celular de 9 dígitos.';
+      if (ruc && !/\S+@\S+\.\S+/.test(v('f-email'))) return 'Para la factura necesitamos un correo.';
+    }
+    if (n === 1 && modoEntrega() !== 'recojo') {
+      if (!v('f-dep') || !v('f-prov') || !v('f-dist')) return 'Elige departamento, provincia y distrito.';
+      if (v('f-dir').length < 5) return 'Escribe la dirección de entrega.';
+    }
+    return '';
+  }
+
+  /** El último paso repasa lo escrito, para confirmar sin volver atrás a mirar. */
+  function pintarRepaso() {
+    const v = (id) => escapar(($(id)?.value || '').trim());
+    const recojo = modoEntrega() === 'recojo';
+    $('ck-repaso').innerHTML = `
+      <div><span>${tipoDoc() === 'RUC' ? 'Factura' : 'Boleta'}</span>
+        <b>${tipoDoc() === 'RUC' ? v('f-razon') : v('f-nombre')}</b>
+        <small>${tipoDoc()} ${v('f-doc')} · ${v('f-tel')}</small></div>
+      <div><span>Entrega</span>
+        <b>${recojo ? 'Recojo en el local' : `${v('f-dir')}`}</b>
+        <small>${recojo ? escapar(TIENDA.direccion || '') : `${v('f-dist')}, ${v('f-prov')}`}</small></div>`;
+    ajustarAlto();
   }
 
   // ------------------------------------------------------- checkout peruano
@@ -857,7 +1041,49 @@
     // Solo dígitos en el documento: evita el 90 % de los errores de tipeo.
     $('f-doc').oninput = (e) => { e.target.value = e.target.value.replace(/\D/g, ''); };
 
+    restaurarBorrador();
     pintarResumenFinal();
+  }
+
+  // ------------------------------------------- lo escrito en el formulario
+  /**
+   * Los datos del checkout mientras dura la compra. Solo en memoria: al
+   * recargar la página se van, y tras un pedido registrado se borran. En un
+   * teléfono prestado no tienen por qué quedar el DNI y la dirección de nadie.
+   */
+  const CAMPOS_BORRADOR = ['f-nombre', 'f-doc', 'f-razon', 'f-tel', 'f-email',
+    'f-dir', 'f-ref', 'f-nota'];
+  let borrador = null;
+
+  function guardarBorrador() {
+    if (!$('f-nombre')) return;   // no hay formulario a la vista
+    borrador = {
+      doc: tipoDoc(),
+      modo: modoEntrega(),
+      wa: $('f-wa').checked,
+      dep: $('f-dep').value, prov: $('f-prov').value, dist: $('f-dist').value,
+      valores: Object.fromEntries(CAMPOS_BORRADOR.map((id) => [id, $(id).value])),
+    };
+  }
+
+  function restaurarBorrador() {
+    if (!borrador) return;
+    const b = borrador;
+    // El tipo de documento primero: al cambiarlo se vacía el número.
+    if (b.doc !== tipoDoc()) $('tipo-doc').querySelector(`[data-doc="${b.doc}"]`)?.click();
+    if ($('modo-entrega') && b.modo !== modoEntrega()) {
+      $('modo-entrega').querySelector(`[data-modo="${b.modo}"]`)?.click();
+    }
+    for (const [id, valor] of Object.entries(b.valores)) if ($(id)) $(id).value = valor;
+    $('f-wa').checked = b.wa;
+    // El ubigeo se llena en cascada: cada lista existe cuando se eligió la anterior.
+    if (b.dep) {
+      $('f-dep').value = b.dep; $('f-dep').onchange();
+      if (b.prov) {
+        $('f-prov').value = b.prov; $('f-prov').onchange();
+        if (b.dist) { $('f-dist').value = b.dist; cotizarEnvio(); }
+      }
+    }
   }
 
   const tipoDoc = () => $('tipo-doc')?.querySelector('.activo')?.dataset.doc || 'DNI';
@@ -964,9 +1190,13 @@
 
   async function confirmar() {
     const err = $('error-forma');
-    const boton = $('btn-confirmar');
+    const boton = $('btn-siguiente');
+    // Mientras se registra no se retrocede: el error del servidor saldría en
+    // otro paso, o en ninguno si se volvía al carrito.
+    const quietos = [$('btn-atras'), ...document.querySelectorAll('.ck-pasos button')];
     err.hidden = true;
     boton.disabled = true;
+    quietos.forEach((b) => { b.disabled = true; });
     boton.textContent = 'Registrando…';
 
     try {
@@ -1022,12 +1252,19 @@
       refrescarCuenta();
       await cargarCatalogo();
       pintarPanel();
+      borrador = null;   // pedido hecho: sus datos no quedan para el siguiente
     } catch {
       err.textContent = 'Se perdió la conexión con la tienda. Intenta otra vez.';
       err.hidden = false;
     } finally {
-      boton.disabled = false;
-      boton.textContent = 'Confirmar pedido';
+      // Tras el éxito el panel ya se repintó y el botón no existe.
+      if (boton.isConnected) {
+        boton.disabled = false;
+        boton.textContent = 'Confirmar pedido';
+        $('btn-atras').disabled = false;
+        document.querySelectorAll('.ck-pasos button')
+          .forEach((b, i) => { b.disabled = i > pasoCheckout + 1; });
+      }
     }
   }
 

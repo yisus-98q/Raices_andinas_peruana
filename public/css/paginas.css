@@ -63,7 +63,7 @@ body.pagina .cabecera-simple::after {
 body.pagina .cabecera-simple .contenedor { display: flex; align-items: center; gap: 13px; }
 body.pagina .cabecera-simple .marca { min-width: 0; }
 body.pagina .cabecera-simple .marca-sello { width: 58px; height: 58px; }
-body.pagina .cabecera-simple .marca-logotipo { height: 42px; }
+body.pagina .cabecera-simple .marca-nombre { font-size: 25px; }
 body.pagina .cabecera-simple .btn { margin-left: auto; flex: none; }
 
 /* ----------------------------------------------------- fondo con fotografía */
@@ -116,6 +116,28 @@ body.pagina .caja-seguimiento { max-width: 640px; margin: 0 auto; padding-top: 6
 body.pagina .caja-seguimiento .grande { margin: 18px 0 12px; }
 body.pagina .bajada { color: var(--tinta-suave); margin-bottom: 30px; }
 body.pagina .bajada strong { color: var(--tinta); }
+
+/* Seguir mi pedido cabe en una pantalla: la caja va centrada en el alto que
+   deja la barra (la página no lleva pie), y todo se aprieta un poco. Antes, entre el título
+   grande, los márgenes y la línea de tiempo, el pedido obligaba a bajar. */
+body.pagina-pedido main { display: flex; flex-direction: column; justify-content: center; }
+body.pagina.pagina-pedido .caja-seguimiento { width: 100%; padding-top: clamp(14px, 3.5vh, 36px); padding-bottom: clamp(14px, 3.5vh, 36px); }
+body.pagina.pagina-pedido .caja-seguimiento .grande { font-size: clamp(1.75rem, 3.6vw, 2.6rem); margin: 8px 0 8px; }
+body.pagina-pedido .bajada { margin-bottom: 18px; font-size: 14.5px; }
+body.pagina-pedido .con-resultado .kicker { display: none; }
+body.pagina.pagina-pedido .con-resultado .grande { font-size: clamp(1.45rem, 2.8vw, 2rem); margin: 0 0 12px; }
+body.pagina.pagina-pedido .pedido-estado { padding: 16px 22px 18px; }
+body.pagina-pedido .p-cabeza { padding-bottom: 10px; }
+body.pagina-pedido .p-pestanas { margin-top: 8px; }
+body.pagina-pedido .p-pestanas button { min-height: 40px; }
+body.pagina-pedido .p-diapo .p-linea { margin: 12px 0 2px; }
+body.pagina-pedido .p-diapo .p-linea li { padding-bottom: 9px; gap: 13px; }
+body.pagina-pedido .p-diapo .p-linea li strong { font-size: 14px; }
+body.pagina-pedido .p-diapo .p-linea li span { font-size: 12.5px; }
+body.pagina-pedido .p-diapo .p-nota { margin-top: 2px; font-size: 12.5px; }
+body.pagina-pedido .p-diapo .p-confirmar { padding-top: 12px; gap: 10px; }
+body.pagina-pedido .p-diapo .p-datos { padding: 12px 0; gap: 10px; }
+body.pagina-pedido .p-diapo .p-items td { padding: 7px 8px 7px 0; }
 
 /* El error venía en rosa claro, pensado para el tema oscuro: sobre papel no se
    leía. Terracota oscura sobre su tinte. */
@@ -189,7 +211,8 @@ body.pagina .caja-pie { align-items: center; padding-top: 6px; padding-bottom: 6
   body.pagina .contenedor { padding: 0 16px; }
   body.pagina .caja-seguimiento { padding-top: 36px; padding-bottom: 44px; }
   body.pagina .asesor-caja { padding: 22px 18px; border-radius: 18px; }
-  body.pagina .pedido-estado { padding: 20px 16px; }
+  body.pagina .pedido-estado { padding: 14px 14px 16px; }
+  body.pagina-pedido .bajada { font-size: 13.5px; margin-bottom: 14px; }
   /* A menos de 16 px el celular hace zoom al tocar el campo, y la página queda
      corrida hacia un lado. */
   body.pagina .campo input { font-size: 16px; }
@@ -197,7 +220,7 @@ body.pagina .caja-pie { align-items: center; padding-top: 6px; padding-bottom: 6
 
   body.pagina .cabecera-simple { padding: 10px 0; }
   body.pagina .cabecera-simple .marca-sello { width: 44px; height: 44px; }
-  body.pagina .cabecera-simple .marca-logotipo { height: 32px; }
+  body.pagina .cabecera-simple .marca-nombre { font-size: 21px; }
   body.pagina .cabecera-simple .marca-bajada { display: none; }
   body.pagina .cabecera-simple .btn { padding: 10px 14px; font-size: 13px; white-space: nowrap; }
 
