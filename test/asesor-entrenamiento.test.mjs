@@ -193,11 +193,117 @@ describe('La jerga y las erratas no esquivan la derivación', () => {
     });
   }
 
+  test('«tienen insulina natural» deriva: no es un producto de otra tienda', async () => {
+    const r = await responder('tienen insulina natural');
+    assert.equal(r.derivar, true);
+    assert.doesNotMatch(r.mensaje, /No trabajamos/);
+  });
+
   test('corregir erratas nunca convierte una palabra común en un producto', async () => {
     // «cada» estaba a una letra de «caida» y traía productos para el cabello.
     const r = await responder('me despierto a cada rato');
     for (const p of r.recomendaciones) {
       assert.doesNotMatch(plano(p.nombre), /capilar|ungurahui|biotina/, `coló ${p.nombre}`);
     }
+  });
+});
+
+/**
+ * Responder lo que se preguntó, no una respuesta genérica.
+ *
+ * Salieron de recorrer la tienda como cliente: «delivery a san juan de
+ * lurigancho» recibía las tres zonas de Lima, «tienen moringa» recibía «no te
+ * entendí» y «cuántas valerianas les quedan» recibía una lista como si no
+ * hubiera preguntado nada.
+ */
+describe('El envío a ESE destino, con su costo y plazo reales', () => {
+  // Las cifras salen de tienda.config.js vía zonaDe, la misma que cobra el
+  // checkout: si alguien cambia una tarifa, el test lo tiene que notar.
+  const CASOS = [
+    ['hacen delivery a san juan de lurigancho', /San Juan de Lurigancho[\s\S]*S\/ 14\.00[\s\S]*24 a 48 horas/],
+    ['llegan a sjl?', /San Juan de Lurigancho[\s\S]*S\/ 14\.00/],
+    ['delivery a miraflorez', /Miraflores[\s\S]*S\/ 9\.00/],
+    ['mandan a brena?', /Breña[\s\S]*S\/ 6\.00[\s\S]*mismo día/],
+    ['envian a surco', /Santiago de Surco[\s\S]*S\/ 9\.00/],
+    ['hacen delivery al callao', /Callao[\s\S]*S\/ 14\.00/],
+  ];
+  for (const [consulta, esperado] of CASOS) {
+    test(`«${consulta}»`, async () => {
+      const r = await responder(consulta);
+      reglasQueNoSeRompen(r, consulta);
+      assert.equal(r.intencion, 'delivery');
+      assert.match(r.mensaje, esperado);
+      assert.doesNotMatch(r.mensaje, /Lima Centro|Lima Moderna/, 'volvió a listar todas las zonas');
+      assert.match(r.mensaje, /gratis/, 'no dice desde cuánto va gratis');
+    });
+  }
+
+  test('a provincia: agencia y plazo, sin tarifa de Lima', async () => {
+    const r = await responder('envian a arequipa');
+    assert.match(r.mensaje, /Arequipa[\s\S]*agencia/);
+    assert.doesNotMatch(r.mensaje, /S\/ \d/);
+    assert.match(r.mensaje, /\. El flete/, 'la frase de la configuración quedó en minúscula');
+  });
+
+  test('sin destino, las zonas de siempre', async () => {
+    const r = await responder('hacen delivery');
+    assert.match(r.mensaje, /Lima Centro/);
+  });
+});
+
+describe('«¿Hay?» se responde, sin cifra', () => {
+  const CASOS = [
+    ['cuantas valerianas les quedan', /valeriana/],
+    ['hay maca?', /maca/],
+    ['tienen stock de propoleo', /propoleo/],
+    ['todavia tienen uña de gato', /una de gato/],
+  ];
+  for (const [consulta, producto] of CASOS) {
+    test(`«${consulta}» → sí, hay`, async () => {
+      const r = await responder(consulta);
+      reglasQueNoSeRompen(r, consulta);
+      assert.match(r.mensaje, /^Sí, hay/);
+      assert.ok(r.recomendaciones.some((p) => producto.test(plano(p.nombre))), 'no trae la ficha del producto');
+      assert.doesNotMatch(r.mensaje, /\b(quedan|hay|tengo)\s+\d/, 'dio la cantidad');
+    });
+  }
+
+  test('pidió uno por nombre: ese va primero', async () => {
+    const r = await responder('les queda miel de eucalipto?');
+    assert.match(plano(r.recomendaciones[0].nombre), /miel de eucalipto/);
+  });
+
+  test('agotado en todas sus presentaciones → hoy no, y cuándo llega', async () => {
+    const sinBoldo = PRODUCTOS.map((p) => (/boldo/i.test(p.nombre) ? { ...p, stock: 0 } : p));
+    const r = await asesorar('hay boldo?', sinBoldo);
+    reglasQueNoSeRompen(r, 'hay boldo agotado');
+    assert.match(r.mensaje, /^Hoy no tenemos[\s\S]*Boldo[\s\S]*3 a 5 días hábiles/);
+    assert.equal(r.recomendaciones.length, 0, 'recomendó algo agotado');
+  });
+});
+
+describe('Lo que no trabajamos, dicho de frente', () => {
+  for (const [consulta, nombre] of [['tienen moringa', 'moringa'], ['tienen ashwagandha', 'ashwagandha'],
+    ['tienen kombucha', 'kombucha'], ['venden cafe de altura', 'cafe de altura']]) {
+    test(`«${consulta}»`, async () => {
+      const r = await responder(consulta);
+      reglasQueNoSeRompen(r, consulta);
+      assert.match(r.mensaje, new RegExp(`^No trabajamos ${nombre}`));
+      assert.doesNotMatch(r.mensaje, /no te entend/i);
+      assert.equal(r.recomendaciones.length, 0, `ofreció algo que no calza: ${r.recomendaciones.map((p) => p.nombre).join(', ')}`);
+    });
+  }
+
+  test('una errata de algo que SÍ vendemos no se niega', async () => {
+    // «spirulina» sin la e: la tienda tiene Espirulina.
+    const r = await responder('venden spirulina en tabletas');
+    assert.doesNotMatch(r.mensaje, /No trabajamos/);
+    assert.ok(r.recomendaciones.some((p) => /espirulina/.test(plano(p.nombre))));
+  });
+
+  test('un malestar dicho con «quiero» no es un producto ajeno', async () => {
+    const r = await responder('quiero bajar de peso');
+    assert.doesNotMatch(r.mensaje, /No trabajamos/);
+    assert.ok(r.recomendaciones.length);
   });
 });

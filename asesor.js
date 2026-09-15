@@ -12,6 +12,7 @@
 import {
   detectarIntencion, detectarComparacion, responderIntencion,
   responderComparacion, contextoTienda, cotizar, responderCotizacion, RE_CODIGO,
+  distancia,
 } from './intenciones.js';
 import { TIENDA } from './tienda.config.js';
 
@@ -84,6 +85,9 @@ const PRESENTACIONES = new Set([
   'gotas', 'gotero', 'capsulas', 'capsula', 'polvo', 'filtrantes', 'sachets', 'sachet',
   'spray', 'crema', 'jarabe', 'aceite', 'extracto', 'tabletas', 'botella', 'frasco',
   'bolsa', 'hojuelas', 'harina', 'grano', 'semilla', 'caramelos', 'ampollas', 'bebible',
+  // Lo que acompaña a la presentación: «hoja seca», «semilla tostada», «pack de
+  // 3», «tamaño familiar». «piel seca» traía Matico · hoja seca.
+  'seca', 'seco', 'tostada', 'tamano', 'familiar', 'viaje', 'pack', 'grande',
 ]);
 
 /** Las claves de una sola palabra, normalizadas, y las frases de más largas a
@@ -230,6 +234,35 @@ const DERIVAR_PATRONES = [
  * decir cuanto tomar es una posologia, asi que la respuesta lo dice de frente y
  * manda a la indicacion del envase en vez de callarse o, peor, inventar.
  */
+/**
+ * «¿Cuántas valerianas les quedan?», «¿hay maca?», «¿tienen stock de propóleo?».
+ *
+ * La pregunta se responde —sí hay, u hoy no— pero nunca con la cifra: el
+ * inventario es información del negocio. Antes se contestaba con una lista de
+ * productos, como si no hubiera preguntado nada.
+ */
+const PREGUNTA_STOCK = /\b(cuant[oa]s?(\s+\w+){0,3}\s+(quedan?|tienen|tienes|hay)|hay\s+stock|tienen\s+stock|tienes\s+stock|stock\s+de|(te|les)\s+quedan?|todavia\s+(tienen|tienes|hay|queda)|esta\s+disponible|estan\s+disponibles|tienen\s+disponible)\b|^(hay|tienen|tienes|tendran|tendras|quedan?)\s/;
+
+/**
+ * «Tienen moringa»: el cliente nombró algo concreto. Si no está en el
+ * catálogo se le dice de frente, en vez de un «no te entendí» que le hace
+ * pensar que escribió mal. Solo con verbo de pedido: una palabra suelta que no
+ * se reconoce sigue siendo «¿qué estás buscando?».
+ */
+const PIDE_PRODUCTO = /^(tienen|tienes|tiene|tendran|tendras|hay|venden|vendes|manejan|busco|quiero|necesito|me vendes|consigo)\s+(.+)$/;
+const NO_ES_PRODUCTO = /^(algo|nada|cosas?|productos?|stock|precio|descuento|delivery|envio|local|tienda|whatsapp|yape|factura|boleta|oferta|promocion|tiempo|ganas|dolor|problemas?)\b/;
+
+function productoPedido(texto) {
+  const m = texto.match(PIDE_PRODUCTO);
+  if (!m) return null;
+  const frase = m[2]
+    .replace(/^(stock\s+de\s+|de\s+|el\s+|la\s+|los\s+|las\s+|un\s+|una\s+|unos\s+|unas\s+)+/, '')
+    .split(/\s+(para|que|pero|porque|por favor|ahora|hoy|todavia)\b/)[0]
+    .split(' ').slice(0, 3).join(' ').trim();
+  if (frase.length < 3 || NO_ES_PRODUCTO.test(frase)) return null;
+  return frase;
+}
+
 const PIDE_DOSIS = new RegExp([
   '\\b(dosis|posologia)\\b',
   '\\bcada\\s+cuanto\\b',
@@ -337,23 +370,6 @@ const DERIVAR_LARGAS = [
   'quimioterapia', 'anticonceptivo', 'antidepresivo', 'medicamento', 'medicamentos',
 ];
 
-/** Distancia de edición, cortando apenas pasa el máximo. */
-function distancia(a, b, max) {
-  if (Math.abs(a.length - b.length) > max) return max + 1;
-  let previa = Array.from({ length: b.length + 1 }, (_, i) => i);
-  for (let i = 1; i <= a.length; i++) {
-    const fila = [i];
-    let minimo = i;
-    for (let j = 1; j <= b.length; j++) {
-      fila[j] = Math.min(previa[j] + 1, fila[j - 1] + 1, previa[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
-      if (fila[j] < minimo) minimo = fila[j];
-    }
-    if (minimo > max) return max + 1;
-    previa = fila;
-  }
-  return previa[b.length];
-}
-
 const derivaPorErrata = (texto) => texto.split(' ').some((w) => w.length >= 6
   && DERIVAR_LARGAS.some((t) => t[0] === w[0] && distancia(w, t, t.length >= 10 ? 2 : 1) <= (t.length >= 10 ? 2 : 1)));
 
@@ -405,14 +421,21 @@ export function corregirErratas(consulta, productos) {
     // Una palabra que el asesor ya entiende no es una errata: «reseca» se
     // «corregía» a «resaca» y la piel seca recibía boldo.
     if (CLAVES_SINONIMOS.some((k) => w.startsWith(k) || k.startsWith(w))) return w;
+    // La «e» de adelante que se come el oído: «spirulina», «sencia». Sin esto
+    // el asesor respondía «no trabajamos spirulina» teniendo Espirulina: decir
+    // que no se vende algo que sí se vende es peor que no entender.
+    if (/^s[bcdfgklmnpqrtv]/.test(w) && vocab.has('e' + w)) return 'e' + w;
+    const variantes = /^s[bcdfgklmnpqrtv]/.test(w) ? [w, 'e' + w] : [w];
     const max = w.length >= 8 ? 2 : 1;
     let mejor = null;
     let mejorD = max + 1;
     let empate = false;
     for (const c of vocab) {
-      if (c[0] !== w[0]) continue;
-      const d = distancia(w, c, max);
-      if (d < mejorD) { mejor = c; mejorD = d; empate = false; } else if (d === mejorD) empate = true;
+      for (const v of variantes) {
+        if (c[0] !== v[0]) continue;
+        const d = distancia(v, c, max);
+        if (d < mejorD) { mejor = c; mejorD = d; empate = false; } else if (d === mejorD && c !== mejor) empate = true;
+      }
     }
     return mejor && mejorD <= max && !empate ? mejor : w;
   });
@@ -549,7 +572,18 @@ export function motorReglas(consulta, productos) {
   // criterio se apaga solo.
   const relleno = (p) => (p.demo ? 1 : 0);
 
-  puntuados.sort((a, b) => relleno(a.prod) - relleno(b.prod)
+  // Lo que se pidió por nombre va primero, y entero. «les queda miel de
+  // eucalipto?» abría con la Multifloral —curada, así que ganaba al relleno—
+  // cuando la que tiene las dos palabras es la Miel de Eucalipto. Solo cuentan
+  // las palabras que son nombre de algún producto: en «no puedo dormir» no hay
+  // ninguna y el orden queda como estaba.
+  const palabrasDeNombre = palabras.filter((w) => !PRESENTACIONES.has(w)
+    && productos.some((p) => nombreTiene(normalizar(p.nombre).split(' '), w)));
+  const completo = (p) => (palabrasDeNombre.length
+    && palabrasDeNombre.every((w) => nombreTiene(normalizar(p.nombre).split(' '), w)) ? 1 : 0);
+
+  puntuados.sort((a, b) => completo(b.prod) - completo(a.prod)
+    || relleno(a.prod) - relleno(b.prod)
     || b.puntos - a.puntos
     || grado(a.prod) - grado(b.prod)
     || b.prod.stock - a.prod.stock);
@@ -664,8 +698,9 @@ const AVISO_DOSIS =
   'fabricante. Si tomas alguna medicación o tienes una condición de salud, ' +
   'consúltalo antes con un profesional.';
 
-function respuestaPlantilla(top, derivar, agotados, noTrabajamos, esClasicos, pideDosis = false) {
+function respuestaPlantilla(top, derivar, agotados, noTrabajamos, esClasicos, pideDosis = false, extra = {}) {
   void esClasicos;
+  const { pideStock = false, pedido = null, agotadoPedido = null } = extra;
   if (derivar) {
     // No termina en «anda al medico». Termina ofreciendo lo unico que la
     // competencia no puede copiar: que la atienda ella, en persona. El limite
@@ -682,6 +717,16 @@ function respuestaPlantilla(top, derivar, agotados, noTrabajamos, esClasicos, pi
       'Lo nuestro son plantas, mieles y superalimentos del Perú. ' +
       '¿Qué es lo que buscas? Capaz tengo algo que te sirva.';
   }
+  // Lo pidió por nombre y no hay ninguna presentación con stock: hoy no, y
+  // cuándo llega. Sin cifra, igual que cuando sí hay.
+  if (!top.length && agotadoPedido) {
+    return `Hoy no tenemos ${agotadoPedido}; nos llega en ${PLAZO_REPOSICION}. ` +
+      '¿Te aviso apenas llegue?';
+  }
+  // Nombró algo concreto que la tienda no trabaja: decirlo de frente.
+  if (!top.length && pedido) {
+    return `No trabajamos ${pedido}. Si me cuentas para qué lo buscas, te digo si tengo algo que te sirva.`;
+  }
   // Sin nada que calce, una pregunta y no una lista. Antes salían tres
   // productos fijos «de lo que más sale»: empujar maca a quien preguntó otra
   // cosa no es orientar, y el cliente ya no vuelve a escribir.
@@ -694,6 +739,13 @@ function respuestaPlantilla(top, derivar, agotados, noTrabajamos, esClasicos, pi
   const nota = agotados.length
     ? `\n\n${agotados.join(' ni ')}: ahorita no lo tengo, te aviso apenas llegue.`
     : '';
+  // Preguntó si hay: primero la respuesta, después las fichas. La cantidad no.
+  if (pideStock && top[0].porNombre) {
+    return `Sí, hay. Esto es lo que tengo:\n\n${listar(top)}${nota}\n\n` +
+      'La cantidad exacta no la manejo por aquí: dime cuántas necesitas y te confirmo si te las entrego todas de una vez. ' +
+      '¿Lo recoges en el puesto o te lo mandamos?' +
+      '\n\nSon productos naturales, no reemplazan un tratamiento médico.';
+  }
   // La pregunta de cierre depende de lo que ya se sabe. Si nombró el producto,
   // lo que falta es cómo se lo lleva; si contó un malestar, para quién es —
   // que es justo lo que deja ver si hay un niño o alguien con tratamiento.
@@ -808,7 +860,27 @@ export async function asesorar(consultaOriginal, productos, buscarPedido = null)
   const clave = Object.keys(NO_TRABAJAMOS).find((k) => texto.includes(normalizar(k)));
   const noTrabajamos = derivar ? null : (clave ? NO_TRABAJAMOS[clave] : null);
 
-  const top = (derivar || noTrabajamos) ? [] : motorReglas(corregida, productos);
+  // «venden café de altura» traía muña, porque «altura» es etiqueta del
+  // soroche. Si nombró algo y NINGUNA de sus palabras es nombre de un producto
+  // del catálogo —con stock o sin él—, no se busca por etiquetas: no lo
+  // trabajamos, y se dice.
+  const pedidoAjeno = (() => {
+    if (derivar || noTrabajamos) return false;
+    const frase = productoPedido(normalizar(corregida));
+    if (!frase) return false;
+    // «quiero bajar de peso», «necesito dormir mejor»: un verbo o un malestar
+    // que el asesor ya reconoce no es el nombre de un producto de otra tienda.
+    if (/^\w+(ar|er|ir)\b/.test(frase)) return false;
+    // El malestar se busca FUERA de lo que nombró: en «café de altura», «altura»
+    // es parte del nombre pedido, no un soroche.
+    const fuera = ` ${normalizar(corregida).replace(frase, ' ')} `;
+    if (FRASES_SINONIMOS.some(([f]) => fuera.includes(` ${normalizar(f)}`))) return false;
+    const significativas = frase.split(' ').filter((w) => w.length > 3 && !PRESENTACIONES.has(w) && !PALABRAS_VACIAS.has(w));
+    return significativas.length > 0 && !significativas.some((w) =>
+      productos.some((p) => nombreTiene(normalizar(p.nombre).split(' '), w)));
+  })();
+
+  const top = (derivar || noTrabajamos || pedidoAjeno) ? [] : motorReglas(corregida, productos);
   const agotados = (derivar || noTrabajamos) ? [] : agotadosRelevantes(corregida, productos);
 
   // Sin señal alguna ya no se ofrecen «los clásicos»: la plantilla pregunta
@@ -816,14 +888,27 @@ export async function asesorar(consultaOriginal, productos, buscarPedido = null)
   // no romper a quien la lea.
   const esClasicos = false;
 
+  // Lo que pidió por nombre, para las dos respuestas nuevas: «hoy no» si solo
+  // hay presentaciones agotadas, y «no trabajamos X» si no está en el catálogo.
+  const pideStock = !derivar && !noTrabajamos && PREGUNTA_STOCK.test(texto);
+  const pedido = (derivar || noTrabajamos || top.length) ? null : productoPedido(normalizar(corregida));
+  let agotadoPedido = null;
+  if (pedido) {
+    const palabras = pedido.split(' ').filter((w) => w.length > 3 && !PRESENTACIONES.has(w));
+    const sinStock = productos.find((p) => p.stock <= 0
+      && palabras.length && palabras.every((w) => nombreTiene(normalizar(p.nombre).split(' '), w)));
+    if (sinStock) agotadoPedido = sinStock.nombre;
+  }
+
   const base = {
     recomendaciones: top.map((t) => fichaProducto(t.prod, t.razones)),
     agotados,
     derivar,
-    no_trabajamos: noTrabajamos,
+    no_trabajamos: noTrabajamos || (pedido && !agotadoPedido ? pedido : null),
     sugerencia_general: esClasicos,
     fuente: 'reglas',
-    mensaje: respuestaPlantilla(top, derivar, agotados, noTrabajamos, esClasicos, pideDosis),
+    mensaje: respuestaPlantilla(top, derivar, agotados, noTrabajamos, esClasicos, pideDosis,
+      { pideStock, pedido, agotadoPedido }),
   };
 
   const redactado = await redactarConClaude(consultaOriginal, top, derivar, agotados, noTrabajamos, esClasicos,

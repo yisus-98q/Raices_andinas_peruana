@@ -10,7 +10,116 @@
  * negocio (delivery, horario, pago, regateo, reclamo, devolucion, comparacion),
  * responde con los datos reales de tienda.config.js y corta ahi.
  */
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { TIENDA, estaAbierto, escalonPara } from './tienda.config.js';
+// La zona, el costo y el plazo salen de la misma lógica que usa /api/envio y
+// el checkout: el asesor no puede cotizar un envío distinto del que se cobra.
+import { validarUbigeo, zonaDe } from './ubigeo.js';
+
+/** Distancia de edición, cortando apenas pasa el máximo. La usa también asesor.js. */
+export function distancia(a, b, max) {
+  if (Math.abs(a.length - b.length) > max) return max + 1;
+  let previa = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    const fila = [i];
+    let minimo = i;
+    for (let j = 1; j <= b.length; j++) {
+      fila[j] = Math.min(previa[j] + 1, fila[j - 1] + 1, previa[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+      if (fila[j] < minimo) minimo = fila[j];
+    }
+    if (minimo > max) return max + 1;
+    previa = fila;
+  }
+  return previa[b.length];
+}
+
+// ------------------------------------------------------------- destinos
+/**
+ * A dónde quiere que le llegue, dicho en una frase libre.
+ *
+ * «hacen delivery a san juan de lurigancho» recibía las tres zonas de Lima
+ * enteras, cuando el sistema ya sabe que ahí son S/ 14 en 24 a 48 horas. Aquí
+ * solo se ENCUENTRA el destino en el texto; cuánto cuesta lo decide `zonaDe`,
+ * la misma que cobra el checkout.
+ *
+ * Lima Metropolitana y Callao van primero y por distrito, con la tolerancia a
+ * erratas de quien escribe apurado. El resto del país, por provincia o
+ * departamento y sin tolerancia: «canas» o «santa» son provincias, y también
+ * palabras.
+ */
+const RAIZ_I = dirname(fileURLToPath(import.meta.url));
+const UBIGEO = JSON.parse(readFileSync(join(RAIZ_I, 'public', 'ubigeo.json'), 'utf8'));
+const claveLugar = (t) => String(t).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+  .replace(/[^a-z\s]/g, ' ').replace(/\s+/g, ' ').trim();
+
+const DESTINOS_LIMA = [];
+for (const [, [dep, provincias]] of Object.entries(UBIGEO)) {
+  for (const [prov, distritos] of provincias) {
+    const esLima = claveLugar(dep) === 'lima' && claveLugar(prov) === 'lima';
+    const esCallao = claveLugar(dep) === 'callao';
+    if (!esLima && !esCallao) continue;
+    for (const distrito of distritos) {
+      DESTINOS_LIMA.push({ clave: claveLugar(distrito), departamento: dep, provincia: esCallao ? 'Callao' : prov, distrito });
+    }
+  }
+}
+DESTINOS_LIMA.sort((a, b) => b.clave.length - a.clave.length);
+
+// Como se dicen en Lima, no como los escribe el INEI.
+const ALIAS_LIMA = {
+  sjl: 'san juan de lurigancho', sjm: 'san juan de miraflores', smp: 'san martin de porres',
+  vmt: 'villa maria del triunfo', ves: 'villa el salvador', surco: 'santiago de surco',
+  magdalena: 'magdalena del mar', cercado: 'lima', 'cercado de lima': 'lima', 'la molina': 'la molina',
+};
+
+const NO_SON_LUGAR = new Set(['canas', 'santa', 'sucre', 'grau', 'la mar', 'bolivar', 'la union', 'anta',
+  'moho', 'lamas', 'lampa', 'palpa', 'manu', 'luya', 'aija', 'ambo', 'lima', 'callao', 'prov const del callao']);
+const DESTINOS_PROVINCIA = [];
+for (const [, [dep, provincias]] of Object.entries(UBIGEO)) {
+  const ponerSi = (nombre) => {
+    const c = claveLugar(nombre);
+    if (!NO_SON_LUGAR.has(c) && !DESTINOS_PROVINCIA.some((d) => d.clave === c)) DESTINOS_PROVINCIA.push({ clave: c, nombre });
+  };
+  ponerSi(dep);
+  for (const [prov] of provincias) ponerSi(prov);
+}
+DESTINOS_PROVINCIA.sort((a, b) => b.clave.length - a.clave.length);
+
+export function buscarDestino(textoNormalizado) {
+  let t = ` ${textoNormalizado} `;
+  for (const [alias, real] of Object.entries(ALIAS_LIMA)) t = t.replace(` ${alias} `, ` ${real} `);
+
+  const exacto = DESTINOS_LIMA.find((d) => t.includes(` ${d.clave} `));
+  let lima = exacto;
+  if (!lima) {
+    // Erratas: «lurigancio», «miraflorez». Solo nombres largos, ventana de
+    // tantas palabras como tiene el nombre.
+    const palabras = t.trim().split(' ');
+    lima = DESTINOS_LIMA.find((d) => {
+      if (d.clave.length < 6) return false;
+      const n = d.clave.split(' ').length;
+      const max = d.clave.length >= 12 ? 2 : 1;
+      for (let i = 0; i + n <= palabras.length; i++) {
+        const trozo = palabras.slice(i, i + n).join(' ');
+        if (trozo[0] === d.clave[0] && distancia(trozo, d.clave, max) <= max) return true;
+      }
+      return false;
+    });
+  }
+  if (lima) {
+    const ubi = validarUbigeo({ departamento: lima.departamento, provincia: lima.provincia, distrito: lima.distrito });
+    if (ubi.ok) return { tipo: 'lima', distrito: ubi.valor.distrito, zona: zonaDe(ubi.valor) };
+  }
+
+  const prov = DESTINOS_PROVINCIA.find((d) => t.includes(` ${d.clave} `))
+    || PROVINCIAS.filter((c) => c !== 'provincia').map((c) => ({ clave: c, nombre: c.charAt(0).toUpperCase() + c.slice(1) }))
+      .find((d) => t.includes(` ${d.clave} `));
+  if (prov) return { tipo: 'provincia', nombre: prov.nombre };
+  if (/\bprovincias?\b/.test(t)) return { tipo: 'provincia', nombre: null };
+  return null;
+}
 
 /** Formato peruano: separador de miles, dos decimales, a prueba de NaN. */
 const soles = (n) => {
@@ -82,7 +191,7 @@ const INTENCIONES = [
   },
   {
     nombre: 'delivery',
-    patron: /\b(delivery|reparto|envio|env[ií]an|mandan|llevan a|reparten|cuanto demora|en cuanto llega|llega (hoy |manana )?a|me lo traen|hacen entrega|a domicilio|recojo|recoger|envios?)\b/,
+    patron: /\b(delivery|reparto|envio|env[ií]an|mandan|llevan a|reparten|cuanto demora|en cuanto llega|llegan? (hoy |manana )?a|me lo traen|hacen entrega|a domicilio|recojo|recoger|envios?)\b/,
   },
   {
     nombre: 'horario',
@@ -216,22 +325,37 @@ export function cotizar(consultaCruda, productos) {
 }
 
 // ------------------------------------------------------------------ respuestas
+// Los textos de tienda.config.js vienen en minúscula porque se escriben para ir
+// a mitad de frase; cuando abren una oración, la primera letra va arriba.
+const mayuscula = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
+
 const listaZonas = () => TIENDA.delivery.zonas
   .map((z) => `${z.nombre}: ${soles(z.costo)}, ${z.horas}`)
   .join('. ');
 
 const RESPUESTAS = {
   delivery: ({ texto = '' }) => {
-    // Si el destino es fuera de Lima, cotizarle tarifas de Lima es mentirle.
-    const prov = PROVINCIAS.find((c) => texto.includes(c));
-    if (prov) {
+    const destino = buscarDestino(texto);
+    const recojo = TIENDA.delivery.recojoEnTienda ? ` o pasas por el puesto sin costo` : '';
+
+    // Un distrito de Lima o del Callao: su zona, con su costo y su plazo.
+    if (destino?.tipo === 'lima') {
+      const z = destino.zona;
+      const gratis = TIENDA.delivery.gratisDesde;
+      return `A ${destino.distrito} sí llegamos: ${soles(z.costo)}, ${z.horas}. ` +
+        (gratis > 0 ? `Si tu pedido pasa de ${soles(gratis)}, el envío va gratis. ` : '') +
+        `¿Te lo mandamos${recojo}?`;
+    }
+
+    // Fuera de Lima, cotizarle tarifas de Lima es mentirle.
+    if (destino?.tipo === 'provincia') {
       const pr = TIENDA.delivery.provincias;
       if (!pr.habilitado) {
         return 'Por ahora solo repartimos dentro de Lima; a provincias todavía no llegamos.';
       }
-      return `A provincia sí enviamos, por agencia (${pr.agencias.join(' o ')}), ` +
-        `en ${pr.plazo}. ${pr.quienPaga}, así que el costo depende del peso y de tu ciudad. ` +
-        `${pr.nota}. Escríbenos al ${TIENDA.whatsapp} con tu pedido y te lo despachamos.`;
+      return `${destino.nombre ? `A ${destino.nombre} s` : 'A provincia s'}í enviamos, por agencia ` +
+        `(${pr.agencias.join(' o ')}), en ${pr.plazo}. ${mayuscula(pr.quienPaga)}, así que el costo depende ` +
+        `del peso y de tu ciudad. ${mayuscula(pr.nota)}. Escríbenos al ${TIENDA.whatsapp} con tu pedido y te lo despachamos.`;
     }
     return `Sí hacemos delivery. ${listaZonas()}. ` +
       `Desde ${soles(TIENDA.delivery.gratisDesde)} el envío va gratis` +
