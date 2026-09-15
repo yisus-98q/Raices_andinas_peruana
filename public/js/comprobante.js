@@ -115,9 +115,11 @@
       <section class="doc-cierre">
         <div class="doc-letras">
           <div class="doc-son">${esc(c.totales.enLetras)}</div>
+          <!-- Solo la imagen: la cadena del QR (RUC|tipo|serie|…) impresa como
+               texto no le dice nada a quien recibe la boleta. El dato va
+               dentro del QR y en el XML. -->
           <div class="doc-qr">
             <div class="qr-caja" id="qr"></div>
-            <code>${esc(c.qr)}</code>
           </div>
         </div>
         <div class="doc-totales">

@@ -67,9 +67,6 @@
   }
   .qr-caja span { font-size: 15px; font-weight: 800; letter-spacing: .1em; }
   .qr-caja small { font-size: 8.5px; line-height: 1.2; padding: 0 4px; }
-  .doc-qr code {
-    font-size: 9.5px; color: #6b6459; word-break: break-all; line-height: 1.45;
-  }
 
   .doc-totales { min-width: 245px; font-size: 13px; }
   .doc-totales div { display: flex; justify-content: space-between; gap: 20px; padding: 5px 0; }
@@ -93,10 +90,36 @@
   .doc-estado.rechazado { background: #fbe6e0; color: #8e3520; }
   .doc-error { padding: 40px; text-align: center; color: #8e3520; }
 
+  /* Impreso: A4 con márgenes de oficina, una sola familia —la del panel— y
+     tamaños en puntos, que es como se miden en papel. En pantalla iba en px
+     pensados para el monitor: al imprimir, el cuerpo quedaba chico y el número
+     de serie gritaba. El número va en monoespaciada para que se lea dígito por
+     dígito, que es como lo dicta quien lo pide por teléfono. */
+  @page { size: A4; margin: 14mm 12mm; }
   @media print {
     body { background: #fff; padding: 0; }
     .acciones-doc { display: none; }
-    .hoja { max-width: none; border-radius: 0; padding: 0; }
+    .hoja {
+      max-width: none; border-radius: 0; padding: 0; color: #000;
+      font-family: "Segoe UI", system-ui, sans-serif; font-size: 11pt; line-height: 1.4;
+      -webkit-print-color-adjust: exact; print-color-adjust: exact;
+    }
+    .doc-emisor strong { font-size: 13pt; }
+    .doc-emisor span { font-size: 10pt; }
+    .doc-ruc { font-size: 11pt; }
+    .doc-tipo { font-size: 10pt; }
+    .doc-serie { font-family: Consolas, "Courier New", monospace; font-size: 14pt; letter-spacing: 0; }
+    .doc-cliente, .doc-tabla, .doc-son { font-size: 11pt; }
+    .doc-tabla th, .doc-tabla small { font-size: 9pt; }
+    .doc-tabla .d, .doc-totales b { font-variant-numeric: tabular-nums; }
+    .doc-totales { font-size: 11pt; }
+    .doc-total { font-size: 13pt; }
+    .doc-pie { font-size: 9pt; }
+    .doc-estado { font-size: 8.5pt; }
+    /* Sin cortes: la cabecera de la tabla se repite si pasa de hoja, y ni una
+       fila, ni el recuadro del número, ni los totales se parten en dos. */
+    .doc-tabla thead { display: table-header-group; }
+    .doc-cabeza, .doc-cliente, .doc-tabla tr, .doc-cierre, .doc-pie { break-inside: avoid; }
   }
 </style>
 </head>

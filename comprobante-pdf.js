@@ -14,7 +14,8 @@
  * recalcula ni se redondea nada: si el papel dijera un total distinto del XML,
  * el comprobante seria observable.
  */
-import { nuevoPdf, anchoDe, A4 } from './pdf.js';
+import QR from 'qrcode';
+import { nuevoPdf, A4 } from './pdf.js';
 import { TIENDA } from './tienda.config.js';
 
 const TINTA = [26, 24, 21];
@@ -181,16 +182,34 @@ export function pdfDeComprobante(c) {
   doc.texto(ESTADO[c.estado] || c.estado, DERECHA, y - 12,
     { tam: 8.5, alinear: 'der', fuente: 'negrita', color: OCRE });
 
-  // El QR grafico necesitaria una libreria; el contenido exacto que exige
-  // SUNAT sí va, para que nada se pierda entre el XML y el papel.
-  y += 34;
-  doc.texto('CÓDIGO QR', M, y, { tam: 7, color: SUAVE, espaciado: 0.6 });
-  y += 11;
+  // El QR que exige SUNAT, dibujado con rectángulos a la derecha del texto
+  // legal. Antes aquí iba la cadena del QR como texto
+  // («20512345671|03|B001|…»): no le dice nada a quien recibe la boleta y el
+  // dato ya va dentro del QR y en el XML. Se usa `qrcode`, la dependencia que
+  // ya dibuja el QR de la página, con la misma corrección de errores: los dos
+  // códigos son idénticos. Una fila de módulos negros seguidos es un solo
+  // rectángulo, y cada uno se estira una fracción para que no queden rayas
+  // blancas entre filas en algunos visores.
   const qr = String(c.qr || '');
-  const trozo = Math.max(1, Math.floor(qr.length / Math.ceil(anchoDe(qr, 7) / ANCHO)));
-  for (let i = 0; i < qr.length; i += trozo) {
-    doc.texto(qr.slice(i, i + trozo), M, y, { tam: 7, color: SUAVE });
-    y += 9;
+  if (qr) {
+    const matriz = QR.create(qr, { errorCorrectionLevel: 'M' }).modules;
+    const lado = 84;
+    const bordeQr = 1;                      // un módulo de margen blanco
+    const paso = lado / (matriz.size + bordeQr * 2);
+    const x0 = DERECHA - lado;
+    const y0 = y + 4;
+    doc.rect(x0, y0, lado, lado, { relleno: [255, 255, 255] });
+    for (let fila = 0; fila < matriz.size; fila++) {
+      let col = 0;
+      while (col < matriz.size) {
+        if (!matriz.get(fila, col)) { col++; continue; }
+        let fin = col;
+        while (fin < matriz.size && matriz.get(fila, fin)) fin++;
+        doc.rect(x0 + (col + bordeQr) * paso, y0 + (fila + bordeQr) * paso,
+          (fin - col) * paso + 0.05, paso + 0.05, { relleno: TINTA });
+        col = fin;
+      }
+    }
   }
 
   doc.texto(`${TIENDA.nombre} · ${TIENDA.sitio}`, DERECHA, A4.alto - 34,
