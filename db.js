@@ -191,6 +191,11 @@ if (!columnas.includes('demo')) {
   db.exec("UPDATE productos SET demo = 1 WHERE imagen LIKE '/img/gen/%'");
   console.log('[db] columna `demo` agregada a productos');
 }
+// La semilla traía «Una de Gato» y «Muna» sin ñ. Se corrige en las bases ya
+// sembradas, solo si el nombre sigue siendo el de la semilla: si la dueña lo
+// cambió a mano, manda lo suyo.
+db.exec(`UPDATE productos SET nombre = 'Uña de Gato' WHERE sku = 'UNG-001' AND nombre = 'Una de Gato';
+         UPDATE productos SET nombre = 'Muña' WHERE sku = 'MUN-001' AND nombre = 'Muna';`);
 /**
  * Venta a granel.
  *
@@ -361,7 +366,7 @@ const SEED = [
     'Maca precocida: se digiere mas facil que la cruda, ideal para estomagos sensibles.',
     'Preparacion tradicional hervida antes de moler, para quitarle la pesadez.',
     'energia,digestion,fatiga,estomago', 34.50, 19.00, 18, 8, '🥣'],
-  ['UNG-001', 'Una de Gato', 'Suplementos', 'Tarapoto, San Martin', '60 capsulas 500 mg',
+  ['UNG-001', 'Uña de Gato', 'Suplementos', 'Tarapoto, San Martin', '60 capsulas 500 mg',
     'Corteza amazonica recolectada bajo manejo sostenible, sin talar el arbol.',
     'Corteza de uso ancestral entre los asháninka.',
     'articulaciones,dolor,rodilla,inflamacion,defensas,huesos', 24.00, 13.00, 7, 10, '🐾'],
@@ -381,7 +386,7 @@ const SEED = [
     'Hierba amarga de altura, cosechada en floracion.',
     'Hierba amarga de larga tradición en la sierra central.',
     'grasa,adelgazar,peso', 10.00, 4.50, 28, 10, '🌿'],
-  ['MUN-001', 'Muna', 'Infusiones', 'Cusco', 'Bolsa 60 g hierba seca',
+  ['MUN-001', 'Muña','Infusiones', 'Cusco', 'Bolsa 60 g hierba seca',
     'Menta andina de aroma intenso, secada al aire libre.',
     'Infusión clásica de la sierra, para después de comer y en la altura.',
     'digestion,estomago,acidez,gases,soroche,altura,nauseas,colicos', 9.00, 4.00, 40, 12, '🍃'],

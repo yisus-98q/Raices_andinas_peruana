@@ -284,9 +284,21 @@ export function cotizar(consultaCruda, productos) {
   // Con el catalogo grande la misma raiz aparece en varias presentaciones
   // ("Maca Negra en polvo", "en capsulas", "gelatinizada") y todas empatan a
   // dos palabras. El desempate no puede ser el orden de la consulta: primero
-  // el envase que pidio, despues lo que se le puede despachar hoy (mas stock)
-  // y a igual stock lo mas barato. Queda determinista.
+  // el envase que pidio, despues lo del negocio antes que el relleno de
+  // demostracion, despues lo que se le puede despachar hoy (mas stock) y a
+  // igual stock lo mas barato. Queda determinista.
+  //
+  // Lo del negocio va antes que el stock por lo mismo que en el motor de
+  // recomendaciones: \u00ab30 frascos de miel\u00bb empataba en \u00abmiel\u00bb entre la
+  // Multifloral \u2014la miel de la tienda\u2014 y la Miel con Prop\u00f3leo del relleno, y
+  // ganaba la del relleno solo por tener m\u00e1s unidades. Quien pide \u00abmiel\u00bb sin
+  // m\u00e1s pide la miel, no una mezcla.
   const encaja = (p) => (envase && envase.test(p.presentacion.toLowerCase()) ? 1 : 0);
+  const delNegocio = (p) => (p.demo ? 0 : 1);
+  const gana = (p, q) => encaja(p) - encaja(q)
+    || delNegocio(p) - delNegocio(q)
+    || p.stock - q.stock
+    || q.precio - p.precio;
 
   let mejor = null;
   let mejorPuntos = 0;
@@ -296,12 +308,7 @@ export function cotizar(consultaCruda, productos) {
       .split(/[^a-z]+/).filter((w) => w.length > 3);
     const aciertos = palabras.filter((w) => texto.includes(w)).length;
     if (aciertos === 0) continue;
-    if (!mejor || aciertos > mejorPuntos
-      || (aciertos === mejorPuntos
-        && (encaja(p) > encaja(mejor)
-          || (encaja(p) === encaja(mejor)
-            && (p.stock > mejor.stock
-              || (p.stock === mejor.stock && p.precio < mejor.precio)))))) {
+    if (!mejor || aciertos > mejorPuntos || (aciertos === mejorPuntos && gana(p, mejor) > 0)) {
       mejorPuntos = aciertos;
       mejor = p;
     }

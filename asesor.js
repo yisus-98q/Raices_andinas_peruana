@@ -272,6 +272,25 @@ const PIDE_DOSIS = new RegExp([
   '\\b(tomo|tomar)\\b(\\s+\\w+){0,3}\\s+(al|por)\\s+dia\\b',
 ].join('|'));
 
+/**
+ * «¿Cuánta muña tomo al día?» traía la Esencia de Muña para difusor: tiene la
+ * palabra del nombre y la etiqueta de digestión. A quien pregunta qué tomar no
+ * se le ofrece algo que no se toma. Cuenta como uso externo lo de las
+ * categorías de esencias, cremas y cuidado personal, y los aceites que no son
+ * de cocina (la copaiba se frota; el de sacha inchi va a la ensalada).
+ */
+const QUIERE_TOMAR = /\b(tomo|tomar|tomas|toma|tomarlo|tomarla|tomando|bebo|beber|tomarse|ingerir|consumir|consumo|infusion|infusiones|mate|matecito|agua de tiempo)\b/;
+const NOMBRA_USO_EXTERNO = /\b(esencias?|difusor|cremas?|jabon|shampoo|champu|balsamo|gel|roll on|aromaterapia|masajes?|frotar|untar|aplicar|pomada)\b/;
+const CATEGORIAS_EXTERNAS = new Set(['esencias', 'cremas', 'cuidado personal']);
+const NOMBRE_EXTERNO = /\b(esencia|difusor|roll on|aceite esencial|crema|jabon|shampoo|balsamo|gel|madera)\b/;
+
+function esDeUsoExterno(p) {
+  const categoria = normalizar(p.categoria || '');
+  if (CATEGORIAS_EXTERNAS.has(categoria)) return true;
+  if (NOMBRE_EXTERNO.test(normalizar(p.nombre))) return true;
+  return categoria === 'aceites' && !normalizar(p.etiquetas || '').split(' ').includes('cocina');
+}
+
 const normalizar = (t) =>
   t.toLowerCase()
     .normalize('NFD')
@@ -700,7 +719,7 @@ const AVISO_DOSIS =
 
 function respuestaPlantilla(top, derivar, agotados, noTrabajamos, esClasicos, pideDosis = false, extra = {}) {
   void esClasicos;
-  const { pideStock = false, pedido = null, agotadoPedido = null } = extra;
+  const { pideStock = false, pedido = null, agotadoPedido = null, usoExterno = [] } = extra;
   if (derivar) {
     // No termina en «anda al medico». Termina ofreciendo lo unico que la
     // competencia no puede copiar: que la atienda ella, en persona. El limite
@@ -736,9 +755,15 @@ function respuestaPlantilla(top, derivar, agotados, noTrabajamos, esClasicos, pi
       `Si prefieres, te atiende una persona por WhatsApp al ${TIENDA.whatsapp}.` +
       (pideDosis ? AVISO_DOSIS : '');
   }
-  const nota = agotados.length
+  // Preguntó qué tomar y lo que calza es para frotar u oler: se dice antes de
+  // que alguien se tome una esencia porque apareció en la lista.
+  const nota = (agotados.length
     ? `\n\n${agotados.join(' ni ')}: ahorita no lo tengo, te aviso apenas llegue.`
-    : '';
+    : '') +
+    (usoExterno.length
+      ? `\n\nOjo: ${usoExterno.join(', ')} ${usoExterno.length > 1 ? 'son de uso externo, no se toman' : 'es de uso externo, no se toma'}. ` +
+        'Si buscas algo para tomar, cuéntame para qué y te oriento.'
+      : '');
   // Preguntó si hay: primero la respuesta, después las fichas. La cantidad no.
   if (pideStock && top[0].porNombre) {
     return `Sí, hay. Esto es lo que tengo:\n\n${listar(top)}${nota}\n\n` +
@@ -880,8 +905,18 @@ export async function asesorar(consultaOriginal, productos, buscarPedido = null)
       productos.some((p) => nombreTiene(normalizar(p.nombre).split(' '), w)));
   })();
 
-  const top = (derivar || noTrabajamos || pedidoAjeno) ? [] : motorReglas(corregida, productos);
-  const agotados = (derivar || noTrabajamos) ? [] : agotadosRelevantes(corregida, productos);
+  // Si pregunta qué tomar y no nombró una esencia o una crema, lo de uso externo
+  // sale de la búsqueda. Si sin eso no queda nada («¿se puede tomar el aceite de
+  // copaiba?»), se busca en todo: decir «no trabajamos» algo que sí está en el
+  // catálogo sería peor que mostrarlo.
+  const paraTomar = !derivar && (pideDosis || QUIERE_TOMAR.test(texto)) && !NOMBRA_USO_EXTERNO.test(texto);
+  const ingeribles = paraTomar ? productos.filter((p) => !esDeUsoExterno(p)) : productos;
+  let top = [];
+  if (!(derivar || noTrabajamos || pedidoAjeno)) {
+    top = motorReglas(corregida, ingeribles);
+    if (!top.length && ingeribles !== productos) top = motorReglas(corregida, productos);
+  }
+  const agotados = (derivar || noTrabajamos) ? [] : agotadosRelevantes(corregida, ingeribles);
 
   // Sin señal alguna ya no se ofrecen «los clásicos»: la plantilla pregunta
   // qué busca. `sugerencia_general` se sigue mandando, siempre en false, para
@@ -908,7 +943,8 @@ export async function asesorar(consultaOriginal, productos, buscarPedido = null)
     sugerencia_general: esClasicos,
     fuente: 'reglas',
     mensaje: respuestaPlantilla(top, derivar, agotados, noTrabajamos, esClasicos, pideDosis,
-      { pideStock, pedido, agotadoPedido }),
+      { pideStock, pedido, agotadoPedido,
+        usoExterno: QUIERE_TOMAR.test(texto) ? top.filter((t) => esDeUsoExterno(t.prod)).map((t) => t.prod.nombre) : [] }),
   };
 
   const redactado = await redactarConClaude(consultaOriginal, top, derivar, agotados, noTrabajamos, esClasicos,

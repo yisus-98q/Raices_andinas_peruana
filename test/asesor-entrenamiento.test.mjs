@@ -307,3 +307,38 @@ describe('Lo que no trabajamos, dicho de frente', () => {
     assert.ok(r.recomendaciones.length);
   });
 });
+
+describe('Lo que se toma y lo que es de uso externo', () => {
+  test('«cuánta muña tomo» no ofrece la esencia ni cremas', async () => {
+    const r = await responder('cuánta muña tomo al día');
+    reglasQueNoSeRompen(r, 'cuánta muña tomo');
+    assert.ok(r.recomendaciones.length > 0);
+    assert.ok(r.recomendaciones.every((p) => !/esencia|difusor|crema|aceite esencial/i.test(p.nombre)),
+      `ofreció algo de uso externo: ${r.recomendaciones.map((p) => p.nombre).join(', ')}`);
+    assert.match(r.mensaje, /forma de uso que indica el envase/);
+  });
+
+  test('si nombra la esencia para el difusor, sí se ofrece', async () => {
+    const r = await responder('esencia de muña para el difusor');
+    assert.match(r.recomendaciones[0].nombre, /Esencia de Muña/);
+  });
+
+  test('preguntar si se toma algo de uso externo lo advierte', async () => {
+    const r = await responder('se puede tomar el aceite de copaiba');
+    assert.match(r.recomendaciones[0].nombre, /Copaiba/);
+    assert.match(r.mensaje, /uso externo, no se toma/);
+  });
+});
+
+describe('Cotizar por mayor', () => {
+  test('«30 frascos de miel» cotiza la Multifloral', async () => {
+    const r = await responder('cuanto me sale 30 frascos de miel');
+    assert.equal(r.intencion, 'cotizacion');
+    assert.match(r.recomendaciones[0].nombre, /Multifloral/);
+  });
+
+  test('«uña de gato» encuentra la ficha con su ñ', async () => {
+    const r = await responder('uña de gato');
+    assert.equal(r.recomendaciones[0].nombre, 'Uña de Gato');
+  });
+});
