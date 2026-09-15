@@ -16,6 +16,7 @@
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { preciosPorTamano } from './precio-por-tamano.mjs';
 
 const RAIZ = dirname(fileURLToPath(import.meta.url));
 const OBJETIVO = Number(process.argv[2]) || 400;
@@ -46,7 +47,7 @@ const INSUMOS = [
     ben: 'Proteína completa y sin gluten',
     tags: 'proteina,nutricion,ninos,celiaco,sin gluten,desayuno',
     uso: 'Grano madre del altiplano, base de la alimentación aymara.' },
-  { n: 'Kiwicha', cat: 'Superalimentos', origen: 'Ancash', base: 12,
+  { n: 'Kiwicha', cat: 'Superalimentos', origen: 'Áncash', base: 12,
     formas: ['grano', 'harina', 'pop', 'hojuelas'],
     ben: 'Calcio y hierro para niños en crecimiento',
     tags: 'ninos,calcio,huesos,desayuno,energia,crecimiento',
@@ -86,7 +87,10 @@ const INSUMOS = [
     ben: 'Hierro, energía y reconstituyente',
     tags: 'hierro,energia,ninos,fatiga,nutricion',
     uso: 'Algarrobina espesa que se daba a los convalecientes.' },
-  { n: 'Chia', cat: 'Superalimentos', origen: 'Valle del Mantaro', base: 14,
+  // «Chía del Mantaro» y no «Chia» sin tilde: hay otra Chía, la de Majes, más
+  // abajo, y en la tienda se veían «Chia en semilla» y «Chía en semilla» como si
+  // fueran un error de tipeo.
+  { n: 'Chía del Mantaro', cat: 'Superalimentos', origen: 'Valle del Mantaro', base: 14,
     formas: ['semilla', 'harina', 'aceite'],
     ben: 'Fibra, omega 3 y saciedad',
     tags: 'digestion,estrenimiento,peso,omega,saciedad',
@@ -230,7 +234,7 @@ const INSUMOS = [
     ben: 'Reconstituyente general',
     tags: 'defensas,energia,digestion,dolor,antioxidante',
     uso: 'Fermentado tradicional de fruta madura.' },
-  { n: 'Tónico de Sauco y Miel', cat: 'Tónicos', origen: 'Cajamarca', base: 26,
+  { n: 'Tónico de Saúco y Miel', cat: 'Tónicos', origen: 'Cajamarca', base: 26,
     formas: ['botella'],
     ben: 'Garganta y defensas',
     tags: 'tos,garganta,gripe,resfrio,defensas,ninos',
@@ -701,7 +705,7 @@ const INSUMOS = [
     ben: 'Digestión y calma',
     tags: 'digestion,nervios,dormir,gases,estomago,estres,nauseas',
     uso: 'Después de comer, bien caliente.' },
-  { n: 'Sauco', cat: 'Hierbas', origen: 'Cajamarca', base: 13,
+  { n: 'Saúco', cat: 'Hierbas', origen: 'Cajamarca', base: 13,
     formas: ['hierba seca', 'jarabe'],
     ben: 'Días de frío',
     tags: 'gripe,resfrio,tos,defensas,garganta,ninos',
@@ -882,6 +886,14 @@ for (let vuelta = 0; vuelta < maxFormas && productos.length < OBJETIVO; vuelta++
       emoji: '',
     });
   }
+}
+
+// El precio sigue al tamaño: una botella de 500 ml no puede costar casi lo mismo
+// que el gotero de 30 ml del mismo aceite. Va después del bucle y sin llamar a
+// `aleatorio()`, así que stock, SKU y todo lo demás salen iguales que antes.
+for (const c of preciosPorTamano(productos)) {
+  c.item.precio = c.precio;
+  c.item.costo = c.costo;
 }
 
 mkdirSync(join(RAIZ, 'data'), { recursive: true });

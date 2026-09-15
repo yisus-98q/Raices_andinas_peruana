@@ -119,6 +119,17 @@
     }
   }
 
+  /**
+   * En qué orden se muestra el catálogo: primero lo que hay, y dentro de eso lo
+   * que tiene foto de verdad, luego lo curado con su ilustración y al final lo
+   * generado. El servidor lo manda por categoría y nombre, y así la tienda abría
+   * con «Aceite de Aguaje» AGOTADO y una fila de botellas dibujadas, mientras la
+   * Maca y la Muña con foto quedaban diez filas abajo. El orden por categoría y
+   * nombre se conserva dentro de cada grupo (el sort es estable).
+   */
+  const pesoVitrina = (p) => (p.disponible ? 0 : 3)
+    + (/^\/img\/fotos\//.test(p.imagen || '') ? 0 : /^\/img\/gen\//.test(p.imagen || '') ? 2 : 1);
+
   function visibles() {
     const q = busqueda.toLowerCase().trim();
     return catalogo.filter((p) => {
@@ -129,7 +140,7 @@
       return (p.nombre + ' ' + p.etiquetas + ' ' + p.origen + ' '
         + p.descripcion + ' ' + (p.beneficios || ''))
         .toLowerCase().includes(q);
-    });
+    }).sort((a, b) => pesoVitrina(a) - pesoVitrina(b));
   }
 
   /** Con RUC la venta es factura; con DNI, boleta. Lo decide el servidor. */
@@ -700,8 +711,7 @@
           <div class="resumen-fila"><span>Subtotal</span><span>${soles(total())}</span></div>
           <div class="resumen-fila"><span>Envío</span><span>${envio.texto}</span></div>
           ${pct ? `
-          <div class="resumen-fila resumen-fino"><span>Op. gravada</span><span>${soles(base)}</span></div>
-          <div class="resumen-fila resumen-fino"><span>IGV ${pct}%</span><span>${soles(igv)}</span></div>` : ''}
+          <div class="resumen-fila resumen-fino"><span>Incluye IGV ${pct}% · op. gravada ${soles(base)}</span><span>${soles(igv)}</span></div>` : ''}
           <div class="resumen-fila resumen-total">
             <span>Total</span><span class="precio">${soles(t)}</span>
           </div>

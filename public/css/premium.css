@@ -682,6 +682,16 @@ img { max-width: 100%; display: block; }
   box-shadow: 0 12px 38px rgba(28, 42, 34, .12);
 }
 .toast.visible { transform: translateX(-50%) translateY(0); opacity: 1; }
+/* En el celular el aviso baja desde arriba: abajo tapaba «Continuar con el
+   pedido» justo después de agregar, que es cuando se va a tocar. */
+@media (max-width: 640px) {
+  .toast {
+    top: calc(env(safe-area-inset-top, 0px) + 12px); bottom: auto;
+    transform: translateX(-50%) translateY(-90px);
+    max-width: calc(100% - 32px); width: max-content; text-align: center;
+    padding: 11px 18px; font-size: 13.5px;
+  }
+}
 
 /* ------------------------------------------------------------- responsive */
 @media (max-width: 980px) {
@@ -1893,7 +1903,9 @@ body.pagina .caja-seguimiento .pedido-estado { margin-top: 0; }
   width: min(560px, calc(100% - 32px));
   /* Alto fijo y no el del contenido: si la ventana cambiara de alto en cada
      paso, además de deslizarse saltaría arriba y abajo. */
-  height: min(640px, calc(100svh - 40px));
+  /* 780 y no 640: con la suma y el botón abajo, a 640 la lista del carrito
+     tenía 313 px y con dos productos se veía uno solo. */
+  height: min(780px, calc(100svh - 40px));
   border: 1px solid var(--borde); border-radius: 22px;
   box-shadow: 0 30px 80px rgba(28, 42, 34, .28), 0 4px 14px rgba(28, 42, 34, .08);
   overflow: hidden;
@@ -1932,6 +1944,13 @@ body.pagina .caja-seguimiento .pedido-estado { margin-top: 0; }
 .panel .panel-pie .btn-bloque { min-height: 46px; padding-block: 0; }
 .panel .pie-nota { margin-top: 6px; }
 .panel .linea { padding: 11px 0; }
+/* Los atajos de cantidad y el − n + en una sola fila: eran dos renglones por
+   producto. */
+.panel .linea-info { display: flex; flex-wrap: wrap; align-items: center; column-gap: 8px; }
+.panel .linea-info strong, .panel .linea-info > span { flex: 1 1 100%; }
+.panel .linea-info .atajos { flex: 1 1 200px; margin-top: 7px; }
+.panel .linea-info .contador { flex: none; margin-top: 7px; }
+.panel .atajo { height: 30px; }
 .panel .exito { padding: 16px 8px; }
 
 .campo-par { display: grid; grid-template-columns: 1fr 1fr; gap: 0 10px; }
@@ -1994,6 +2013,13 @@ body.pagina .caja-seguimiento .pedido-estado { margin-top: 0; }
   }
   .tienda-pagina .sugerencias::-webkit-scrollbar { display: none; }
   .tienda-pagina .sugerencia { flex: none; white-space: nowrap; }
+
+  /* Sin «pantalla completa» en el celular: el asesor centrado en 100svh dejaba
+     media pantalla de río oscuro debajo y ningún producto a la vista. El
+     catálogo arranca justo después, y el enlace «Catálogo» sigue cayendo
+     debajo de la barra fija gracias al scroll-margin. */
+  .tienda-pagina .tienda-inicio { min-height: 0; justify-content: flex-start; padding-bottom: 22px; }
+  .tienda-pagina .tienda-catalogo { min-height: 0; padding-top: 18px; scroll-margin-top: 110px; }
 }
 
 /* Laptop chica y tableta horizontal: las tres cifras del hero en una fila. */

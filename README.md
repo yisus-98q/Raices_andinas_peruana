@@ -460,6 +460,7 @@ markdown.mjs       Markdown a HTML, lo justo que usa este README
 manual.mjs         Viste este README para imprimirlo: portada, índice y hoja A4
 ilustraciones.mjs  Qué lámina le toca a cada producto (forma × color)
 gen-catalogo.mjs   Arma los 400 productos de ejemplo desde 132 insumos
+precio-por-tamano.mjs  Que la presentación grande cueste más que la chica
 gen-imagenes.mjs   Dibuja las ilustraciones SVG de respaldo
 gen-ubigeo.mjs     Compacta el ubigeo del INEI a public/ubigeo.json
 gen-pdf.mjs        Arma el manual desde este README e imprime los tres PDF
@@ -497,11 +498,73 @@ corresponden a cada uno. Así los nombres salen naturales —*Maca Negra en
 cápsulas*— y no aparecen disparates como *Jabón en gotas*. La semilla del
 generador es fija: dos ejecuciones dan exactamente el mismo catálogo.
 
-> **Uña de Gato y Muña, con ñ.** La semilla de `db.js` las traía como *Una de
-> Gato* y *Muna*, y así salían en la tienda y en la boleta. La semilla ya está
-> corregida, y una migración al arrancar renombra `UNG-001` y `MUN-001` en las
-> bases ya sembradas, **solo si el nombre sigue siendo el de la semilla**: si la
-> dueña lo cambió a mano desde el panel, se respeta lo suyo.
+#### Con tildes
+
+La semilla de `db.js` estaba escrita sin tildes, y así salía en la tienda, en el
+asesor y en la boleta: *Una de Gato*, *Manzanilla Organica*, *60 capsulas*,
+*Jabon de Aguaje y Avena*, *Canete, Lima*. Ahora nombre, origen, presentación,
+descripción, uso tradicional y beneficio llevan sus tildes, y en el generador
+también (*Saúco*, *Áncash*).
+
+En el generador había además **dos Chías**, la del Mantaro y la de Majes, una con
+tilde y otra sin ella: la tienda mostraba *Chia en semilla* y *Chía en semilla*
+como si fuera un error de tipeo. La del Mantaro ahora se llama **Chía del
+Mantaro**.
+
+Una base ya sembrada se pone al día sola al arrancar (`ponerAlDiaCatalogo()` en
+`db.js`):
+
+- **Un texto se corrige solo si lo que hay es lo mismo sin las tildes.** Si la
+  dueña lo reescribió desde el panel, se respeta lo suyo.
+- **El relleno que ahora se llama igual que un producto del negocio se da de
+  baja.** El *Jabón de Aguaje y Avena* del relleno se colaba junto al *Jabon* de
+  la semilla por la tilde; con los dos escritos igual, habría dos fichas con el
+  mismo nombre. La baja no borra: se puede reactivar desde el panel.
+- Se puede correr siempre: una segunda pasada no cambia nada.
+
+Sobre una copia de la base de la demo: 81 textos corregidos, 4 duplicados de
+relleno de baja.
+
+#### El precio sigue al tamaño
+
+El relleno ponía precio con un multiplicador por forma de venta, sin mirar el
+contenido. En la tienda se veía **Aceite de Aguaje, botella de 500 ml, S/ 29.40**
+al lado de **Aceite de Aguaje en gotas, 30 ml, S/ 27.90**: casi lo mismo por
+diecisiete veces más aceite. Una clienta no lo lee como oferta; piensa que el
+precio está mal puesto.
+
+`precio-por-tamano.mjs` compara las presentaciones **del mismo producto y en la
+misma unidad** (g, ml, cápsulas, filtrantes…) y exige dos cosas:
+
+| Regla | Ejemplo |
+|---|---|
+| Lo grande cuesta más, al menos en proporción a la raíz cúbica del tamaño | 8 veces el contenido → al menos el doble de precio |
+| Lo grande nunca sale más caro por unidad | 8 veces el contenido → como mucho 8 veces el precio |
+
+«El mismo producto» es el nombre sin lo que solo cambia el envase: *en gotas*,
+*roll-on*, *para difusor*, *en sachets*, *tamaño viaje*… La Maca Negra en polvo y
+la gelatinizada son productos distintos y cada una conserva su precio.
+
+**Manda la presentación grande y se corrigen las chicas.** Al revés, el gotero
+caro arrastraba a la botella de 500 ml a más de S/ 70. El costo se mueve en la
+misma proporción que el precio, así que el margen se conserva y el costo nunca
+llega al precio.
+
+| Producto | Antes | Ahora |
+|---|---|---|
+| Aceite de Aguaje en gotas, 30 ml (botella de 500 ml: S/ 29.40) | S/ 27.90 | S/ 11.40 |
+| Esencia de Lavanda para difusor, 15 ml (gotero de 30 ml: S/ 19.40) | S/ 23.40 | S/ 14.90 |
+| Crema de Árnica tamaño viaje, 50 g (pote de 60 g: S/ 28.40) | S/ 15.40 | S/ 23.90 |
+
+El generador lo aplica al final, sin tocar la secuencia aleatoria: SKU, stock y
+nombres salen iguales; en el catálogo de 400 cambian 52 precios. En una base ya
+sembrada, `ponerAlDiaCatalogo()` hace lo mismo **solo con el relleno**
+(`demo = 1`) y solo con lo vendido por unidad (47 precios en la base de la
+demo). **Los productos del negocio no se tocan**, y los pedidos ya registrados
+tampoco: cada línea guarda su propio precio y costo.
+
+> Con el catálogo real del negocio esta regla no corre: los precios los pone
+> la dueña.
 
 #### El stock tampoco es al azar plano
 

@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { readFileSync } from 'node:fs';
 import { rutaIlustracion } from './ilustraciones.mjs';
+import { preciosPorTamano } from './precio-por-tamano.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -358,100 +359,100 @@ asegurarRestricciones('pedidos', DEF_PEDIDOS,
 // sku, nombre, categoria, origen, presentacion, descripcion, uso_tradicional,
 // etiquetas, precio, costo, stock, stock_min, emoji
 const SEED = [
-  ['MAC-001', 'Maca Negra en polvo', 'Superalimentos', 'Meseta de Bombon, Junin', 'Bolsa 250 g',
-    'Raiz andina cultivada sobre los 4000 m s.n.m., secada al sol y molida en piedra.',
-    'Los pastores de Junin la consumian antes de las jornadas largas de altura.',
+  ['MAC-001', 'Maca Negra en polvo', 'Superalimentos', 'Meseta de Bombón, Junín', 'Bolsa 250 g',
+    'Raíz andina cultivada sobre los 4000 m s.n.m., secada al sol y molida en piedra.',
+    'Los pastores de Junín la consumían antes de las jornadas largas de altura.',
     'energia,fatiga,cansancio,animo,resistencia,hombre', 29.90, 16.00, 42, 10, '🌰'],
-  ['MAC-002', 'Maca Gelatinizada', 'Superalimentos', 'Junin', 'Frasco 200 g',
-    'Maca precocida: se digiere mas facil que la cruda, ideal para estomagos sensibles.',
-    'Preparacion tradicional hervida antes de moler, para quitarle la pesadez.',
+  ['MAC-002', 'Maca Gelatinizada', 'Superalimentos', 'Junín', 'Frasco 200 g',
+    'Maca precocida: se digiere más fácil que la cruda, ideal para estómagos sensibles.',
+    'Preparación tradicional hervida antes de moler, para quitarle la pesadez.',
     'energia,digestion,fatiga,estomago', 34.50, 19.00, 18, 8, '🥣'],
-  ['UNG-001', 'Uña de Gato', 'Suplementos', 'Tarapoto, San Martin', '60 capsulas 500 mg',
-    'Corteza amazonica recolectada bajo manejo sostenible, sin talar el arbol.',
+  ['UNG-001', 'Uña de Gato', 'Suplementos', 'Tarapoto, San Martín', '60 cápsulas 500 mg',
+    'Corteza amazónica recolectada bajo manejo sostenible, sin talar el árbol.',
     'Corteza de uso ancestral entre los asháninka.',
     'articulaciones,dolor,rodilla,inflamacion,defensas,huesos', 24.00, 13.00, 7, 10, '🐾'],
   ['SAN-001', 'Sangre de Grado', 'Aceites y esencias', 'Pucallpa, Ucayali', 'Frasco 30 ml',
-    'Latex rojo del arbol Croton lechleri, recolectado por sangrado controlado.',
+    'Látex rojo del árbol Croton lechleri, recolectado por sangrado controlado.',
     'Látex de uso ancestral en la Amazonía.',
     'piel,tradicional,amazonia', 18.00, 9.50, 25, 8, '🩸'],
-  ['CHA-001', 'Chanca Piedra', 'Infusiones', 'Amazonia peruana', 'Bolsa 100 g hierba seca',
+  ['CHA-001', 'Chanca Piedra', 'Infusiones', 'Amazonía peruana', 'Bolsa 100 g hierba seca',
     'Planta entera secada a la sombra.',
     'Su nombre viene de la tradición amazónica.',
     'infusion,amazonia,tradicional', 12.50, 6.00, 31, 10, '🪨'],
-  ['CAM-001', 'Camu Camu en polvo', 'Superalimentos', 'Rio Ucayali, Loreto', 'Bolsa 150 g',
-    'El fruto con mas vitamina C del mundo, liofilizado para no perder potencia.',
-    'Fruto ribereno que se comia maduro directo del arbol en creciente.',
+  ['CAM-001', 'Camu Camu en polvo', 'Superalimentos', 'Río Ucayali, Loreto', 'Bolsa 150 g',
+    'El fruto con más vitamina C del mundo, liofilizado para no perder potencia.',
+    'Fruto ribereño que se comía maduro directo del árbol en creciente.',
     'defensas,vitamina c,resfrio,gripe,inmunidad,antioxidante', 27.00, 15.00, 22, 10, '🍒'],
   ['HER-001', 'Hercampuri', 'Infusiones', 'Sierra central', 'Bolsa 80 g hierba seca',
-    'Hierba amarga de altura, cosechada en floracion.',
+    'Hierba amarga de altura, cosechada en floración.',
     'Hierba amarga de larga tradición en la sierra central.',
     'grasa,adelgazar,peso', 10.00, 4.50, 28, 10, '🌿'],
-  ['MUN-001', 'Muña','Infusiones', 'Cusco', 'Bolsa 60 g hierba seca',
+  ['MUN-001', 'Muña', 'Infusiones', 'Cusco', 'Bolsa 60 g hierba seca',
     'Menta andina de aroma intenso, secada al aire libre.',
     'Infusión clásica de la sierra, para después de comer y en la altura.',
     'digestion,estomago,acidez,gases,soroche,altura,nauseas,colicos', 9.00, 4.00, 40, 12, '🍃'],
-  ['MAN-001', 'Manzanilla Organica', 'Infusiones', 'Valle del Mantaro', 'Caja 25 filtrantes',
-    'Flor entera, sin tallo, cultivo sin agroquimicos.',
-    'La infusion de la abuela para el dolor de barriga y el sueno.',
+  ['MAN-001', 'Manzanilla Orgánica', 'Infusiones', 'Valle del Mantaro', 'Caja 25 filtrantes',
+    'Flor entera, sin tallo, cultivo sin agroquímicos.',
+    'La infusión de la abuela para el dolor de barriga y el sueño.',
     'dormir,insomnio,nervios,estomago,acidez,colicos,ansiedad,relajante', 8.50, 3.80, 55, 15, '🌼'],
-  ['VAL-001', 'Valeriana + Pasiflora', 'Suplementos', 'Sierra sur', '60 capsulas',
-    'Combinacion estandarizada de raiz de valeriana y hoja de pasiflora.',
-    'Cocimiento de raiz que se tomaba de noche para el mal dormir.',
+  ['VAL-001', 'Valeriana + Pasiflora', 'Suplementos', 'Sierra sur', '60 cápsulas',
+    'Combinación estandarizada de raíz de valeriana y hoja de pasiflora.',
+    'Cocimiento de raíz que se tomaba de noche para el mal dormir.',
     'dormir,insomnio,ansiedad,estres,nervios,relajante', 26.00, 14.00, 14, 8, '😴'],
   ['MIE-001', 'Miel de Abeja Multifloral', 'Apicolas', 'Oxapampa, Pasco', 'Frasco 500 g',
-    'Miel cruda sin pasteurizar, filtrada en frio. Cristaliza: es senal de pureza.',
+    'Miel cruda sin pasteurizar, filtrada en frío. Cristaliza: es señal de pureza.',
     'Endulzante tradicional de toda la sierra y la selva alta.',
     'tos,garganta,resfrio,gripe,energia,endulzante,ninos', 22.00, 12.00, 36, 12, '🍯'],
-  ['PRO-001', 'Propoleo en gotas', 'Apicolas', 'Oxapampa, Pasco', 'Frasco 30 ml',
-    'Extracto hidroalcoholico de propoleo puro al 20 por ciento.',
+  ['PRO-001', 'Propóleo en gotas', 'Apicolas', 'Oxapampa, Pasco', 'Frasco 30 ml',
+    'Extracto hidroalcohólico de propóleo puro al 20 por ciento.',
     'Resina que las abejas recogen para proteger la colmena.',
     'garganta,tos,defensas,gripe,resfrio,boca', 19.50, 10.00, 4, 10, '🐝'],
-  ['POL-001', 'Polen de Abeja', 'Apicolas', 'Canete, Lima', 'Frasco 200 g',
-    'Granulos deshidratados a baja temperatura, conservan sus enzimas.',
+  ['POL-001', 'Polen de Abeja', 'Apicolas', 'Cañete, Lima', 'Frasco 200 g',
+    'Gránulos deshidratados a baja temperatura, conservan sus enzimas.',
     'Recogido por las abejas en los valles de Cañete.',
     'energia,defensas,fatiga,nutricion,apetito', 21.00, 11.50, 19, 8, '🌸'],
-  ['SAC-001', 'Sacha Inchi en capsulas', 'Suplementos', 'Lamas, San Martin', '90 capsulas 500 mg',
-    'Aceite prensado en frio del mani del inca, alto en omega 3, 6 y 9.',
-    'Semilla tostada que se comia como snack en las comunidades shawi.',
+  ['SAC-001', 'Sacha Inchi en cápsulas', 'Suplementos', 'Lamas, San Martín', '90 cápsulas 500 mg',
+    'Aceite prensado en frío del maní del inca, alto en omega 3, 6 y 9.',
+    'Semilla tostada que se comía como snack en las comunidades shawi.',
     'omega,memoria,piel', 32.00, 18.00, 16, 8, '🥜'],
   ['ACE-001', 'Aceite de Copaiba', 'Aceites y esencias', 'Iquitos, Loreto', 'Frasco 30 ml',
-    'Oleo-resina extraida por puncion del tronco, sin cortar el arbol.',
+    'Óleo-resina extraída por punción del tronco, sin cortar el árbol.',
     'Se frotaba en golpes, torceduras y dolores musculares.',
     'dolor,muscular,golpes,inflamacion,piel,acne,articulaciones', 26.50, 14.00, 11, 6, '🛢️'],
   ['ACE-002', 'Aceite de Rosa Mosqueta', 'Cuidado personal', 'Cusco', 'Frasco 30 ml',
-    'Prensado en frio de la semilla, sin refinar. Color ambar natural.',
+    'Prensado en frío de la semilla, sin refinar. Color ámbar natural.',
     'Se aplicaba para suavizar la piel.',
     'piel,cicatrices,manchas,arrugas,estrias,rostro', 28.00, 15.00, 20, 8, '🌹'],
-  ['JAB-001', 'Jabon de Aguaje y Avena', 'Cuidado personal', 'Loreto', 'Barra 100 g',
+  ['JAB-001', 'Jabón de Aguaje y Avena', 'Cuidado personal', 'Loreto', 'Barra 100 g',
     'Saponificado en frio, con pulpa de aguaje y avena molida.',
     'La pulpa de aguaje se usaba para refrescar y suavizar la piel.',
     'piel,acne,exfoliante,rostro,cuerpo,seca', 12.00, 5.50, 33, 10, '🧼'],
-  ['YAC-001', 'Jarabe de Yacon', 'Superalimentos', 'Cajamarca', 'Frasco 260 g',
-    'Endulzante natural de bajo indice glucemico, evaporado a fuego lento.',
-    'Raiz dulce que se comia cruda en la chacra, refrescante.',
+  ['YAC-001', 'Jarabe de Yacón', 'Superalimentos', 'Cajamarca', 'Frasco 260 g',
+    'Endulzante natural de bajo índice glucémico, evaporado a fuego lento.',
+    'Raíz dulce que se comía cruda en la chacra, refrescante.',
     'endulzante,digestion,peso,estrenimiento', 24.50, 13.00, 13, 6, '🍶'],
-  ['QUI-001', 'Quinua Perlada Organica', 'Superalimentos', 'Puno', 'Bolsa 1 kg',
+  ['QUI-001', 'Quinua Perlada Orgánica', 'Superalimentos', 'Puno', 'Bolsa 1 kg',
     'Grano lavado y seleccionado, libre de saponina, listo para cocinar.',
-    'Grano madre del altiplano, base de la alimentacion aymara.',
+    'Grano madre del altiplano, base de la alimentación aymara.',
     'proteina,nutricion,ninos,celiaco,sin gluten', 16.00, 9.00, 48, 15, '🌾'],
-  ['KIW-001', 'Kiwicha Pop', 'Superalimentos', 'Ancash', 'Bolsa 200 g',
-    'Grano expandido con aire caliente, sin aceite ni azucar anadida.',
+  ['KIW-001', 'Kiwicha Pop', 'Superalimentos', 'Áncash', 'Bolsa 200 g',
+    'Grano expandido con aire caliente, sin aceite ni azúcar añadida.',
     'Se mezclaba con miel para hacer las turronitas de las ferias.',
     'ninos,calcio,huesos,desayuno,energia', 9.50, 4.20, 29, 10, '✨'],
   ['BOL-001', 'Boldo', 'Infusiones', 'Sierra norte', 'Bolsa 60 g hoja seca',
-    'Hoja entera secada a la sombra, aroma alcanforado caracteristico.',
-    'Infusion despues de la comida pesada.',
+    'Hoja entera secada a la sombra, aroma alcanforado característico.',
+    'Infusión después de la comida pesada.',
     'digestion,estomago,resaca,pesadez', 9.00, 4.00, 26, 10, '🍂'],
   ['COL-001', 'Cola de Caballo', 'Infusiones', 'Sierra central', 'Bolsa 80 g',
-    'Tallos secos ricos en silice, cortados en trozo pequeno.',
+    'Tallos secos ricos en sílice, cortados en trozo pequeño.',
     'Agua de tiempo tradicional de la sierra central.',
     'retencion,hinchazon,unas,cabello,piernas', 9.50, 4.00, 24, 10, '🐴'],
   ['NON-001', 'Jugo de Noni', 'Suplementos', 'Selva central', 'Botella 500 ml',
-    'Fermentado tradicional de fruta madura, sin azucar anadida.',
+    'Fermentado tradicional de fruta madura, sin azúcar añadida.',
     'Fermentado tradicional de la selva central.',
     'defensas,energia,digestion,dolor,antioxidante', 29.00, 16.50, 9, 6, '🥤'],
-  ['GRA-001', 'Graviola en capsulas', 'Suplementos', 'Amazonia', '60 capsulas',
-    'Hoja de guanabana secada y micronizada, sin excipientes.',
+  ['GRA-001', 'Graviola en cápsulas', 'Suplementos', 'Amazonía', '60 cápsulas',
+    'Hoja de guanábana secada y micronizada, sin excipientes.',
     'Infusión de hoja que se tomaba de noche.',
     'defensas,dormir,antioxidante,relajante', 23.00, 12.50, 15, 8, '🍈'],
 ];
@@ -462,8 +463,8 @@ const SEED = [
  * las 24 filas y deja el texto donde se lee de un vistazo.
  */
 const BENEFICIOS = {
-  'MAC-001': 'Energia sostenida y resistencia fisica',
-  'MAC-002': 'Energia sin pesadez para estomagos sensibles',
+  'MAC-001': 'Energía sostenida y resistencia física',
+  'MAC-002': 'Energía sin pesadez para estómagos sensibles',
   'UNG-001': 'Articulaciones y defensas',
   'SAN-001': 'Látex amazónico de uso tradicional',
   'CHA-001': 'Infusión tradicional amazónica',
@@ -479,13 +480,13 @@ const BENEFICIOS = {
   'SAC-001': 'Omega 3, 6 y 9 de origen vegetal',
   'ACE-001': 'Masajes para golpes y músculos cansados',
   'ACE-002': 'Cicatrices, manchas y arrugas',
-  'JAB-001': 'Piel grasa y acne',
+  'JAB-001': 'Piel grasa y acné',
   'YAC-001': 'Endulzante natural de bajo índice glucémico',
-  'QUI-001': 'Proteina completa, sin gluten',
-  'KIW-001': 'Calcio y energia para los ninos',
+  'QUI-001': 'Proteína completa, sin gluten',
+  'KIW-001': 'Calcio y energía para los niños',
   'BOL-001': 'Digestión después de comidas pesadas',
   'COL-001': 'Uñas, cabello y agua de tiempo',
-  'NON-001': 'Defensas y energia general',
+  'NON-001': 'Defensas y energía general',
 };
 
 /**
@@ -512,6 +513,111 @@ function catalogoGenerado() {
     return [];   // la demo funciona igual con los 24 curados
   }
 }
+
+/**
+ * Tildes y precios de una base ya sembrada.
+ *
+ * La semilla y el generador se corrigieron (ver `precio-por-tamano.mjs`), pero
+ * una base sembrada antes conserva lo viejo: «Manzanilla Organica», «60
+ * capsulas», y el gotero de 30 ml casi al precio de la botella de 500 ml. Esto
+ * lo pone al día al arrancar. Se puede correr siempre: lo que ya está bien no
+ * se toca, y una segunda pasada no cambia nada.
+ *
+ *  - Texto: solo si lo que hay en la base es lo de la semilla SIN las tildes.
+ *    Si la dueña lo reescribió a mano, manda lo suyo.
+ *  - Duplicados: al corregir, «Jabon de Aguaje y Avena» pasa a llamarse igual
+ *    que el «Jabón de Aguaje y Avena» del relleno, que antes se colaba por la
+ *    tilde. El de relleno se da de baja (se puede reactivar, no se borra).
+ *  - Precios: solo relleno (`demo = 1`) y solo lo vendido por unidad. Lo del
+ *    negocio y los pedidos ya registrados —que guardan su propio precio y
+ *    costo por línea— no se tocan.
+ */
+const quitarTildes = (t) => String(t).normalize('NFD').replace(/\p{M}/gu, '');
+const marcas = (t) => String(t).normalize('NFD').length - quitarTildes(t).length;
+const soloFaltanTildes = (actual, nuevo) => actual !== nuevo
+  && quitarTildes(actual) === quitarTildes(nuevo) && marcas(actual) < marcas(nuevo);
+
+function ponerAlDiaCatalogo() {
+  const hay = db.prepare('SELECT COUNT(*) n FROM productos').get().n;
+  if (!hay) return;
+  const CAMPOS = ['nombre', 'origen', 'presentacion', 'descripcion', 'uso_tradicional', 'beneficios'];
+  const leer = db.prepare(`SELECT id, sku, demo, unidad, activo, categoria, precio, costo, ${CAMPOS.join(', ')} FROM productos`);
+  let textos = 0;
+  let bajas = 0;
+  let precios = 0;
+
+  // Si otro proceso tiene la base ocupada (el servidor, mientras corre
+  // `clave.mjs`), se deja para el próximo arranque: no vale tumbar el script.
+  try {
+    db.exec('BEGIN IMMEDIATE');
+  } catch (e) {
+    console.warn('[db] catálogo sin poner al día, base ocupada: ' + e.message);
+    return;
+  }
+  try {
+    const filas = leer.all();
+    const cambiar = (fila, campo, valor) => {
+      db.prepare(`UPDATE productos SET ${campo} = ? WHERE id = ?`).run(valor, fila.id);
+      fila[campo] = valor;
+      textos++;
+    };
+
+    // Los 24 curados, por SKU.
+    for (const [sku, nombre, , origen, presentacion, descripcion, uso] of SEED) {
+      const fila = filas.find((f) => f.sku === sku && !f.demo);
+      if (!fila) continue;
+      const nuevos = { nombre, origen, presentacion, descripcion, uso_tradicional: uso, beneficios: BENEFICIOS[sku] || '' };
+      for (const campo of CAMPOS) {
+        if (nuevos[campo] && soloFaltanTildes(fila[campo], nuevos[campo])) cambiar(fila, campo, nuevos[campo]);
+      }
+    }
+
+    // El relleno, por nombre y origen: sus SKU se corren si chocan con un curado.
+    // «Chia» del Mantaro pasó a «Chía del Mantaro» para no confundirse con la
+    // Chía de Majes; ese es el único cambio que no es solo una tilde.
+    const viejoChia = (t) => String(t).replace(/Chía del Mantaro/g, 'Chia');
+    const clave = (nombre, origen) => `${quitarTildes(nombre).toLowerCase()}|${quitarTildes(origen).toLowerCase()}`;
+    const generado = new Map();
+    for (const p of catalogoGenerado()) {
+      generado.set(clave(p.nombre, p.origen), p);
+      generado.set(clave(viejoChia(p.nombre), p.origen), p);
+    }
+    for (const fila of filas.filter((f) => f.demo)) {
+      const p = generado.get(clave(fila.nombre, fila.origen));
+      if (!p) continue;
+      for (const campo of CAMPOS) {
+        const nuevo = p[campo];
+        if (!nuevo || fila[campo] === nuevo) continue;
+        if (soloFaltanTildes(fila[campo], nuevo) || fila[campo] === viejoChia(nuevo)) cambiar(fila, campo, nuevo);
+      }
+    }
+
+    // Relleno que ahora se llama igual que un producto del negocio.
+    const delNegocio = new Set(filas.filter((f) => !f.demo).map((f) => f.nombre.toLowerCase()));
+    for (const fila of filas.filter((f) => f.demo && f.activo && delNegocio.has(f.nombre.toLowerCase()))) {
+      db.prepare('UPDATE productos SET activo = 0 WHERE id = ? AND demo = 1').run(fila.id);
+      bajas++;
+    }
+
+    // El precio sigue al tamaño.
+    const porUnidad = filas.filter((f) => f.demo && f.unidad !== 'gramo');
+    const actualizarPrecio = db.prepare('UPDATE productos SET precio = ?, costo = ? WHERE id = ? AND demo = 1');
+    for (const c of preciosPorTamano(porUnidad)) {
+      actualizarPrecio.run(c.precio, c.costo, c.item.id);
+      precios++;
+    }
+
+    db.exec('COMMIT');
+  } catch (e) {
+    db.exec('ROLLBACK');
+    console.warn('[db] no se pudo poner al día el catálogo: ' + e.message);
+    return;
+  }
+  if (textos || bajas || precios) {
+    console.log(`[db] catálogo al día: ${textos} textos con tildes, ${bajas} duplicados de relleno de baja, ${precios} precios de relleno según su tamaño`);
+  }
+}
+ponerAlDiaCatalogo();
 
 export function resetSeed() {
   // El orden importa: primero lo que apunta a productos, después productos.
