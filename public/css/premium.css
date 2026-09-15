@@ -643,6 +643,16 @@ img { max-width: 100%; display: block; }
 .campo input:focus, .campo textarea:focus { outline: none; border-color: var(--ocre); }
 .campo textarea { resize: vertical; min-height: 64px; }
 
+/* El permiso para WhatsApp: una fila tocable entera, no un cuadrito de 13 px. */
+.casilla {
+  display: flex; align-items: flex-start; gap: 11px; margin: 4px 0 14px;
+  padding: 12px 14px; min-height: 44px; cursor: pointer;
+  font-size: 13.5px; line-height: 1.45; color: var(--tinta);
+  border: 1px solid var(--borde); border-radius: 11px; background: rgba(251, 249, 243, .6);
+}
+.casilla input { width: 20px; height: 20px; margin: 1px 0 0; flex: none; accent-color: var(--ocre); cursor: pointer; }
+.casilla:has(input:focus-visible) { border-color: var(--ocre); }
+
 .aviso { padding: 13px 16px; border-radius: 11px; font-size: 13.5px; margin-bottom: 16px; }
 .aviso[hidden] { display: none; }
 .aviso-error { background: rgba(194, 80, 44, .14); border: 1px solid rgba(194, 80, 44, .42); color: #f0a58c; }

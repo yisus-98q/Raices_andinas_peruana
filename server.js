@@ -30,6 +30,10 @@ import {
   programar as programarRespaldo, respaldar, listar as listarRespaldos,
   ultimo as ultimoRespaldo, DIR as DIR_RESPALDOS, DIAS_QUE_SE_GUARDAN,
 } from './respaldo.js';
+import {
+  mensaje as mensajeWhatsapp, enlaceChat, modo as modoWhatsapp, enviarPorApi,
+  NOMBRE_EVENTO,
+} from './whatsapp.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PUBLIC = join(__dirname, 'public');
@@ -283,9 +287,63 @@ db.exec(`CREATE TABLE IF NOT EXISTS actividad_equipo (
 )`);
 db.exec('CREATE INDEX IF NOT EXISTS idx_actividad_fecha ON actividad_equipo(creado_en)');
 
+/**
+ * Reparto: a quién le toca cada pedido, y los avisos al cliente.
+ *
+ * `pedidos.repartidor` guarda el usuario del motorizado. Vacío = sin asignar:
+ * lo ven todos los repartidores y el primero que lo saca a la calle se lo
+ * queda. Con dos motorizados, sin esto los dos veían y podían marcar el mismo
+ * pedido, y la ruta impresa de cada uno traía los del otro.
+ *
+ * `avisos_cliente` es un aviso por WhatsApp por fila: qué evento, por qué canal
+ * y cómo terminó. En modo manual nace «pendiente» y pasa a «enviado_manual»
+ * cuando alguien toca el botón; en modo api, «enviado» o «error».
+ */
+if (!db.prepare('PRAGMA table_info(pedidos)').all().some((c) => c.name === 'repartidor')) {
+  db.exec("ALTER TABLE pedidos ADD COLUMN repartidor TEXT NOT NULL DEFAULT ''");
+}
+/**
+ * Cuándo se cerró el pedido y cómo se cobró en la puerta.
+ *
+ * `cerrado_en` deja que la ruta del motorizado muestre lo entregado HOY y no
+ * lo de la semana pasada. `cobro` es lo que dice el motorizado al entregar
+ * —efectivo, Yape, Plin, ya pagado—: sin eso, al final del día la dueña no
+ * sabe cuánto efectivo le tienen que rendir.
+ */
+// `acepta_whatsapp`: la casilla del checkout. Meta exige que el cliente haya
+// aceptado recibir mensajes antes de que el sistema le escriba solo.
+for (const [col, def] of [['cerrado_en', 'TEXT'], ['cobro', "TEXT NOT NULL DEFAULT ''"],
+  ['acepta_whatsapp', 'INTEGER NOT NULL DEFAULT 0']]) {
+  if (!db.prepare('PRAGMA table_info(pedidos)').all().some((c) => c.name === col)) {
+    db.exec(`ALTER TABLE pedidos ADD COLUMN ${col} ${def}`);
+  }
+}
+/** Cómo se puede cobrar en la puerta. */
+const COBROS = ['efectivo', 'yape', 'plin', 'transferencia', 'pagado'];
+db.exec(`CREATE TABLE IF NOT EXISTS avisos_cliente (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  pedido_id  INTEGER NOT NULL,
+  evento     TEXT NOT NULL,
+  canal      TEXT NOT NULL,
+  estado     TEXT NOT NULL,
+  texto      TEXT NOT NULL,
+  detalle    TEXT NOT NULL DEFAULT '',
+  enviado_por TEXT NOT NULL DEFAULT '',
+  creado_en  TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+)`);
+db.exec('CREATE INDEX IF NOT EXISTS idx_avisos_pedido ON avisos_cliente(pedido_id)');
+
 const Q = {
   insActividad: db.prepare(`INSERT INTO actividad_equipo
     (usuario, rol, accion, pedido_id, codigo, monto) VALUES (?,?,?,?,?,?)`),
+  asignar: db.prepare('UPDATE pedidos SET repartidor = ? WHERE id = ?'),
+  repartidores: db.prepare("SELECT usuario, nombre FROM usuarios WHERE rol = 'reparto' ORDER BY nombre"),
+  usuarioPorNombre: db.prepare('SELECT usuario, nombre, rol FROM usuarios WHERE usuario = ?'),
+  insAviso: db.prepare(`INSERT INTO avisos_cliente (pedido_id, evento, canal, estado, texto, detalle)
+    VALUES (?,?,?,?,?,?)`),
+  avisosDe: db.prepare('SELECT * FROM avisos_cliente WHERE pedido_id = ? ORDER BY id'),
+  aviso: db.prepare('SELECT * FROM avisos_cliente WHERE id = ?'),
+  cerrarAviso: db.prepare('UPDATE avisos_cliente SET estado = ?, detalle = ?, enviado_por = ? WHERE id = ?'),
   productos: db.prepare(
     `SELECT ${CAMPOS_PUBLICOS} FROM productos WHERE activo = 1
      ORDER BY categoria, nombre`
@@ -321,7 +379,11 @@ const Q = {
   pedidos: db.prepare('SELECT * FROM pedidos ORDER BY id DESC LIMIT 100'),
   pedido: db.prepare('SELECT * FROM pedidos WHERE id = ?'),
   itemsDe: db.prepare('SELECT * FROM pedido_items WHERE pedido_id = ?'),
-  estado: db.prepare('UPDATE pedidos SET estado = ? WHERE id = ?'),
+  estado: db.prepare(`UPDATE pedidos SET estado = ?1,
+    cerrado_en = CASE WHEN ?1 IN ('entregado','anulado','devuelto') THEN datetime('now','localtime') ELSE NULL END
+    WHERE id = ?2`),
+  cobro: db.prepare('UPDATE pedidos SET cobro = ? WHERE id = ?'),
+  aceptaWhatsapp: db.prepare('UPDATE pedidos SET acepta_whatsapp = 1 WHERE id = ?'),
   movimientos: db.prepare(`SELECT m.*, p.nombre, p.sku FROM movimientos_stock m
     JOIN productos p ON p.id = m.producto_id ORDER BY m.id DESC LIMIT 60`),
   bajoStock: db.prepare(`SELECT * FROM productos
@@ -652,6 +714,12 @@ const EDITABLES = {
 // una venta que no ocurrio y el otro una venta que se deshizo.
 const ESTADOS = ['pendiente', 'preparando', 'enviado', 'entregado', 'anulado', 'devuelto'];
 const REPONEN_STOCK = new Set(['anulado', 'devuelto']);
+const CERRADOS = new Set(['entregado', 'anulado', 'devuelto']);
+/** El recorrido del pedido, para saber qué es avanzar. */
+const ORDEN_PEDIDO = { pendiente: 0, preparando: 1, enviado: 2, entregado: 3, anulado: 4, devuelto: 4 };
+/** La fecha de hoy como la escribe SQLite con 'localtime', para comparar con cerrado_en. */
+const Q_HOY = db.prepare("SELECT date('now','localtime') d");
+const hoyLocal = () => Q_HOY.get().d;
 
 // ------------------------------------------------------------------- sesion
 const sesionDe_ = (req) => sesionDe(leerCookie(req, COOKIE));
@@ -801,6 +869,55 @@ function pedidoParaReparto(p) {
   void num_doc; void tipo_doc; void razon_social; void cliente_email;
   return resto;
 }
+
+/** Nombre visible del motorizado asignado, o '' si no hay. */
+const nombreRepartidor = (usuario) => (usuario ? Q.usuarioPorNombre.get(usuario)?.nombre || usuario : '');
+
+/**
+ * Registra y, si hay API configurada, envía un aviso al cliente.
+ *
+ * Nunca frena la operación que lo dispara: el pedido ya se creó o ya cambió de
+ * estado. El envío por API va sin esperar; si falla, el aviso queda en «error»
+ * y el panel ofrece el botón manual para mandarlo igual.
+ */
+function avisarCliente(evento, pedidoId) {
+  try {
+    const pedido = Q.pedido.get(pedidoId);
+    if (!pedido || pedido.canal === 'mostrador') return;
+    // Un aviso por evento: marcar «enviado» dos veces no manda dos mensajes.
+    if (Q.avisosDe.all(pedidoId).some((a) => a.evento === evento)) return;
+    const extra = { repartidor: nombreRepartidor(pedido.repartidor) };
+    const texto = mensajeWhatsapp(evento, pedido, extra);
+    if (!texto) return;
+    // El envío automático solo a quien marcó la casilla. Al resto el aviso le
+    // queda como botón manual: una persona decide si le escribe, como antes.
+    const canal = modoWhatsapp() === 'api' && pedido.acepta_whatsapp ? 'api' : 'manual';
+    const r = Q.insAviso.run(pedidoId, evento, canal, canal === 'api' ? 'enviando' : 'pendiente', texto, '');
+    const avisoId = Number(r.lastInsertRowid);
+    if (canal === 'api') {
+      enviarPorApi(evento, pedido, texto, extra).then((res) => {
+        Q.cerrarAviso.run(res.ok ? 'enviado' : 'error', res.detalle, 'sistema', avisoId);
+        if (!res.ok) console.warn(`[whatsapp] ${pedido.codigo} ${evento}: ${res.detalle}`);
+      });
+    }
+  } catch (e) {
+    console.warn('[whatsapp] ' + e.message);
+  }
+}
+
+/**
+ * Los avisos de un pedido como los usa el panel: qué se mandó y, para lo que
+ * falta mandar a mano (o falló por la API), el enlace que abre el chat.
+ */
+const avisosParaPanel = (pedido) => Q.avisosDe.all(pedido.id).map((a) => ({
+  id: a.id,
+  evento: a.evento,
+  nombre: NOMBRE_EVENTO[a.evento] || a.evento,
+  canal: a.canal,
+  estado: a.estado,
+  enviado_por: a.enviado_por,
+  ...(a.estado === 'pendiente' || a.estado === 'error' ? { enlace: enlaceChat(pedido, a.texto) } : {}),
+}));
 
 /**
  * Las lineas de un pedido segun quien pregunte.
@@ -1148,6 +1265,9 @@ async function api(req, res, url) {
       comprobante: cmp ? numeroDe(cmp.serie, cmp.correlativo) : null,
       tipoComprobante: actual.tipo_comprobante,
       recibidoEn: actual.recibido_en || null,
+      // Quién se lo lleva, cuando ya salió: el cliente abre la puerta sabiendo
+      // a quién espera. Solo el nombre, nunca el teléfono del motorizado.
+      repartidor: actual.estado === 'enviado' ? nombreRepartidor(actual.repartidor) || null : null,
       items: Q.itemsDe.all(pedido.id).map((i) => ({
         nombre: i.nombre, cantidad: i.cantidad, subtotal: i.subtotal,
       })),
@@ -1158,22 +1278,96 @@ async function api(req, res, url) {
   if (metodo === 'GET' && ruta === '/api/pedidos') {
     const sesion = requiereSesion(req, res);
     if (!sesion) return;
+    const hoy = hoyLocal();
     const lista = Q.pedidos.all()
       .filter((p) => !esReparto(sesion) || salePorReparto(p))
+      // Cada motorizado ve lo suyo y lo que nadie tomó todavía; lo asignado a
+      // otro no le aparece ni en la lista ni en su ruta impresa.
+      .filter((p) => !esReparto(sesion) || !p.repartidor || p.repartidor === sesion.usuario)
+      // Y de lo cerrado, solo lo de hoy: su lista es la ruta del día, no un
+      // archivo. Lo de días anteriores lo consulta el puesto.
+      .filter((p) => !esReparto(sesion) || !CERRADOS.has(p.estado)
+        || (p.cerrado_en || '').slice(0, 10) === hoy)
       .map((p) => {
-        const con = { ...p, items: itemsSegun(p.id, sesion) };
+        const con = {
+          ...p,
+          items: itemsSegun(p.id, sesion),
+          repartidor_nombre: nombreRepartidor(p.repartidor),
+          avisos: avisosParaPanel(p),
+        };
         return esReparto(sesion) ? pedidoParaReparto(con) : con;
       });
     return json(res, 200, lista);
+  }
+
+  // Los motorizados, para el selector de asignación del panel.
+  if (metodo === 'GET' && ruta === '/api/admin/repartidores') {
+    if (!requierePuesto(req, res)) return;
+    return json(res, 200, { repartidores: Q.repartidores.all(), avisos: modoWhatsapp() });
+  }
+
+  /**
+   * Asignar un pedido a un motorizado. Lo hace el puesto (la dueña o quien
+   * atiende), no el reparto: repartir el trabajo es decisión de quien ve la
+   * cola completa. Vacío = sin asignar.
+   */
+  if (metodo === 'PATCH' && /^\/api\/pedidos\/\d+\/repartidor$/.test(ruta)) {
+    const sesion = requierePuesto(req, res);
+    if (!sesion) return;
+    const id = Number(ruta.split('/')[3]);
+    const pedido = Q.pedido.get(id);
+    if (!pedido) return json(res, 404, { error: 'Pedido no encontrado' });
+    if (!salePorReparto(pedido)) return json(res, 400, { error: 'Ese pedido no sale a reparto.' });
+    if (['entregado', 'anulado', 'devuelto'].includes(pedido.estado)) {
+      return json(res, 409, { error: `El pedido ya figura como ${pedido.estado}.` });
+    }
+    const { repartidor = '' } = await leerCuerpo(req);
+    const usuario = String(repartidor || '').trim();
+    if (usuario) {
+      const u = Q.usuarioPorNombre.get(usuario);
+      if (!u || u.rol !== 'reparto') {
+        return json(res, 400, { error: 'Solo se asigna a un acceso con papel de reparto.' });
+      }
+    }
+    Q.asignar.run(usuario, id);
+    Q.insActividad.run(sesion.usuario, sesion.rol, usuario ? 'asignado' : 'desasignado', id, pedido.codigo, 0);
+    const actual = Q.pedido.get(id);
+    return json(res, 200, { ...actual, repartidor_nombre: nombreRepartidor(actual.repartidor) });
+  }
+
+  /**
+   * Marcar un aviso manual como enviado, cuando quien tocó el botón ya lo
+   * mandó desde su WhatsApp. El reparto solo los de pedidos que puede ver.
+   */
+  if (metodo === 'PATCH' && /^\/api\/avisos\/\d+$/.test(ruta)) {
+    const sesion = requiereSesion(req, res);
+    if (!sesion) return;
+    const aviso = Q.aviso.get(Number(ruta.split('/')[3]));
+    if (!aviso) return json(res, 404, { error: 'Aviso no encontrado' });
+    const pedido = Q.pedido.get(aviso.pedido_id);
+    if (esReparto(sesion) && (!salePorReparto(pedido)
+      || (pedido.repartidor && pedido.repartidor !== sesion.usuario))) {
+      return json(res, 403, { error: 'Ese pedido no es de tu ruta.' });
+    }
+    if (aviso.estado === 'enviado' || aviso.estado === 'enviado_manual') {
+      return json(res, 200, { ...aviso, texto: undefined });
+    }
+    Q.cerrarAviso.run('enviado_manual', 'desde el panel', sesion.usuario, aviso.id);
+    const { texto, ...resto } = Q.aviso.get(aviso.id);
+    void texto;
+    return json(res, 200, resto);
   }
 
   if (metodo === 'PATCH' && /^\/api\/pedidos\/\d+\/estado$/.test(ruta)) {
     const sesion = requiereSesion(req, res);
     if (!sesion) return;
     const id = Number(ruta.split('/')[3]);
-    const { estado } = await leerCuerpo(req);
+    const { estado, cobro = '' } = await leerCuerpo(req);
     if (!ESTADOS.includes(estado)) {
       return json(res, 400, { error: 'Estado no valido' });
+    }
+    if (cobro && (estado !== 'entregado' || !COBROS.includes(cobro))) {
+      return json(res, 400, { error: `El cobro va al entregar y es uno de: ${COBROS.join(', ')}.` });
     }
     const pedido = Q.pedido.get(id);
     if (!pedido) return json(res, 404, { error: 'Pedido no encontrado' });
@@ -1197,9 +1391,42 @@ async function api(req, res, url) {
       if (!salePorReparto(pedido)) {
         return json(res, 403, { error: 'Ese pedido no sale a reparto.' });
       }
+      // Lo asignado a otro motorizado no se toca: dos personas marcando el
+      // mismo pedido es cómo un cliente recibe «entregado» sin que nadie llegue.
+      if (pedido.repartidor && pedido.repartidor !== sesion.usuario) {
+        return json(res, 403, {
+          error: `Ese pedido lo lleva ${nombreRepartidor(pedido.repartidor)}.`,
+        });
+      }
+      // Y solo hacia adelante. Sin esto, quien rinde la plata podía devolver
+      // a «preparando» un pedido cobrado en efectivo y sacarlo de su cuenta.
+      if (ORDEN_PEDIDO[estado] < ORDEN_PEDIDO[pedido.estado]) {
+        return json(res, 409, { error: `El pedido ya figura como ${pedido.estado}.` });
+      }
     }
     if (REPONEN_STOCK.has(pedido.estado)) {
       return json(res, 409, { error: `El pedido ya figura como ${pedido.estado}` });
+    }
+
+    /**
+     * Marcar el estado que ya tiene no hace nada: ni otra fila de actividad, ni
+     * otra hora de cierre. Antes, la dueña tocando «entregado» sobre un pedido
+     * que el motorizado acababa de cerrar —su panel aún sin refrescar— dejaba
+     * el efectivo a nombre de ella.
+     *
+     * La excepción es un entregado SIN cobro: pasa cuando el cliente confirma
+     * «ya lo recibí» antes de que el motorizado registre cómo le pagó. Entonces
+     * se registra el cobro, y la entrega a nombre de quien lo registra si nadie
+     * la tenía anotada.
+     */
+    if (estado === pedido.estado) {
+      if (estado === 'entregado' && cobro && !pedido.cobro) {
+        Q.cobro.run(cobro, id);
+        const anotada = db.prepare("SELECT 1 FROM actividad_equipo WHERE pedido_id = ? AND accion = 'entregado'").get(id);
+        if (!anotada) Q.insActividad.run(sesion.usuario, sesion.rol, 'entregado', id, pedido.codigo, pedido.total);
+      }
+      const actual = Q.pedido.get(id);
+      return json(res, 200, { ...actual, repartidor_nombre: nombreRepartidor(actual.repartidor) });
     }
     // Anular y devolver reponen la mercaderia al inventario.
     if (REPONEN_STOCK.has(estado)) {
@@ -1235,8 +1462,19 @@ async function api(req, res, url) {
     } else {
       Q.estado.run(estado, id);
     }
+    // Un pedido sin asignar que el motorizado mueve queda a su nombre: es quien
+    // lo tiene en la mano, y así el aviso de «en camino» dice quién va.
+    if (esReparto(sesion) && !pedido.repartidor) Q.asignar.run(sesion.usuario, id);
+    if (cobro) Q.cobro.run(cobro, id);
     Q.insActividad.run(sesion.usuario, sesion.rol, estado, id, pedido.codigo, pedido.total);
-    return json(res, 200, Q.pedido.get(id));
+
+    // Avisos al cliente: salió y llegó. Solo lo que va a domicilio sale «en
+    // camino»; lo que se recoge en el puesto recibe el de entregado igual.
+    if (estado === 'enviado' && salePorReparto(pedido)) avisarCliente('en_camino', id);
+    if (estado === 'entregado') avisarCliente('entregado', id);
+
+    const actual = Q.pedido.get(id);
+    return json(res, 200, { ...actual, repartidor_nombre: nombreRepartidor(actual.repartidor) });
   }
 
   /**
@@ -1654,6 +1892,8 @@ function crearPedido(res, body) {
           recojo ? '' : String(cliente.referencia || '').trim().slice(0, 200),
           envio, recojo ? 'recojo' : 'envio');
         pedidoId = Number(r.lastInsertRowid);
+        // Solo un `true` de verdad: una casilla que no se marcó no es permiso.
+        if (cliente.acepta_whatsapp === true) Q.aceptaWhatsapp.run(pedidoId);
         break;
       } catch (e) {
         if (intento >= 8 || !/UNIQUE.*pedidos\.codigo/i.test(e.message)) throw e;
@@ -1680,6 +1920,10 @@ function crearPedido(res, body) {
     } catch (e) {
       console.warn('[comprobante] ' + e.message);
     }
+
+    // El primer aviso al cliente: su pedido entró. Con API sale solo; en modo
+    // manual queda listo en el panel para mandarlo de un toque.
+    avisarCliente('confirmado', pedidoId);
 
     // Aquí no van las alertas de reposición: esta respuesta la recibe el
     // comprador, y «quedan 2 de 10» es inventario. El panel ya las muestra en
@@ -1948,6 +2192,17 @@ function equipoHoy(web) {
     WHERE p.estado = 'enviado' AND a.accion = 'enviado'
       AND a.id = (SELECT MAX(id) FROM actividad_equipo WHERE pedido_id = a.pedido_id)
     GROUP BY a.usuario`).all();
+  // El efectivo que cada motorizado cobró hoy en la puerta: lo que tiene que
+  // entregar en caja al volver.
+  const efectivo = db.prepare(`SELECT a.usuario, COALESCE(SUM(p.total),0) t FROM actividad_equipo a
+    JOIN pedidos p ON p.id = a.pedido_id
+    -- Un devuelto sigue contando: la plata la cobró el motorizado y la tiene
+    -- que rendir igual; devolvérsela al cliente es cosa de la caja.
+    WHERE a.accion = 'entregado' AND p.cobro = 'efectivo' AND p.estado IN ('entregado','devuelto')
+      AND date(a.creado_en) = date('now','localtime')
+      -- Una vez por pedido: marcarlo entregado dos veces no duplica la plata.
+      AND a.id = (SELECT MAX(id) FROM actividad_equipo WHERE pedido_id = a.pedido_id AND accion = 'entregado')
+    GROUP BY a.usuario`).all();
   const porRepartir = db.prepare(`SELECT COUNT(*) c FROM pedidos
     WHERE canal = 'web' AND modo_entrega != 'recojo'
       AND estado IN ('pendiente','preparando','enviado')`).get().c;
@@ -1967,6 +2222,7 @@ function equipoHoy(web) {
       entregados: de(u.usuario, 'entregado').c,
       anulados: de(u.usuario, 'anulado').c + de(u.usuario, 'devuelto').c,
       en_camino: enCamino.find((x) => x.usuario === u.usuario)?.c || 0,
+      efectivo: +(efectivo.find((x) => x.usuario === u.usuario)?.t || 0).toFixed(2),
       ultima_actividad: suyos.reduce((m, h) => (h.ultima > m ? h.ultima : m), '') || null,
     };
   });

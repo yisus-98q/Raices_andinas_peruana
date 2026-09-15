@@ -72,6 +72,7 @@ img { max-width: 100%; display: block; }
 .btn-verde:hover { background: #1f5136; }
 .btn-bloque { width: 100%; padding: 14px; }
 .btn:disabled { opacity: .45; cursor: not-allowed; }
+.btn[hidden] { display: none; }
 
 /* --------------------------------------------------------------- cabecera */
 .admin-cabecera {
@@ -222,6 +223,117 @@ button.paso-reparto:active { transform: scale(.98); }
    del puesto, para que el codigo de color signifique lo mismo en los dos. */
 .paso-reparto.e-pendiente .paso-ahora i { animation: latido 2.2s ease-in-out infinite; }
 .paso-siguiente { font-size: 11.5px; font-weight: 600; opacity: .8; }
+
+/* ------------------------------------------ quien lo lleva y los avisos
+   Una franja entre los productos y el pie: el motorizado a la izquierda y lo
+   que se le dijo al cliente por WhatsApp a la derecha. Lo que falta mandar es
+   verde WhatsApp y se toca; lo ya mandado es texto apagado con su ✓. */
+.pedido-entrega {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+  gap: 8px 12px; margin-top: 11px;
+}
+.asignar { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; }
+.asignar select {
+  min-height: 38px; padding: 6px 30px 6px 11px; max-width: 100%;
+  font: inherit; font-weight: 600; color: var(--tinta);
+  background: var(--papel-puro); border: 1px solid var(--borde); border-radius: 9px;
+}
+.asignar select:focus-visible { outline: 2px solid var(--verde); outline-offset: 1px; }
+.asignado { font-size: 13px; color: var(--tinta-suave); }
+.asignado b { color: var(--tinta); }
+.asignado-mio { color: var(--verde); font-weight: 700; }
+.asignado-libre { color: #8a5c0f; }
+/* Prefijo `wa-` y no `aviso`: `.aviso` ya es la caja de error de los
+   formularios, más abajo, y pisaba el tamaño de estas pastillas. */
+.wa-avisos { display: flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
+.wa-aviso {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 600; padding: 6px 11px; border-radius: 999px;
+  border: 1px solid var(--borde); color: var(--tinta-suave); white-space: nowrap;
+}
+.wa-hecho { background: var(--humo); }
+.wa-enviando { border-style: dashed; }
+/* Contorno y no relleno: el botón grande de la tarjeta es el del estado. Este
+   se ve —verde WhatsApp— pero no se lee como «lo siguiente que hay que tocar». */
+.wa-falta {
+  min-height: 40px; color: #17804a; background: var(--papel-puro); border-color: rgba(31, 143, 78, .55);
+  transition: background .15s, transform .12s;
+}
+.wa-falta:hover { background: rgba(31, 143, 78, .08); }
+.wa-falta:active { transform: scale(.97); }
+.wa-falta svg { width: 15px; height: 15px; fill: currentColor; flex: none; }
+.wa-error { color: var(--terra); border-color: rgba(180, 85, 47, .55); }
+.wa-error:hover { background: rgba(180, 85, 47, .08); }
+@media (max-width: 520px) {
+  .wa-avisos { margin-left: 0; width: 100%; }
+  .wa-falta { flex: 1 1 auto; justify-content: center; }
+}
+
+/* ---------------------------------------------- lo que usa en la calle
+   Llamar y cómo llegar: dos botones anchos, del alto de un pulgar. Van justo
+   debajo de la dirección, que es donde se mira cuando no se encuentra la casa. */
+.pedido-contacto { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 11px; }
+.contacto {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  min-height: 44px; padding: 8px 10px; border-radius: 11px;
+  font-size: 13.5px; font-weight: 700; color: var(--tinta);
+  background: var(--papel-puro); border: 1px solid var(--borde);
+  transition: border-color .15s, transform .12s;
+}
+.contacto:hover { border-color: var(--verde); color: var(--verde); }
+.contacto:active { transform: scale(.97); }
+.contacto svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2; flex: none; }
+
+/* El monto: para el motorizado es lo que se cobra, no un total contable. */
+.pedido-cobrar { margin-left: auto; text-align: right; line-height: 1.15; }
+.pedido-cobrar small {
+  display: block; font-size: 10.5px; font-weight: 700; letter-spacing: .09em;
+  text-transform: uppercase; color: var(--terra);
+}
+.pedido-cobrar .pedido-total { margin-left: 0; font-size: 22px; }
+.pedido-cobrado small { color: var(--verde); }
+.cobro-dato { color: var(--verde); font-weight: 700; }
+
+/* Sus dos pasos. Salir en violeta —el color de «en camino» en todo el panel—
+   y entregar en verde; los dos llenos, porque son lo único que viene a tocar. */
+.pedido-reparto.solo-paso { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); }
+.paso-grande { min-height: 68px; font-size: 16px; font-weight: 800; }
+.paso-grande .paso-accion { display: inline-flex; align-items: center; gap: 8px; letter-spacing: -.01em; }
+.paso-salir { background: #5b45a8; color: #fff; }
+.paso-entregar { background: var(--verde); color: #fff; }
+.paso-grande .paso-siguiente { color: inherit; opacity: .85; font-weight: 600; }
+
+/* Separadores de la ruta: qué lleva, qué falta salir, qué ya cerró hoy. */
+.ruta-grupo {
+  padding: 14px 22px 6px; font-size: 11px; font-weight: 800; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--tinta-suave); background: var(--papel-hondo);
+  border-top: 1px solid var(--borde);
+}
+.ruta-grupo b { color: var(--tinta); }
+.pedido-hecho { opacity: .72; }
+
+/* El diálogo de cobro: el monto grande y un botón por medio de pago. */
+.dlg-cobro { width: min(420px, calc(100vw - 24px)); }
+.cobro-monto { margin: 0 0 4px; font-size: 13px; color: var(--tinta-suave); }
+.cobro-monto strong { display: block; font-size: 34px; color: var(--tinta); letter-spacing: -.03em; }
+.cobro-opciones { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 16px 0 10px; }
+.cobro-opciones button {
+  min-height: 56px; border-radius: 12px; font-size: 15px; font-weight: 700;
+  border: 1px solid var(--borde); background: var(--humo); color: var(--tinta);
+}
+.cobro-opciones button:hover { border-color: var(--verde); color: var(--verde); }
+.cobro-opciones .cobro-pagado { grid-column: 1 / -1; background: var(--papel-puro); font-weight: 600; font-size: 14px; }
+
+/* La cabecera del motorizado: sin QR ni tienda le quedan tres botones, y
+   caben en una sola fila con su nombre. */
+@media (max-width: 640px) {
+  body.rol-reparto .admin-cabecera { padding: 8px 0; }
+  body.rol-reparto .marca-icono { width: 34px; height: 34px; }
+  body.rol-reparto .marca-logotipo { height: 24px; }
+  body.rol-reparto .admin-cabecera .contenedor { gap: 8px; }
+  body.rol-reparto .admin-cabecera .acciones .btn { padding: 9px 10px; }
+  .ruta-grupo { padding: 12px 16px 6px; }
+}
 
 /* Anular y registrar devolucion. Van debajo de los dos controles y alineadas
    a la derecha: reponen stock y emiten nota de credito, asi que son la

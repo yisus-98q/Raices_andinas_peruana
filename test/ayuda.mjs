@@ -13,7 +13,7 @@ import { fileURLToPath } from 'node:url';
 
 const RAIZ = join(dirname(fileURLToPath(import.meta.url)), '..');
 
-export async function levantarServidor({ limites = false } = {}) {
+export async function levantarServidor({ limites = false, env = {} } = {}) {
   const carpeta = mkdtempSync(join(tmpdir(), 'ra-test-'));
   const dbPath = join(carpeta, 'prueba.db');
 
@@ -45,6 +45,11 @@ export async function levantarServidor({ limites = false } = {}) {
       // carpeta desechable: asi se prueba el arranque sin dejar copias de
       // bases de prueba en data/respaldos.
       RESPALDO_DIR: join(carpeta, 'respaldos'),
+      // Los avisos por WhatsApp quedan en modo manual salvo que la suite pida
+      // otra cosa: una credencial en la consola no debe mandar mensajes reales.
+      WHATSAPP_TOKEN: '',
+      WHATSAPP_PHONE_ID: '',
+      ...env,
     },
     stdio: ['ignore', 'pipe', 'pipe'],
   });

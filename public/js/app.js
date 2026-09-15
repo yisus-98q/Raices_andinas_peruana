@@ -766,6 +766,12 @@
              como "dejar con el portero". -->
         <div class="campo"><label for="f-nota">Nota para el pedido (opcional)</label>
           <textarea id="f-nota" placeholder="Ej: dejar con el portero" maxlength="300"></textarea></div>
+
+        <!-- Sin marcar por defecto: un permiso que viene puesto no es permiso. -->
+        <label class="casilla" for="f-wa">
+          <input type="checkbox" id="f-wa">
+          <span>Quiero recibir por WhatsApp la confirmación y el aviso cuando mi pedido salga y llegue.</span>
+        </label>
       </div>
 
       <div class="resumen" id="resumen-final"></div>`;
@@ -982,6 +988,7 @@
             provincia: $('f-prov').value,
             distrito: $('f-dist').value,
             referencia: $('f-ref').value,
+            acepta_whatsapp: $('f-wa').checked,
           },
           nota: $('f-nota').value,
           entrega: modoEntrega(),

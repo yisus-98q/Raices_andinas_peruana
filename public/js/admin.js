@@ -51,6 +51,13 @@
    * quita de la vista, y el servidor además se lo niega si lo pide a mano.
    */
   let esReparto = false;
+  /** El acceso con que se entró: al motorizado le marca qué pedidos son suyos. */
+  let miUsuario = '';
+  /**
+   * Los motorizados, para asignar pedidos. Solo lo pide el puesto: repartir el
+   * trabajo lo decide quien ve la cola completa.
+   */
+  let repartidores = [];
 
   /**
    * Qué bloques ve cada rol.
@@ -242,7 +249,7 @@
     // el refresco vuelve en 15 s, y en cuanto salga del campo se actualiza.
     const foco = document.activeElement;
     if (foco && foco !== document.body && el.contains(foco)
-        && (foco.tagName === 'INPUT' || foco.tagName === 'TEXTAREA')) {
+        && (foco.tagName === 'INPUT' || foco.tagName === 'TEXTAREA' || foco.tagName === 'SELECT')) {
       el.dataset.pendiente = html;
       return;
     }
@@ -291,7 +298,7 @@
       const soloDuena = (ruta, vacio) => (esDueno ? pedir(ruta) : vacio);
 
       const [resumen, pedidos, movimientos, productos, comprobantes,
-        cal, clientes, cambios, resp] = await Promise.all([
+        cal, clientes, cambios, resp, reparto] = await Promise.all([
         delPuesto('/api/admin/resumen', null),
         pedir('/api/pedidos'),
         soloDuena('/api/admin/movimientos', []),
@@ -301,7 +308,9 @@
         delPuesto('/api/admin/clientes', []),
         esDueno ? pedir('/api/admin/cambios') : [],
         esDueno ? pedir('/api/admin/respaldos') : null,
+        delPuesto('/api/admin/repartidores', null),
       ]);
+      if (reparto) repartidores = reparto.repartidores;
       ultimosPedidos = pedidos;
       ultimosProductos = productos;
       // Los comprobantes se guardan porque cada pedido enlaza al suyo.
@@ -340,6 +349,14 @@
       const s = await pedir('/api/sesion');
       esDueno = s.rol === 'admin';
       esReparto = s.rol === 'reparto';
+      miUsuario = s.usuario;
+      document.body.classList.toggle('rol-reparto', esReparto);
+      if (esReparto) {
+        // El QR y la vitrina son para vender; en la moto solo ocupan la
+        // cabecera que el celular necesita para la lista.
+        $('btn-qr').hidden = true;
+        $('btn-tienda').hidden = true;
+      }
 
       const papel = esDueno ? '' : esReparto ? ' · reparto' : ' · mostrador';
       $('quien').textContent = s.nombre + papel;
@@ -415,6 +432,8 @@
       if (p.rol !== 'vendedor') {
         datos.push(dato(p.entregados, 'entregado(s)', p.entregados > 0));
         if (p.rol === 'reparto') datos.push(dato(p.en_camino, 'en camino ahora', p.en_camino > 0));
+        // Lo que tiene que rendir en caja al volver.
+        if (p.efectivo > 0) datos.push(dato(soles(p.efectivo), 'efectivo por rendir', true));
       }
       const avanzados = p.preparados + p.enviados;
       if (avanzados) datos.push(dato(avanzados, 'pedido(s) avanzados'));
@@ -574,6 +593,7 @@
    * queriendo la otra. El reparto directamente no la tiene.
    */
   function pieDePedido(p, deshacer = []) {
+    if (esReparto) return pieDelReparto(p);
     const paso = PASO_PEDIDO[p.estado];
     const estado = `<span class="paso-ahora"><i></i>${p.estado}</span>`;
 
@@ -589,11 +609,178 @@
          </span>`;
 
     return `
+      ${entregaDe(p)}
       <div class="pedido-reparto">
         ${avance}
         <div class="comprobante-reparto">${comprobanteDe(p)}</div>
       </div>
       ${deshacer.length ? `<div class="pedido-deshacer">${deshacer.join('')}</div>` : ''}`;
+  }
+
+  /**
+   * El pie del motorizado: sus dos pasos y nada más.
+   *
+   * Preparar el pedido es trabajo del puesto; el motorizado sale y entrega.
+   * Antes su botón decía «tocar: en preparación» y lo hacía pasar por un paso
+   * que no es suyo. «Entregado» no se marca de un toque: abre el cobro, que
+   * además de registrar cómo pagó el cliente es la confirmación contra el
+   * toque accidental —que le mandaría al cliente un «ya está contigo» falso—.
+   */
+  function pieDelReparto(p) {
+    let paso;
+    if (p.estado === 'pendiente' || p.estado === 'preparando') {
+      paso = `<button class="paso-reparto paso-grande paso-salir" data-estado="enviado" data-id="${p.id}">
+          <span class="paso-accion">🛵 Salgo a entregar</span>
+          <span class="paso-siguiente">${p.estado === 'preparando' ? 'lo están preparando' : 'aún sin preparar'}</span>
+        </button>`;
+    } else if (p.estado === 'enviado') {
+      paso = `<button class="paso-reparto paso-grande paso-entregar" data-entregar="${p.id}">
+          <span class="paso-accion">✓ Entregado</span>
+          <span class="paso-siguiente">cobrar ${soles(p.total)}</span>
+        </button>`;
+    } else if (p.estado === 'entregado' && !p.cobro) {
+      // El cliente confirmó «ya lo recibí» antes de que se anotara el cobro:
+      // queda el botón para registrarlo, o esa plata no figura por rendir.
+      paso = `<button class="paso-reparto paso-grande paso-entregar" data-entregar="${p.id}">
+          <span class="paso-accion">💵 Registrar cobro</span>
+          <span class="paso-siguiente">el cliente ya confirmó · ${soles(p.total)}</span>
+        </button>`;
+    } else {
+      paso = `<span class="paso-reparto paso-cerrado e-${p.estado}">
+          <span class="paso-ahora"><i></i>${p.estado}</span>
+          <span class="paso-siguiente">${p.cobro ? `cobrado: ${NOMBRE_COBRO[p.cobro] || escapar(p.cobro)}` : 'entrega cerrada'}</span>
+        </span>`;
+    }
+    return `
+      ${entregaDe(p)}
+      <div class="pedido-reparto solo-paso">
+        ${paso}
+        <div class="comprobante-reparto">${comprobanteDe(p)}</div>
+      </div>`;
+  }
+
+  const NOMBRE_COBRO = {
+    efectivo: 'efectivo', yape: 'Yape', plin: 'Plin', transferencia: 'transferencia', pagado: 'ya estaba pagado',
+  };
+
+  /** +51 y los 9 dígitos, para que el celular marque sin preguntar el país. */
+  const telLlamar = (tel) => {
+    const d = String(tel || '').replace(/\D/g, '');
+    if (d.length === 9) return '+51' + d;
+    if (d.length === 11 && d.startsWith('51')) return '+' + d;
+    return d;
+  };
+  /** Google Maps con la dirección completa: abre la app en el celular. */
+  const enlaceMapa = (p) => 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(
+    [p.cliente_dir, p.distrito, p.provincia, p.departamento, 'Perú'].filter(Boolean).join(', '));
+
+  const ICONO_TEL = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2Z"/></svg>';
+  const ICONO_MAPA = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>';
+
+  /**
+   * Pregunta cómo pagó el cliente. Resuelve con el medio elegido, o '' si se
+   * cancela (× o Escape): en ese caso el pedido no se toca.
+   */
+  function pedirCobro(p) {
+    return new Promise((resolve) => {
+      let dlg = $('dlg-cobro');
+      if (!dlg) {
+        dlg = document.createElement('dialog');
+        dlg.id = 'dlg-cobro';
+        dlg.className = 'dlg dlg-cobro';
+        document.body.append(dlg);
+      }
+      dlg.innerHTML = `
+        <form method="dialog">
+          <header class="dlg-cabeza">
+            <h2>Entregar ${escapar(p.codigo)}</h2>
+            <button type="button" class="dlg-cerrar" aria-label="Cancelar">×</button>
+          </header>
+          <div class="dlg-cuerpo">
+            <p class="cobro-monto">${escapar(p.cliente_nombre)} · a cobrar<strong>${soles(p.total)}</strong></p>
+            <div class="cobro-opciones">
+              <button value="efectivo">💵 Efectivo</button>
+              <button value="yape">Yape</button>
+              <button value="plin">Plin</button>
+              <button value="transferencia">Transferencia</button>
+              <button value="pagado" class="cobro-pagado">Ya estaba pagado</button>
+            </div>
+          </div>
+        </form>`;
+      dlg.returnValue = '';
+      dlg.querySelector('.dlg-cerrar').onclick = () => dlg.close('');
+      dlg.addEventListener('close', () => resolve(dlg.returnValue), { once: true });
+      dlg.showModal();
+    });
+  }
+
+  /** Lo mismo que decide el servidor: sale en moto si no es del local ni lo recogen. */
+  const salePorReparto = (p) => p.canal !== 'mostrador' && p.modo_entrega !== 'recojo';
+  const CERRADOS = ['entregado', 'anulado', 'devuelto'];
+
+  /**
+   * Quién lleva el pedido y qué se le avisó al cliente por WhatsApp.
+   *
+   * El puesto asigna con un selector; el motorizado solo lee si es suyo. Cada
+   * aviso es una pastilla: hecha (✓) o por mandar, y la que falta es un enlace
+   * que abre el chat del cliente con el mensaje escrito — se envía con un toque
+   * desde el teléfono de quien lo tenga en la mano.
+   */
+  function entregaDe(p) {
+    const lista = p.avisos || [];
+    const anulado = p.estado === 'anulado' || p.estado === 'devuelto';
+    const avisos = lista.map((a, i) => {
+      if (a.estado === 'enviado' || a.estado === 'enviado_manual') {
+        return `<span class="wa-aviso wa-hecho" title="${a.canal === 'api' ? 'Lo mandó el sistema' : `Lo mandó ${escapar(a.enviado_por)}`}">✓ ${escapar(a.nombre)}</span>`;
+      }
+      if (a.estado === 'enviando') {
+        return `<span class="wa-aviso wa-enviando">enviando: ${escapar(a.nombre)}…</span>`;
+      }
+      // Lo que ya quedó atrás no se ofrece: mandar «recibimos tu pedido» cuando
+      // ya salió «en camino» confunde más de lo que informa. Tampoco a un anulado.
+      // Y la confirmación es del puesto: el motorizado manda lo de su recorrido.
+      if (!a.enlace || anulado || i < lista.length - 1) return '';
+      if (esReparto && a.evento === 'confirmado') return '';
+      const fallo = a.estado === 'error';
+      return `<a class="wa-aviso wa-falta${fallo ? ' wa-error' : ''}" data-aviso="${a.id}"
+                 href="${escapar(a.enlace)}" target="_blank" rel="noopener"
+                 title="${fallo ? 'No salió solo: tócalo para enviarlo desde tu WhatsApp' : 'Abre el chat del cliente con el mensaje listo'}">
+                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.3-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.7 11.8 11.8 0 0 0 4.5 4c1.7.7 2.3.8 3.2.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.2-1.2-.1-.1-.3-.2-.5-.3Z"/></svg>
+                 ${fallo ? 'Reintentar' : 'Avisar'}: ${escapar(a.nombre)}</a>`;
+    }).join('');
+
+    // Un pedido cerrado que nadie tenía asignado —los de antes de esta función—
+    // no necesita decir «sin asignar»: ya no hay nada que repartir.
+    if (!salePorReparto(p) || (CERRADOS.includes(p.estado) && !p.repartidor)) {
+      return avisos ? `<div class="pedido-entrega"><div class="wa-avisos">${avisos}</div></div>` : '';
+    }
+
+    let quien;
+    if (!esReparto && !CERRADOS.includes(p.estado) && repartidores.length) {
+      quien = `
+        <label class="asignar">
+          <span>🛵 Lo lleva</span>
+          <select data-asignar="${p.id}">
+            <option value="">sin asignar</option>
+            ${repartidores.map((r) => `<option value="${escapar(r.usuario)}"${
+              r.usuario === p.repartidor ? ' selected' : ''}>${escapar(r.nombre)}</option>`).join('')}
+          </select>
+        </label>`;
+    } else if (esReparto) {
+      quien = p.repartidor === miUsuario
+        ? '<span class="asignado asignado-mio">🛵 Es de tu ruta</span>'
+        : '<span class="asignado asignado-libre">🛵 Sin asignar · al moverlo pasa a tu nombre</span>';
+    } else {
+      quien = p.repartidor_nombre
+        ? `<span class="asignado">🛵 Lo lleva <b>${escapar(p.repartidor_nombre)}</b></span>`
+        : `<span class="asignado asignado-libre">🛵 ${repartidores.length ? 'Sin asignar' : 'Sin motorizados: crea un acceso de reparto'}</span>`;
+    }
+
+    return `
+      <div class="pedido-entrega">
+        ${quien}
+        ${avisos ? `<div class="wa-avisos">${avisos}</div>` : ''}
+      </div>`;
   }
 
   function pintarPedidos() {
@@ -613,8 +800,25 @@
         `<div class="vacio">Ningún pedido coincide con “${escapar(filtro)}”.</div>`);
     }
 
-    pintar('lista-pedidos', lista.map((p) => {
+    /**
+     * La ruta del motorizado, en el orden en que la trabaja: primero lo que ya
+     * lleva en la moto, luego lo que falta salir y al final lo cerrado hoy.
+     * Antes iba por fecha de compra y lo que tenía encima quedaba tercero,
+     * debajo de pedidos que ni siquiera estaban listos.
+     */
+    const grupoDe = (p) => (CERRADOS.includes(p.estado) ? 2 : p.estado === 'enviado' ? 0 : 1);
+    const GRUPOS = ['Llevando ahora', 'Por salir', 'Cerrados hoy'];
+    const orden = esReparto
+      ? [...lista].sort((a, b) => grupoDe(a) - grupoDe(b))
+      : lista;
+    const cuantos = [0, 1, 2].map((g) => orden.filter((p) => grupoDe(p) === g).length);
+
+    pintar('lista-pedidos', orden.map((p, i) => {
       const items = p.items.map((i) => `${i.cantidad} × ${escapar(i.nombre)}`).join(' · ');
+      const g = grupoDe(p);
+      const separador = esReparto && (i === 0 || grupoDe(orden[i - 1]) !== g)
+        ? `<div class="ruta-grupo">${GRUPOS[g]} · <b>${cuantos[g]}</b></div>` : '';
+      const abierto = !CERRADOS.includes(p.estado);
 
       /**
        * Lo que deshace una venta. Solo el puesto, nunca el reparto.
@@ -631,14 +835,21 @@
         }
       }
 
-      return `
-      <div class="pedido">
+      // Al motorizado el monto le dice cuánto cobrar, o cómo ya se cobró.
+      const monto = !esReparto
+        ? `<span class="pedido-total">${soles(p.total)}</span>`
+        : p.cobro
+          ? `<span class="pedido-cobrar pedido-cobrado"><small>Cobrado · ${NOMBRE_COBRO[p.cobro] || escapar(p.cobro)}</small><span class="pedido-total">${soles(p.total)}</span></span>`
+          : `<span class="pedido-cobrar"><small>${abierto ? 'Cobrar' : 'Total'}</small><span class="pedido-total">${soles(p.total)}</span></span>`;
+
+      return `${separador}
+      <div class="pedido${esReparto && !abierto ? ' pedido-hecho' : ''}">
         <div class="pedido-fila">
           <span class="pedido-codigo">${escapar(p.codigo)}</span>
           ${p.canal === 'mostrador' ? '<span class="canal">en el local</span>' : ''}
           ${p.canal !== 'mostrador' && p.modo_entrega === 'recojo'
             ? '<span class="canal canal-recojo">pasa a recoger</span>' : ''}
-          <span class="pedido-total">${soles(p.total)}</span>
+          ${monto}
         </div>
         <div class="pedido-meta">
           <b>${escapar(p.razon_social || p.cliente_nombre)}</b>
@@ -654,7 +865,13 @@
           <br>${soloFecha(p.creado_en)} ${horaCorta(p.creado_en)}
           ${p.costo_envio > 0 ? ` · envío ${soles(p.costo_envio)}` : ''}
           ${p.nota ? '<br><b>Nota:</b> ' + escapar(p.nota) : ''}
+          ${!esReparto && p.cobro ? `<br><span class="cobro-dato">Cobrado: ${NOMBRE_COBRO[p.cobro] || escapar(p.cobro)}</span>` : ''}
         </div>
+        ${esReparto && abierto ? `
+        <div class="pedido-contacto">
+          <a class="contacto" href="tel:${escapar(telLlamar(p.cliente_tel))}">${ICONO_TEL} Llamar</a>
+          <a class="contacto" href="${escapar(enlaceMapa(p))}" target="_blank" rel="noopener">${ICONO_MAPA} Cómo llegar</a>
+        </div>` : ''}
         <div class="pedido-items">${items}</div>
 
         <!-- El pie: en qué va el pedido y el papel del cliente. Va al final y
@@ -1393,7 +1610,8 @@
         </td>
         <td>${p.items.map((i2) => `${i2.cantidad} × ${escapar(i2.nombre)}`).join('<br>')}</td>
         <td class="der"><strong>${soles(p.total)}</strong><br>
-          <span class="cod">${escapar(p.codigo)}</span></td>
+          <span class="cod">${escapar(p.codigo)}</span>
+          ${p.repartidor_nombre ? `<br><span class="moto">${escapar(p.repartidor_nombre)}</span>` : ''}</td>
         <td class="firma"></td>
       </tr>`).join('');
 
@@ -1415,6 +1633,7 @@
         .firma { width: 92px; border-left: 1px dashed #bbb; }
         .tel { color: #444; }
         .cod { font-family: Consolas, monospace; font-size: 10px; color: #777; }
+        .moto { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
         em { color: #b4462a; font-style: normal; font-size: 11px; }
         tfoot td { border: none; padding-top: 12px; font-size: 13px; }
         @media print { .noprint { display: none } }
@@ -1439,7 +1658,63 @@
   }
 
   // -------------------------------------------------------------- acciones
+  // Asignar un pedido a un motorizado.
+  document.addEventListener('change', async (e) => {
+    const sel = e.target.closest?.('select[data-asignar]');
+    if (!sel) return;
+    sel.disabled = true;
+    const r = await fetch(`/api/pedidos/${sel.dataset.asignar}/repartidor`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ repartidor: sel.value }),
+    });
+    if (r.status === 401) return alLogin();
+    const datos = await r.json();
+    avisar(!r.ok ? datos.error
+      : datos.repartidor_nombre ? `${datos.codigo}: lo lleva ${datos.repartidor_nombre}`
+      : `${datos.codigo}: sin asignar`);
+    // Soltar el foco: con el selector enfocado el repintado queda en espera.
+    sel.blur();
+    return cargar();
+  });
+
   document.addEventListener('click', async (e) => {
+    /**
+     * El aviso manual. El enlace abre WhatsApp por su cuenta; aquí solo se
+     * anota que se mandó. No hay forma de saber si la persona apretó «enviar»
+     * en su teléfono: se da por hecho al abrir el chat, que es lo honesto que
+     * se puede registrar sin la API.
+     */
+    const btnAviso = e.target.closest('a[data-aviso]');
+    if (btnAviso) {
+      fetch(`/api/avisos/${btnAviso.dataset.aviso}`, { method: 'PATCH' })
+        .then((r) => (r.status === 401 ? alLogin() : cargar()))
+        .catch(() => {});
+      return;
+    }
+
+    const btnEntregar = e.target.closest('[data-entregar]');
+    if (btnEntregar) {
+      const p = ultimosPedidos.find((x) => x.id === Number(btnEntregar.dataset.entregar));
+      if (!p) return avisar('No encuentro ese pedido; actualiza el panel');
+      const cobro = await pedirCobro(p);
+      if (!cobro) return;
+      btnEntregar.disabled = true;
+      try {
+        const r = await fetch(`/api/pedidos/${p.id}/estado`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ estado: 'entregado', cobro }),
+        });
+        if (r.status === 401) return alLogin();
+        const datos = await r.json().catch(() => ({ error: 'El servidor no respondió bien; vuelve a intentar' }));
+        avisar(r.ok ? `${datos.codigo} entregado · ${NOMBRE_COBRO[cobro]}` : datos.error);
+      } catch {
+        avisar('Sin conexión: el pedido no se marcó. Vuelve a intentar.');
+      }
+      return cargar();
+    }
+
     const btnEstado = e.target.closest('[data-estado]');
     if (btnEstado) {
       const { id, estado } = btnEstado.dataset;

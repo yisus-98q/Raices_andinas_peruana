@@ -97,7 +97,8 @@
               <span class="p-punto"></span>
               <div>
                 <strong>${esc(titulo)}</strong>
-                <span>${esc(texto)}</span>
+                <span>${PASOS[i][0] === 'enviado' && d.repartidor && i === indice
+                  ? `Te lo lleva <b>${esc(d.repartidor)}</b>.` : esc(texto)}</span>
               </div>
             </li>`).join('')}
         </ol>`}

@@ -28,6 +28,38 @@ export const TIENDA = {
   // inyecta al servir el HTML, para que no quede escrito a mano en cada pagina.
   sitio: 'https://raizandina.pe',
 
+  /**
+   * Avisos por WhatsApp al cliente (ver whatsapp.js).
+   *
+   * Tres momentos: cuando entra el pedido, cuando el motorizado sale y cuando
+   * lo entrega. Tono cercano, corto y con un emoji que dice qué pasó antes de
+   * leer. Variables: {nombre} {codigo} {total} {repartidor} {enlace} {tienda}
+   * {entrega}. El enlace abre el seguimiento con el código puesto; pide los 4
+   * últimos dígitos del teléfono, así que reenviarlo no expone el pedido.
+   *
+   * Si se usa la API oficial con plantillas aprobadas por Meta, estos textos
+   * son la referencia para registrarlas: allá las variables van como {{1}}…
+   * en el orden que fija PARAMETROS_PLANTILLA en whatsapp.js.
+   */
+  avisos: {
+    plantillas: {
+      confirmado:
+        '¡Hola, {nombre}! 🌿 Recibimos tu pedido *{codigo}* en {tienda} por *{total}*.\n'
+        + '📦 {entrega}\n'
+        + '🔎 Síguelo aquí: {enlace} (te pedirá los 4 últimos dígitos de tu teléfono).\n'
+        + 'Te escribimos por aquí cuando salga. ¡Gracias por tu compra!',
+      en_camino:
+        '🛵 ¡{nombre}, tu pedido *{codigo}* ya va en camino!\n'
+        + 'Te lo lleva *{repartidor}*.\n'
+        + '📍 Mira en qué va: {enlace}\n'
+        + 'Si pagas contra entrega, ten a mano *{total}*. 🙌',
+      entregado:
+        '✅ ¡Entregado, {nombre}! Tu pedido *{codigo}* ya está contigo.\n'
+        + 'Gracias por elegir {tienda} 🌱\n'
+        + 'Si algo no llegó bien, respóndenos por aquí y lo resolvemos.',
+    },
+  },
+
   horario: {
     texto: 'lunes a sábado de 8:00 a 19:00',
     domingo: 'los domingos no abrimos',
