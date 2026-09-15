@@ -1721,6 +1721,15 @@ img { max-width: 100%; display: block; }
   .zona { display: flex; flex-direction: column; justify-content: flex-start; }
 }
 
+/* Todo lo que se toca en la tienda, de al menos 44 px de alto: es el mínimo
+   para un dedo, y sugerencias, filtros y el carrito quedaban en 39–41. */
+.tienda-pagina .sugerencia,
+.tienda-pagina .filtro,
+.tienda-pagina .pastilla-carrito,
+.tienda-pagina #btn-asesor {
+  min-height: 44px; display: inline-flex; align-items: center; justify-content: center;
+}
+
 /* Laptop chica y tableta horizontal: las tres cifras del hero en una fila. */
 @media (min-width: 981px) and (max-width: 1180px) {
   .hero-datos { gap: 20px; flex-wrap: nowrap; }
