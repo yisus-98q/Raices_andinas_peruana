@@ -988,6 +988,126 @@ elige productos: la derivación y la lista vienen resueltas del motor de reglas.
 
 ---
 
+## Avisos por WhatsApp
+
+El cliente recibe tres avisos: **pedido confirmado**, **en camino** y
+**entregado**. Uno por evento y por pedido, registrados en `avisos_cliente`.
+Un aviso nunca frena el pedido.
+
+- **Manual, por defecto.** El panel ofrece un botón que abre el chat del cliente
+  con el mensaje ya escrito (`wa.me`); quien lo manda lo marca como enviado. Sin
+  cuenta de empresa, sin costo y sin internet en el servidor: es el modo de la
+  demo.
+- **Automático.** Con `WHATSAPP_TOKEN` y `WHATSAPP_PHONE_ID` en el `.env`, el
+  servidor los manda por la API oficial de Meta, con plantillas aprobadas. Si
+  uno falla, queda en error y vuelve el botón manual.
+
+**Solo a quien lo pidió.** En el checkout hay una casilla sin marcar: *«Quiero
+recibir por WhatsApp la confirmación y el aviso cuando mi pedido salga y
+llegue.»* Se guarda en `pedidos.acepta_whatsapp`. En modo automático, el
+servidor escribe solo a quien la marcó; al resto el aviso le queda como botón
+manual y una persona decide si le escribe. En modo manual nada cambia.
+
+Los textos se editan en `tienda.config.js` → `avisos.plantillas`. Cada pedido
+de reparto se asigna a un motorizado, que solo ve lo suyo y lo que nadie tomó.
+
+**[`docs/whatsapp.md`](docs/whatsapp.md)** tiene la guía completa: estados y
+papeles, comparación de Meta, Twilio, BSP y manual con costos, el paso a paso
+con Meta (token permanente, las tres plantillas y prueba con curl), webhooks
+—todavía no implementados— y buenas prácticas.
+
+---
+
+## Panel del repartidor
+
+El motorizado entra al mismo panel con un acceso de papel `reparto`, desde su
+celular. Está pensado para usarse en la calle, con una mano: pocos botones,
+grandes, y nada del negocio.
+
+### Su ruta del día
+
+La lista viene ordenada en el orden en que trabaja:
+
+| Grupo | Qué hay |
+|---|---|
+| **Llevando ahora** | Lo que ya sacó y está en camino (`enviado`) |
+| **Por salir** | Lo pendiente o en preparación que le toca o que nadie tomó |
+| **Cerrados hoy** | Lo entregado, anulado o devuelto **hoy** |
+
+Solo ve pedidos que salen a reparto —ni ventas de mostrador ni recojos en el
+puesto—, **asignados a él o sin asignar**. Lo cerrado de días anteriores ya no
+le aparece: el servidor lo compara con `pedidos.cerrado_en`, que se llena al
+entregar, anular o devolver. El historial completo lo sigue viendo el puesto.
+
+### El flujo en la calle
+
+1. **🛵 Salgo a entregar.** Pasa el pedido de pendiente o preparación a
+   `enviado`. Si nadie lo tenía asignado, queda a su nombre, y el cliente ve
+   «Te lo lleva …» en su página de seguimiento.
+2. **Llamar** y **Cómo llegar**, en cada pedido abierto: el primero marca al
+   cliente con `+51`, el segundo abre Google Maps con la dirección y el distrito.
+3. **✓ Entregado.** No se marca de un toque: abre un cuadro que pregunta **cómo
+   pagó** el cliente —efectivo, Yape, Plin, transferencia o «ya estaba pagado»—.
+   Esa pregunta registra el cobro y además evita el toque accidental que le
+   mandaría al cliente un «ya está contigo» falso. Cerrar el cuadro (× o Escape)
+   no toca el pedido.
+4. **💵 Registrar cobro.** Aparece cuando el cliente ya confirmó «lo recibí» en
+   su celular antes de que el motorizado anotara cómo le pagaron: el pedido
+   figura entregado pero sin cobro. Abre el mismo cuadro, y así esa plata no se
+   queda fuera del efectivo por rendir.
+
+**Solo hacia adelante.** El motorizado no puede retroceder un pedido —de
+entregado a preparación, por ejemplo—: el servidor responde 409. Sin eso,
+quien rinde la plata podría sacar de su cuenta un pedido cobrado en efectivo.
+
+En la cabecera de cada tarjeta ve **«Cobrar S/ …»** mientras está abierto, y
+**«Cobrado · Yape»** (o el medio que marcó) cuando ya lo cerró. Los avisos de
+WhatsApp que puede mandar desde ahí son «en camino» y «entregado»; la
+confirmación la manda el puesto (ver [`docs/whatsapp.md`](docs/whatsapp.md)).
+
+Lo que **no** tiene: anular ni devolver (reponen stock y emiten nota de
+crédito), costos, caja del día, el QR de la tienda ni el enlace «Ver tienda».
+
+### El cobro y el efectivo por rendir
+
+El medio de pago se guarda en `pedidos.cobro` y **solo se acepta al marcar
+entregado** (`PATCH /api/pedidos/:id/estado` con `{ estado: 'entregado', cobro }`);
+un medio que no está en la lista, o un cobro con otro estado, responde 400.
+
+**Repetir el estado que ya tiene no hace nada.** Marcar entregado un pedido que
+ya está entregado —un doble toque, o la dueña tocando el botón antes de que su
+pantalla se refresque— responde 200 sin registrar otra actividad, sin mover la
+hora de cierre y sin cambiar el cobro. Así el efectivo sigue a nombre de quien
+lo cobró.
+
+La única excepción es la del paso 4: un pedido **entregado sin cobro** acepta
+`{ estado: 'entregado', cobro }` para anotar cómo se pagó. Si nadie tenía
+registrada la entrega, queda a nombre de quien registra el cobro.
+
+En el resumen de la dueña, la tarjeta de cada motorizado muestra **«efectivo por
+rendir»**: la suma de lo que cobró **hoy en efectivo** en pedidos entregados.
+Es la plata que tiene que dejar en caja al volver. Cada pedido cuenta una sola
+vez.
+
+**Una devolución no borra ese efectivo.** Si la tienda registra la devolución
+de un pedido que el motorizado cobró en efectivo, esa plata **sigue figurando a
+su nombre**: la cobró y la tiene que rendir igual. Devolverle el dinero al
+cliente es asunto de la caja, no del motorizado. Antes la devolución hacía
+desaparecer el monto de su cuenta aunque el billete siguiera en su bolsillo.
+
+### Qué ve cada papel
+
+| | Dueña (`admin`) | Mostrador (`vendedor`) | Reparto (`reparto`) |
+|---|---|---|---|
+| Pedidos | Todos, con historial | Todos, con historial | Su ruta: lo suyo y lo libre, lo cerrado solo de hoy |
+| Asignar motorizado | Sí | Sí | No (se autoasigna al salir) |
+| Mover el pedido | Todos los estados | Todos los estados | Salir y entregar, solo hacia adelante |
+| Cobro al entregar | Ve «Cobrado: …» | Ve «Cobrado: …» | Lo registra, también después de que el cliente confirmó |
+| Efectivo por rendir | Sí, por motorizado | No | No |
+| Llamar / Cómo llegar | No | No | Sí, en pedidos abiertos |
+
+---
+
 ## API
 
 | Método | Ruta | Qué hace |
